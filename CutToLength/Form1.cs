@@ -56,13 +56,17 @@ namespace CutToLength
         {
             var bins = GetResults();
 
-            var saveFileDialog = new SaveFileDialog();
-            saveFileDialog.Filter = "Text File|*.txt";
+			var form = new Form2();
+			form.Bins = bins;
+			form.ShowDialog();
 
-            if (saveFileDialog.ShowDialog() == DialogResult.OK)
-            {
-                SaveBins(saveFileDialog.FileName, bins);
-            }
+            //var saveFileDialog = new SaveFileDialog();
+            //saveFileDialog.Filter = "Text File|*.txt";
+
+            //if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            //{
+            //    SaveBins(saveFileDialog.FileName, bins);
+            //}
         }
 
         private List<Bin> GetResults()

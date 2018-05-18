@@ -1,0 +1,42 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace CutToLength
+{
+	public partial class Form2 : Form
+	{
+		public Form2()
+		{
+			InitializeComponent();
+		}
+
+		private void dataGridView1_SelectionChanged(object sender, EventArgs e)
+		{
+			
+		}
+
+		private void dataGridView1_RowEnter(object sender, DataGridViewCellEventArgs e)
+		{
+			var selectedBin = dataGridView1.Rows[e.RowIndex].DataBoundItem as Bin;
+
+			if (selectedBin == null)
+				return;
+
+			class11.Bin = selectedBin;
+			class11.Invalidate();
+		}
+
+		public List<Bin> Bins
+		{
+			get { return dataGridView1.DataSource as List<Bin>; }
+			set { dataGridView1.DataSource = value; }
+		}
+	}
+}
