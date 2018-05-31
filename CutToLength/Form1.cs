@@ -1,15 +1,10 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace CutToLength
@@ -56,9 +51,9 @@ namespace CutToLength
         {
             var bins = GetResults();
 
-			var form = new Form2();
-			form.Bins = bins;
-			form.ShowDialog();
+            var form = new Form2();
+            form.Bins = bins;
+            form.ShowDialog();
 
             //var saveFileDialog = new SaveFileDialog();
             //saveFileDialog.Filter = "Text File|*.txt";
@@ -100,6 +95,9 @@ namespace CutToLength
 
             foreach (var item in items)
             {
+                if (item.Length == 0)
+                    continue;
+
                 for (int i = 0; i < item.Quantity; i++)
                 {
                     items2.Add(new BinItem
@@ -240,7 +238,7 @@ namespace CutToLength
     public class UIItem
     {
         private string name;
-        
+
         public UIItem()
         {
         }
