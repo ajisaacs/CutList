@@ -36,7 +36,7 @@
 			this.remainingLengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
 			this.utilizationDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
 			this.binBindingSource = new System.Windows.Forms.BindingSource(this.components);
-			this.class11 = new CutToLength.Class1();
+			this.class11 = new CutToLength.BinLayoutView();
 			this.splitContainer1 = new System.Windows.Forms.SplitContainer();
 			this.uIItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
 			((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
@@ -160,7 +160,7 @@
 		#endregion
 
 		private System.Windows.Forms.DataGridView dataGridView1;
-		private Class1 class11;
+		private BinLayoutView class11;
 		private System.Windows.Forms.DataGridViewTextBoxColumn spacingDataGridViewTextBoxColumn;
 		private System.Windows.Forms.DataGridViewTextBoxColumn lengthDataGridViewTextBoxColumn;
 		private System.Windows.Forms.DataGridViewTextBoxColumn usedLengthDataGridViewTextBoxColumn;
