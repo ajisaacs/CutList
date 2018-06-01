@@ -1,29 +1,18 @@
-﻿namespace CutToLength
+﻿using Newtonsoft.Json;
+
+namespace CutToLength
 {
     public class UIItem
     {
-        private string name;
-
         public UIItem()
         {
         }
 
-        public string Name
-        {
-            get
-            {
-                return string.IsNullOrWhiteSpace(name) ?
-                    GetDefaultName() :
-                    name;
-            }
-            set
-            {
-                name = value;
-            }
-        }
+        public string Name { get; set; }
 
         public double Length { get; set; }
 
+        [JsonIgnore]
         public double TotalLength
         {
             get { return Length * Quantity; }
