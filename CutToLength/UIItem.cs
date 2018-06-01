@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 
 namespace CutToLength
 {
@@ -15,7 +16,7 @@ namespace CutToLength
         [JsonIgnore]
         public double TotalLength
         {
-            get { return Length * Quantity; }
+            get { return Math.Round(Length * Quantity, 8); }
         }
 
         public int Quantity { get; set; } = 1;
