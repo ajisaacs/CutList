@@ -9,11 +9,11 @@ using System.Windows.Forms;
 
 namespace CutToLength
 {
-    public partial class Form1 : Form
+    public partial class MainForm : Form
     {
         private List<UIItem> items;
 
-        public Form1()
+        public MainForm()
         {
             InitializeComponent();
 
@@ -51,7 +51,7 @@ namespace CutToLength
         {
             var bins = GetResults();
 
-            var form = new Form2();
+            var form = new ResultsForm();
             form.Bins = bins;
             form.ShowDialog();
 

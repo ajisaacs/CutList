@@ -1,6 +1,6 @@
 ﻿namespace CutToLength
 {
-	partial class Form2
+	partial class ResultsForm
 	{
 		/// <summary>
 		/// Required designer variable.

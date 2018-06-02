@@ -10,9 +10,9 @@ using System.Windows.Forms;
 
 namespace CutToLength
 {
-	public partial class Form2 : Form
+	public partial class ResultsForm : Form
 	{
-		public Form2()
+		public ResultsForm()
 		{
 			InitializeComponent();
 		}
