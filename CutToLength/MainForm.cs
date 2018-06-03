@@ -242,7 +242,7 @@ namespace CutToLength
 
         private void SaveTools(IEnumerable<Tool> tools)
         {
-            var json = JsonConvert.SerializeObject(tools);
+            var json = JsonConvert.SerializeObject(tools, Formatting.Indented);
             File.WriteAllText(ToolsFilePath, json);
         }
 
