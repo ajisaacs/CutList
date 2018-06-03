@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -19,9 +20,25 @@ namespace CutToLength
 
             items = new List<UIItem>();
 
-
             itemBindingSource.DataSource = items;
             itemBindingSource.CurrentChanged += ItemBindingSource_CurrentChanged;
+
+            if (!File.Exists(ToolsFilePath))
+            {
+                var tools = new List<Tool>
+                {
+                    new Tool { Name = "Shear", Kerf = 0.0 },
+                    new Tool { Name = "Saw", Kerf = 0.125 }
+                };
+
+                SaveTools(tools);
+
+                comboBox1.DataSource = tools;
+            }
+            else
+            {
+                comboBox1.DataSource = GetTools();
+            }
         }
 
         protected override void OnLoad(EventArgs e)
@@ -51,6 +68,8 @@ namespace CutToLength
             {
                 var data = File.ReadAllText(openFileDialog.FileName);
                 items = JsonConvert.DeserializeObject<List<UIItem>>(data);
+
+                dataGridView1.ClearSelection();
                 itemBindingSource.DataSource = items;
             }
         }
@@ -133,12 +152,17 @@ namespace CutToLength
         private Bin CreateBin()
         {
             var length = (double)numericUpDown1.Value;
-            var spacing = (double)numericUpDown2.Value;
+            var spacing = GetSelectedTool().Kerf;
 
             return new Bin(length)
             {
                 Spacing = spacing
             };
+        }
+
+        public Tool GetSelectedTool()
+        {
+            return comboBox1.SelectedItem as Tool;
         }
 
         private void SaveBins(string file, IEnumerable<Bin> bins)
@@ -201,6 +225,71 @@ namespace CutToLength
         private void runButton_Click(object sender, EventArgs e)
         {
             Run();
+        }
+
+        private string ToolsFilePath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools.json"); }
+        }
+
+        private List<Tool> GetTools()
+        {
+            var json = File.ReadAllText(ToolsFilePath);
+            var list = JsonConvert.DeserializeObject<List<Tool>>(json);
+
+            return list;
+        }
+
+        private void SaveTools(IEnumerable<Tool> tools)
+        {
+            var json = JsonConvert.SerializeObject(tools);
+            File.WriteAllText(ToolsFilePath, json);
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var tool = comboBox1.SelectedItem as Tool;
+
+            if (tool == null)
+                return;
+
+            textBox1.Text = tool.Kerf.ToString();
+
+            if (tool.AllowUserToChange)
+            {
+                textBox1.ReadOnly = false;
+                textBox1.BackColor = Color.White;
+            }
+            else
+            {
+                textBox1.ReadOnly = true;
+                textBox1.BackColor = SystemColors.Info;
+            }
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            double value;
+
+            if (!double.TryParse(textBox1.Text, out value))
+                return;
+
+            var tool = comboBox1.SelectedItem as Tool;
+
+            if (tool == null)
+                return;
+
+            if (!tool.AllowUserToChange)
+                return;
+
+            tool.Kerf = value;
+
+            var tools = comboBox1.DataSource as List<Tool>;
+
+            if (tools != null)
+            {
+                SaveTools(tools);
+            }
         }
     }
 }

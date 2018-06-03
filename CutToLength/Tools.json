@@ -1,0 +1,17 @@
+[
+  {
+    "Name": "Shear",
+    "Kerf": 0.0,
+    "AllowUserToChange": false
+  },
+  {
+    "Name": "Saw",
+    "Kerf": 0.125,
+    "AllowUserToChange": false
+  },
+  {
+    "Name": "Custom",
+    "Kerf": 0.125,
+    "AllowUserToChange": true
+  }
+]
