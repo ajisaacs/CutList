@@ -33,7 +33,7 @@ namespace CutToLength
 
         public double Utilization
         {
-            get { return (UsedLength / Length * 100.0); }
+            get { return UsedLength / Length; }
         }
 
         public override string ToString()
