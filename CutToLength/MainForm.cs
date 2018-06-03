@@ -76,7 +76,12 @@ namespace CutToLength
 
         private void Save()
         {
-            var json = JsonConvert.SerializeObject(items, Formatting.Indented);
+            var itemsToSave = items;
+
+            if (dataGridView1.Rows[items.Count - 1].IsNewRow == true)
+                itemsToSave.RemoveAt(itemsToSave.Count - 1);
+
+            var json = JsonConvert.SerializeObject(itemsToSave, Formatting.Indented);
 
             var saveFileDialog = new SaveFileDialog();
             saveFileDialog.Filter = "Json File|*.json";
