@@ -19,7 +19,26 @@ namespace CutToLength
 
             items = new List<UIItem>();
 
+
             itemBindingSource.DataSource = items;
+            itemBindingSource.CurrentChanged += ItemBindingSource_CurrentChanged;
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            UpdateRunButtonState();
+        }
+
+        private void ItemBindingSource_CurrentChanged(object sender, EventArgs e)
+        {
+            UpdateRunButtonState();
+        }
+
+        private void UpdateRunButtonState()
+        {
+            runButton.Enabled = items.Any(i => i.Length > 0 && i.Quantity > 0);
+            saveButton.Enabled = runButton.Enabled;
         }
 
         private void Open()
@@ -174,12 +193,12 @@ namespace CutToLength
             Open();
         }
 
-        private void toolStripButton2_Click(object sender, EventArgs e)
+        private void saveButton_Click(object sender, EventArgs e)
         {
             Save();
         }
 
-        private void toolStripButton3_Click(object sender, EventArgs e)
+        private void runButton_Click(object sender, EventArgs e)
         {
             Run();
         }
