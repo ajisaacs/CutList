@@ -10,6 +10,11 @@
     "AllowUserToChange": false
   },
   {
+    "Name": "Channel shear",
+    "Kerf": 0.5,
+    "AllowUserToChange": false
+  },
+  {
     "Name": "Custom",
     "Kerf": 0.125,
     "AllowUserToChange": true
