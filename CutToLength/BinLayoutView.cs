@@ -41,6 +41,8 @@ namespace CutToLength
             var id = 1;
             var scale = displayWidth / (float)Bin.Length;
 
+            var beginningScrap = rect.Left;
+
             if (Bin != null)
             {
                 for (int i = 0; i < Bin.Items.Count; i++)
@@ -61,10 +63,16 @@ namespace CutToLength
 
                     if (i < Bin.Items.Count - 1)
                         x += (float)Bin.Spacing;
+
+                    if (r.Right > beginningScrap)
+                        beginningScrap = r.Right;
                 }
             }
 
-            var scrapRect = new RectangleF(x + 1, y, (float)Bin.RemainingLength * scale, displayHeight);
+            // add 1 pixel so the last items' border will not be drawn over.
+            beginningScrap += 1;
+
+            var scrapRect = new RectangleF(beginningScrap, y, rect.Right - beginningScrap, displayHeight);
 
             e.Graphics.FillRectangle(hBrush, scrapRect);
             e.Graphics.DrawRectangle(Pens.Black, rect.X, rect.Y, rect.Width, rect.Height);
