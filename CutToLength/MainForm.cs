@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using SimpleExpressionEvaluator;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -90,6 +91,11 @@ namespace CutToLength
                 File.WriteAllText(saveFileDialog.FileName, json);
         }
 
+        private double StockLength
+        {
+            get { return double.Parse(textBox2.Text); }
+        }
+
         private void Run()
         {
             var bins = GetResults();
@@ -111,7 +117,7 @@ namespace CutToLength
         {
             var items2 = GetItems().OrderByDescending(i => i.Length);
             var bins = new List<Bin>();
-            var length = (double)numericUpDown1.Value;
+            var length = StockLength;
 
             foreach (var item in items2)
             {
@@ -156,7 +162,7 @@ namespace CutToLength
 
         private Bin CreateBin()
         {
-            var length = (double)numericUpDown1.Value;
+            var length = StockLength;
             var spacing = GetSelectedTool().Kerf;
 
             return new Bin(length)
@@ -294,6 +300,21 @@ namespace CutToLength
             if (tools != null)
             {
                 SaveTools(tools);
+            }
+        }
+
+        private void TextBox2_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            try
+            {
+                var ee = new ExpressionEvaluator();
+                var x = ee.Evaluate(textBox2.Text);
+                textBox2.Text = x.ToString();
+                textBox2.ForeColor = SystemColors.WindowText;
+            }
+            catch
+            {
+                textBox2.ForeColor = Color.Red;
             }
         }
     }
