@@ -15,7 +15,7 @@
     "AllowUserToChange": false
   },
   {
-    "Name": "Custom",
+    "Name": "Other",
     "Kerf": 0.125,
     "AllowUserToChange": true
   }
