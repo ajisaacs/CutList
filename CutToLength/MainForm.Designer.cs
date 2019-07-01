@@ -45,11 +45,14 @@
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
+            this.feetBox = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
+            this.label6 = new System.Windows.Forms.Label();
+            this.inchesBox = new System.Windows.Forms.TextBox();
             this.nameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.quantityDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.itemBindingSource = new System.Windows.Forms.BindingSource(this.components);
-            this.textBox2 = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.toolStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.itemBindingSource)).BeginInit();
@@ -79,8 +82,9 @@
             this.dataGridView1.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
             this.dataGridView1.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
             this.dataGridView1.RowTemplate.Height = 26;
-            this.dataGridView1.Size = new System.Drawing.Size(763, 361);
-            this.dataGridView1.TabIndex = 5;
+            this.dataGridView1.Size = new System.Drawing.Size(822, 349);
+            this.dataGridView1.TabIndex = 11;
+            this.dataGridView1.CellValidated += new System.Windows.Forms.DataGridViewCellEventHandler(this.DataGridView1_CellValidated);
             // 
             // TotalLength
             // 
@@ -101,7 +105,7 @@
             this.label1.Location = new System.Drawing.Point(21, 101);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(300, 17);
-            this.label1.TabIndex = 4;
+            this.label1.TabIndex = 10;
             this.label1.Text = "Enter the lengths that will be cut from the stock";
             // 
             // label2
@@ -112,7 +116,7 @@
             this.label2.Location = new System.Drawing.Point(20, 45);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(84, 17);
-            this.label2.TabIndex = 0;
+            this.label2.TabIndex = 1;
             this.label2.Text = "Stock length";
             // 
             // toolStrip1
@@ -124,8 +128,8 @@
             this.runButton});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(787, 39);
-            this.toolStrip1.TabIndex = 7;
+            this.toolStrip1.Size = new System.Drawing.Size(846, 39);
+            this.toolStrip1.TabIndex = 0;
             this.toolStrip1.Text = "toolStrip1";
             // 
             // toolStripButton1
@@ -173,15 +177,15 @@
             // 
             this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(409, 42);
+            this.comboBox1.Location = new System.Drawing.Point(478, 42);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(184, 25);
-            this.comboBox1.TabIndex = 8;
+            this.comboBox1.TabIndex = 7;
             this.comboBox1.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
             // 
             // textBox1
             // 
-            this.textBox1.Location = new System.Drawing.Point(409, 73);
+            this.textBox1.Location = new System.Drawing.Point(478, 73);
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(184, 25);
             this.textBox1.TabIndex = 9;
@@ -192,10 +196,10 @@
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label3.ForeColor = System.Drawing.Color.Blue;
-            this.label3.Location = new System.Drawing.Point(322, 45);
+            this.label3.Location = new System.Drawing.Point(391, 45);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(81, 17);
-            this.label3.TabIndex = 0;
+            this.label3.TabIndex = 6;
             this.label3.Text = "Cut method";
             // 
             // label4
@@ -203,11 +207,57 @@
             this.label4.AutoSize = true;
             this.label4.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label4.ForeColor = System.Drawing.Color.Blue;
-            this.label4.Location = new System.Drawing.Point(336, 76);
+            this.label4.Location = new System.Drawing.Point(405, 76);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(67, 17);
-            this.label4.TabIndex = 0;
+            this.label4.TabIndex = 8;
             this.label4.Text = "Cut width";
+            // 
+            // feetBox
+            // 
+            this.feetBox.Location = new System.Drawing.Point(110, 42);
+            this.feetBox.Name = "feetBox";
+            this.feetBox.Size = new System.Drawing.Size(53, 25);
+            this.feetBox.TabIndex = 2;
+            this.feetBox.Text = "12";
+            this.feetBox.TextChanged += new System.EventHandler(this.FeetBox_TextChanged);
+            this.feetBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.TextBox2_KeyPress);
+            this.feetBox.Validating += new System.ComponentModel.CancelEventHandler(this.TextBox2_Validating);
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.ForeColor = System.Drawing.Color.Gray;
+            this.label5.Location = new System.Drawing.Point(166, 45);
+            this.label5.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(17, 17);
+            this.label5.TabIndex = 3;
+            this.label5.Text = "ft";
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label6.ForeColor = System.Drawing.Color.Gray;
+            this.label6.Location = new System.Drawing.Point(245, 45);
+            this.label6.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(19, 17);
+            this.label6.TabIndex = 5;
+            this.label6.Text = "in";
+            // 
+            // inchesBox
+            // 
+            this.inchesBox.Location = new System.Drawing.Point(189, 42);
+            this.inchesBox.Name = "inchesBox";
+            this.inchesBox.Size = new System.Drawing.Size(53, 25);
+            this.inchesBox.TabIndex = 4;
+            this.inchesBox.Text = "0";
+            this.inchesBox.TextChanged += new System.EventHandler(this.InchesBox_TextChanged);
+            this.inchesBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.TextBox2_KeyPress);
+            this.inchesBox.Validating += new System.ComponentModel.CancelEventHandler(this.TextBox2_Validating);
             // 
             // nameDataGridViewTextBoxColumn
             // 
@@ -238,25 +288,19 @@
             // 
             this.itemBindingSource.DataSource = typeof(CutToLength.UIItem);
             // 
-            // textBox2
-            // 
-            this.textBox2.Location = new System.Drawing.Point(110, 42);
-            this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(184, 25);
-            this.textBox2.TabIndex = 9;
-            this.textBox2.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
-            this.textBox2.Validating += new System.ComponentModel.CancelEventHandler(this.TextBox2_Validating);
-            // 
             // MainForm
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.ClientSize = new System.Drawing.Size(787, 496);
-            this.Controls.Add(this.textBox2);
+            this.ClientSize = new System.Drawing.Size(846, 484);
+            this.Controls.Add(this.inchesBox);
+            this.Controls.Add(this.feetBox);
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.toolStrip1);
             this.Controls.Add(this.label4);
+            this.Controls.Add(this.label6);
             this.Controls.Add(this.label3);
+            this.Controls.Add(this.label5);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.dataGridView1);
@@ -293,7 +337,10 @@
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.TextBox feetBox;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.TextBox inchesBox;
     }
 }
 

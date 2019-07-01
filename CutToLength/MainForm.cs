@@ -2,6 +2,7 @@
 using SimpleExpressionEvaluator;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
@@ -13,16 +14,17 @@ namespace CutToLength
 {
     public partial class MainForm : Form
     {
-        private List<UIItem> items;
+        private BindingList<UIItem> items;
 
         public MainForm()
         {
             InitializeComponent();
 
-            items = new List<UIItem>();
+            items = new BindingList<UIItem>();
+            items.ListChanged += Items_ListChanged;
 
             itemBindingSource.DataSource = items;
-            itemBindingSource.CurrentChanged += ItemBindingSource_CurrentChanged;
+            itemBindingSource.ListChanged += ItemBindingSource_ListChanged;
 
             if (!File.Exists(ToolsFilePath))
             {
@@ -42,21 +44,28 @@ namespace CutToLength
             }
         }
 
+        private void ItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
+        {
+            UpdateRunButtonState();
+        }
+
+        private void Items_ListChanged(object sender, ListChangedEventArgs e)
+        {
+        }
+
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
             UpdateRunButtonState();
         }
 
-        private void ItemBindingSource_CurrentChanged(object sender, EventArgs e)
-        {
-            UpdateRunButtonState();
-        }
-
         private void UpdateRunButtonState()
         {
-            runButton.Enabled = items.Any(i => i.Length > 0 && i.Quantity > 0);
-            saveButton.Enabled = runButton.Enabled;
+            var hasItems = items.Any(i => i.Length > 0 && i.Quantity > 0);
+            var validStockLength = !Double.IsNaN(StockLengthInches);
+
+            runButton.Enabled = hasItems && validStockLength;
+            saveButton.Enabled = hasItems;
         }
 
         private void Open()
@@ -68,7 +77,7 @@ namespace CutToLength
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 var data = File.ReadAllText(openFileDialog.FileName);
-                items = JsonConvert.DeserializeObject<List<UIItem>>(data);
+                items = JsonConvert.DeserializeObject<BindingList<UIItem>>(data);
 
                 dataGridView1.ClearSelection();
                 itemBindingSource.DataSource = items;
@@ -91,9 +100,31 @@ namespace CutToLength
                 File.WriteAllText(saveFileDialog.FileName, json);
         }
 
-        private double StockLength
+        private double StockLengthInches
         {
-            get { return double.Parse(textBox2.Text); }
+            get
+            {
+                var feet = GetDouble(feetBox);
+                var inches = GetDouble(inchesBox);
+
+                return feet * 12 + inches;
+            }
+        }
+
+        private double GetDouble(TextBox tb)
+        {
+            try
+            {
+                var x = double.Parse(tb.Text);
+                tb.ForeColor = SystemColors.WindowText;
+                return x;
+
+            }
+            catch
+            {
+                tb.ForeColor = Color.Red;
+                return double.NaN;
+            }
         }
 
         private void Run()
@@ -117,7 +148,7 @@ namespace CutToLength
         {
             var items2 = GetItems().OrderByDescending(i => i.Length);
             var bins = new List<Bin>();
-            var length = StockLength;
+            var length = StockLengthInches;
 
             foreach (var item in items2)
             {
@@ -162,7 +193,7 @@ namespace CutToLength
 
         private Bin CreateBin()
         {
-            var length = StockLength;
+            var length = StockLengthInches;
             var spacing = GetSelectedTool().Kerf;
 
             return new Bin(length)
@@ -308,14 +339,37 @@ namespace CutToLength
             try
             {
                 var ee = new ExpressionEvaluator();
-                var x = ee.Evaluate(textBox2.Text);
-                textBox2.Text = x.ToString();
-                textBox2.ForeColor = SystemColors.WindowText;
+                var x = ee.Evaluate(feetBox.Text);
+                feetBox.Text = x.ToString();
+                feetBox.ForeColor = SystemColors.WindowText;
             }
             catch
             {
-                textBox2.ForeColor = Color.Red;
+                feetBox.ForeColor = Color.Red;
             }
+        }
+
+        private void TextBox2_KeyPress(object sender, KeyPressEventArgs e)
+        {
+
+        }
+
+        private void DataGridView1_CellValidated(object sender, DataGridViewCellEventArgs e)
+        {
+            UpdateRunButtonState();
+
+        }
+
+        private void FeetBox_TextChanged(object sender, EventArgs e)
+        {
+            UpdateRunButtonState();
+
+        }
+
+        private void InchesBox_TextChanged(object sender, EventArgs e)
+        {
+            UpdateRunButtonState();
+
         }
     }
 }
