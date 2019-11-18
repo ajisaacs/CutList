@@ -3,7 +3,6 @@ using SimpleExpressionEvaluator;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -129,7 +128,12 @@ namespace CutToLength
 
         private void Run()
         {
-            var bins = GetResults();
+            var engine = new BestFitEngine();
+            engine.CutTool = GetSelectedTool();
+            engine.StockLength = StockLengthInches;
+
+            var items = GetItems();
+            var bins = engine.GetResults(items);
 
             var form = new ResultsForm();
             form.Bins = bins;
@@ -142,31 +146,6 @@ namespace CutToLength
             //{
             //    SaveBins(saveFileDialog.FileName, bins);
             //}
-        }
-
-        private List<Bin> GetResults()
-        {
-            var items2 = GetItems().OrderByDescending(i => i.Length);
-            var bins = new List<Bin>();
-            var length = StockLengthInches;
-
-            foreach (var item in items2)
-            {
-                Bin best_bin;
-
-                if (!FindBin(bins.ToArray(), item.Length, out best_bin))
-                {
-                    if (item.Length > length)
-                        continue;
-
-                    best_bin = CreateBin();
-                    bins.Add(best_bin);
-                }
-
-                best_bin.Items.Add(item);
-            }
-
-            return bins;
         }
 
         private List<BinItem> GetItems()
@@ -189,17 +168,6 @@ namespace CutToLength
             }
 
             return items2;
-        }
-
-        private Bin CreateBin()
-        {
-            var length = StockLengthInches;
-            var spacing = GetSelectedTool().Kerf;
-
-            return new Bin(length)
-            {
-                Spacing = spacing
-            };
         }
 
         public Tool GetSelectedTool()
@@ -233,25 +201,6 @@ namespace CutToLength
             writer.Close();
 
             Process.Start(file);
-        }
-
-        private static bool FindBin(IEnumerable<Bin> bins, double length, out Bin found)
-        {
-            found = null;
-
-            foreach (var bin in bins)
-            {
-                if (bin.RemainingLength < length)
-                    continue;
-
-                if (found == null)
-                    found = bin;
-
-                if (bin.RemainingLength < found.RemainingLength)
-                    found = bin;
-            }
-
-            return (found != null);
         }
 
         private void toolStripButton1_Click(object sender, EventArgs e)

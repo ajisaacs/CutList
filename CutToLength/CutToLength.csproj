@@ -52,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BestFitEngine.cs" />
     <Compile Include="Bin.cs" />
     <Compile Include="BinItem.cs" />
     <Compile Include="BinLayoutView.cs">
