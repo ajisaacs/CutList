@@ -128,15 +128,17 @@ namespace CutToLength
 
         private void Run()
         {
-            var engine = new BestFitEngine();
-            engine.CutTool = GetSelectedTool();
+            var cutTool = GetSelectedTool();
+
+            var engine = new Engine2();
+            engine.Spacing = cutTool.Kerf;
             engine.StockLength = StockLengthInches;
 
             var items = GetItems();
-            var bins = engine.GetResults(items);
+            var result = engine.Pack(items);
 
             var form = new ResultsForm();
-            form.Bins = bins;
+            form.Bins = result.Bins;
             form.ShowDialog();
 
             //var saveFileDialog = new SaveFileDialog();
