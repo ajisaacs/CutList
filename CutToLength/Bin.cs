@@ -22,13 +22,13 @@ namespace CutToLength
         {
             get
             {
-                return Items.Sum(i => i.Length) + Spacing * Items.Count;
+                return Math.Round(Items.Sum(i => i.Length) + Spacing * Items.Count, 8);
             }
         }
 
         public double RemainingLength
         {
-            get { return Length - UsedLength; }
+            get { return Math.Round(Length - UsedLength, 8); }
         }
 
         public double Utilization
