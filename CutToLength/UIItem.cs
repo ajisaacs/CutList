@@ -11,12 +11,43 @@ namespace CutToLength
 
         public string Name { get; set; }
 
-        public double Length { get; set; }
+        public string LengthInputValue { get; set; }
+
+        public double? Length
+        {
+            get
+            {
+                try
+                {
+                    double d;
+
+                    if (double.TryParse(LengthInputValue, out d))
+                    {
+                        LengthInputValue += "\"";
+                        return d;
+                    }
+
+                    return ArchUnits.ParseToInches(LengthInputValue);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
 
         [JsonIgnore]
-        public double TotalLength
+        public double? TotalLength
         {
-            get { return Math.Round(Length * Quantity, 8); }
+            get 
+            {
+                var length = Length;
+
+                if (length == null)
+                    return null;
+
+                return Math.Round(length.Value * Quantity, 8); 
+            }
         }
 
         public int Quantity { get; set; } = 1;

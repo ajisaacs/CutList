@@ -60,11 +60,31 @@ namespace CutToLength
 
         private void UpdateRunButtonState()
         {
-            var hasItems = items.Any(i => i.Length > 0 && i.Quantity > 0);
-            var validStockLength = !Double.IsNaN(StockLengthInches);
+            var isValid = IsValid();
 
-            runButton.Enabled = hasItems && validStockLength;
-            saveButton.Enabled = hasItems;
+            runButton.Enabled = isValid;
+            saveButton.Enabled = isValid;
+        }
+
+        private bool IsValid()
+        {
+            if (!items.Any(i => i.Length > 0 && i.Quantity > 0))
+                return false;
+
+            if (Double.IsNaN(StockLengthInches))
+                return false;
+
+            for (int rowIndex = 0; rowIndex < dataGridView1.Rows.Count; rowIndex++)
+            {
+                var row = dataGridView1.Rows[rowIndex];
+
+                if (!string.IsNullOrWhiteSpace(row.ErrorText))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private void Open()
@@ -103,18 +123,22 @@ namespace CutToLength
         {
             get
             {
-                var feet = GetDouble(feetBox);
-                var inches = GetDouble(inchesBox);
-
-                return feet * 12 + inches;
+                return GetLengthInches(stockLengthBox);
             }
         }
 
-        private double GetDouble(TextBox tb)
+        private double GetLengthInches(TextBox tb)
         {
             try
             {
-                var x = double.Parse(tb.Text);
+                double d;
+
+                if (double.TryParse(tb.Text, out d))
+                {
+                    return d;
+                }
+
+                var x = ArchUnits.ParseToInches(tb.Text);
                 tb.ForeColor = SystemColors.WindowText;
                 return x;
 
@@ -156,7 +180,7 @@ namespace CutToLength
 
             foreach (var item in items)
             {
-                if (item.Length == 0)
+                if (item.Length == null || item.Length == 0)
                     continue;
 
                 for (int i = 0; i < item.Quantity; i++)
@@ -164,7 +188,7 @@ namespace CutToLength
                     items2.Add(new BinItem
                     {
                         Name = item.Name,
-                        Length = item.Length
+                        Length = item.Length.Value
                     });
                 }
             }
@@ -285,42 +309,43 @@ namespace CutToLength
             }
         }
 
-        private void TextBox2_Validating(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            try
-            {
-                var ee = new ExpressionEvaluator();
-                var x = ee.Evaluate(feetBox.Text);
-                feetBox.Text = x.ToString();
-                feetBox.ForeColor = SystemColors.WindowText;
-            }
-            catch
-            {
-                feetBox.ForeColor = Color.Red;
-            }
-        }
-
-        private void TextBox2_KeyPress(object sender, KeyPressEventArgs e)
-        {
-
-        }
-
         private void DataGridView1_CellValidated(object sender, DataGridViewCellEventArgs e)
         {
-            UpdateRunButtonState();
+            if (e.ColumnIndex == lengthDataGridViewTextBoxColumn.Index)
+            {
+                var item = dataGridView1.Rows[e.RowIndex].DataBoundItem as UIItem;
 
+                if (item == null)
+                    return;
+
+                var errorText = string.Empty;
+
+                if (item.Length == null)
+                {
+                    errorText = "Length is not in a valid format.";
+                }
+
+                dataGridView1.Rows[e.RowIndex].ErrorText = errorText;
+            }
+
+            UpdateRunButtonState();
         }
 
-        private void FeetBox_TextChanged(object sender, EventArgs e)
+        private void StockLengthBox_TextChanged(object sender, EventArgs e)
         {
             UpdateRunButtonState();
-
         }
 
-        private void InchesBox_TextChanged(object sender, EventArgs e)
+        private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
-            UpdateRunButtonState();
+            if (e.ColumnIndex == lengthDataGridViewTextBoxColumn.Index)
+                dataGridView1.Refresh();
+        }
 
+        private void dataGridView1_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            dataGridView1.Rows[e.RowIndex].ErrorText = e.Exception.InnerException?.Message;
+            e.ThrowException = false;
         }
     }
 }
