@@ -53,7 +53,10 @@ namespace CutToLength
                 best_bin.Items.Add(item);
             }
 
-            return bins;
+            return bins
+                .OrderByDescending(b => b.Utilization)
+                .ThenBy(b => b.Items.Count)
+                .ToList();
         }
 
         private Bin CreateBin()
@@ -135,7 +138,10 @@ namespace CutToLength
                 bins.Add(bin);
             }
 
-            return bins;
+            return bins
+                .OrderByDescending(b => b.Utilization)
+                .ThenBy(b => b.Items.Count)
+                .ToList();
         }
 
         private void FillBin(Bin bin)
