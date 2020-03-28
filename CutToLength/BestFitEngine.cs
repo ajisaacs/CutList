@@ -228,19 +228,6 @@ namespace CutToLength
         }
     }
 
-    class OptimizeResult
-    {
-        public OptimizeResult()
-        {
-            OldItems = new List<BinItem>();
-            NewItems = new List<BinItem>();
-        }
-
-        public List<BinItem> OldItems { get; set; }
-
-        public List<BinItem> NewItems { get; set; }
-    }
-
     public interface IEngine
     {
         Result Pack(List<BinItem> items);
