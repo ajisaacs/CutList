@@ -20,7 +20,7 @@ namespace CutToLength
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            base.OnPaint(e);
+            //base.OnPaint(e);
 
             if (Bin == null)
                 return;

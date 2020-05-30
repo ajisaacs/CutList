@@ -31,15 +31,15 @@
             this.components = new System.ComponentModel.Container();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.binBindingSource = new System.Windows.Forms.BindingSource(this.components);
+            this.class11 = new CutToLength.BinLayoutView();
+            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.uIItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.spacingDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.usedLengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.remainingLengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.utilizationDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.binBindingSource = new System.Windows.Forms.BindingSource(this.components);
-            this.class11 = new CutToLength.BinLayoutView();
-            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.uIItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.binBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -73,41 +73,6 @@
             this.dataGridView1.TabIndex = 0;
             this.dataGridView1.RowEnter += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_RowEnter);
             this.dataGridView1.SelectionChanged += new System.EventHandler(this.dataGridView1_SelectionChanged);
-            // 
-            // spacingDataGridViewTextBoxColumn
-            // 
-            this.spacingDataGridViewTextBoxColumn.DataPropertyName = "Spacing";
-            this.spacingDataGridViewTextBoxColumn.HeaderText = "Spacing";
-            this.spacingDataGridViewTextBoxColumn.Name = "spacingDataGridViewTextBoxColumn";
-            // 
-            // lengthDataGridViewTextBoxColumn
-            // 
-            this.lengthDataGridViewTextBoxColumn.DataPropertyName = "Length";
-            this.lengthDataGridViewTextBoxColumn.HeaderText = "Length";
-            this.lengthDataGridViewTextBoxColumn.Name = "lengthDataGridViewTextBoxColumn";
-            // 
-            // usedLengthDataGridViewTextBoxColumn
-            // 
-            this.usedLengthDataGridViewTextBoxColumn.DataPropertyName = "UsedLength";
-            this.usedLengthDataGridViewTextBoxColumn.HeaderText = "UsedLength";
-            this.usedLengthDataGridViewTextBoxColumn.Name = "usedLengthDataGridViewTextBoxColumn";
-            this.usedLengthDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // remainingLengthDataGridViewTextBoxColumn
-            // 
-            this.remainingLengthDataGridViewTextBoxColumn.DataPropertyName = "RemainingLength";
-            this.remainingLengthDataGridViewTextBoxColumn.HeaderText = "RemainingLength";
-            this.remainingLengthDataGridViewTextBoxColumn.Name = "remainingLengthDataGridViewTextBoxColumn";
-            this.remainingLengthDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // utilizationDataGridViewTextBoxColumn
-            // 
-            this.utilizationDataGridViewTextBoxColumn.DataPropertyName = "Utilization";
-            dataGridViewCellStyle1.Format = "P2";
-            this.utilizationDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle1;
-            this.utilizationDataGridViewTextBoxColumn.HeaderText = "Utilization";
-            this.utilizationDataGridViewTextBoxColumn.Name = "utilizationDataGridViewTextBoxColumn";
-            this.utilizationDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // binBindingSource
             // 
@@ -147,11 +112,47 @@
             // 
             this.uIItemBindingSource.DataSource = typeof(CutToLength.UIItem);
             // 
+            // spacingDataGridViewTextBoxColumn
+            // 
+            this.spacingDataGridViewTextBoxColumn.DataPropertyName = "Spacing";
+            this.spacingDataGridViewTextBoxColumn.HeaderText = "Spacing";
+            this.spacingDataGridViewTextBoxColumn.Name = "spacingDataGridViewTextBoxColumn";
+            // 
+            // lengthDataGridViewTextBoxColumn
+            // 
+            this.lengthDataGridViewTextBoxColumn.DataPropertyName = "Length";
+            this.lengthDataGridViewTextBoxColumn.HeaderText = "Length";
+            this.lengthDataGridViewTextBoxColumn.Name = "lengthDataGridViewTextBoxColumn";
+            // 
+            // usedLengthDataGridViewTextBoxColumn
+            // 
+            this.usedLengthDataGridViewTextBoxColumn.DataPropertyName = "UsedLength";
+            this.usedLengthDataGridViewTextBoxColumn.HeaderText = "Used Length";
+            this.usedLengthDataGridViewTextBoxColumn.Name = "usedLengthDataGridViewTextBoxColumn";
+            this.usedLengthDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // remainingLengthDataGridViewTextBoxColumn
+            // 
+            this.remainingLengthDataGridViewTextBoxColumn.DataPropertyName = "RemainingLength";
+            this.remainingLengthDataGridViewTextBoxColumn.HeaderText = "Remaining Length";
+            this.remainingLengthDataGridViewTextBoxColumn.Name = "remainingLengthDataGridViewTextBoxColumn";
+            this.remainingLengthDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // utilizationDataGridViewTextBoxColumn
+            // 
+            this.utilizationDataGridViewTextBoxColumn.DataPropertyName = "Utilization";
+            dataGridViewCellStyle1.Format = "P2";
+            this.utilizationDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle1;
+            this.utilizationDataGridViewTextBoxColumn.HeaderText = "Utilization";
+            this.utilizationDataGridViewTextBoxColumn.Name = "utilizationDataGridViewTextBoxColumn";
+            this.utilizationDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
             // ResultsForm
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(892, 441);
             this.Controls.Add(this.splitContainer1);
+            this.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Name = "ResultsForm";
             this.ShowIcon = false;
             this.ShowInTaskbar = false;
