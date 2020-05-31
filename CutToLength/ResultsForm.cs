@@ -15,11 +15,23 @@ namespace CutToLength
 		public ResultsForm()
 		{
 			InitializeComponent();
+
+			dataGridView1.RowPostPaint += DataGridView1_RowPostPaint;
 		}
 
-		private void dataGridView1_SelectionChanged(object sender, EventArgs e)
+		private void DataGridView1_RowPostPaint(object sender, DataGridViewRowPostPaintEventArgs e)
 		{
-			
+			var grid = sender as DataGridView;
+			var rowIdx = (e.RowIndex + 1).ToString();
+
+			var centerFormat = new StringFormat()
+			{
+				Alignment = StringAlignment.Far,
+				LineAlignment = StringAlignment.Center
+			};
+
+			var headerBounds = new Rectangle(e.RowBounds.Left, e.RowBounds.Top, grid.RowHeadersWidth - 4, e.RowBounds.Height);
+			e.Graphics.DrawString(rowIdx, this.Font, Brushes.Blue, headerBounds, centerFormat);
 		}
 
 		private void dataGridView1_RowEnter(object sender, DataGridViewCellEventArgs e)

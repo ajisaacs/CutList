@@ -72,7 +72,6 @@
             this.dataGridView1.Size = new System.Drawing.Size(892, 256);
             this.dataGridView1.TabIndex = 0;
             this.dataGridView1.RowEnter += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_RowEnter);
-            this.dataGridView1.SelectionChanged += new System.EventHandler(this.dataGridView1_SelectionChanged);
             // 
             // binBindingSource
             // 
@@ -137,6 +136,7 @@
             this.remainingLengthDataGridViewTextBoxColumn.HeaderText = "Remaining Length";
             this.remainingLengthDataGridViewTextBoxColumn.Name = "remainingLengthDataGridViewTextBoxColumn";
             this.remainingLengthDataGridViewTextBoxColumn.ReadOnly = true;
+            this.remainingLengthDataGridViewTextBoxColumn.Width = 150;
             // 
             // utilizationDataGridViewTextBoxColumn
             // 
