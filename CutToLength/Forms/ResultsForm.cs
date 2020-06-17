@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -51,6 +53,56 @@ namespace CutToLength.Forms
 		{
 			get { return dataGridView1.DataSource as List<Bin>; }
 			set { dataGridView1.DataSource = value; }
+		}
+
+        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+			var s = new SaveFileDialog();
+
+			var today = DateTime.Today;
+			var name = $"{today.Year}-{today.Month.ToString().PadLeft(2, '0')}-{today.Day.ToString().PadLeft(2, '0')} cut list.txt";
+
+			s.FileName = name;
+			s.Filter = "Text File|*.txt";
+			
+			if (s.ShowDialog() != DialogResult.OK)
+            {
+				return;
+            }
+
+			SaveBins(s.FileName);
+        }
+
+		private void SaveBins(string file)
+		{
+			var writer = new StreamWriter(file);
+			writer.AutoFlush = true;
+
+			var max = Bins.Max(b => b.Items.Max(i => i.Length.ToString().Length));
+			var id = 1;
+
+			foreach (var bin in Bins)
+			{
+				writer.WriteLine(id++.ToString() + ". " + bin.ToString());
+
+				var groups = bin.Items.GroupBy(i => i.Name);
+
+				foreach (var group in groups)
+				{
+					var count = group.Count();
+					var length = group.First().Length.ToString().PadLeft(max + 2);
+					var name = group.Key;
+
+					writer.WriteLine($"   {count}pcs  @  {length}\" LG   Tag:{name}");
+				}
+
+				writer.WriteLine("---------------------------------------------------------------------");
+				writer.WriteLine();
+			}
+
+			writer.Close();
+
+			Process.Start(file);
 		}
 	}
 }

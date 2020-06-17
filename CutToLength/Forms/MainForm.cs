@@ -202,34 +202,6 @@ namespace CutToLength.Forms
             return comboBox1.SelectedItem as Tool;
         }
 
-        private void SaveBins(string file, IEnumerable<Bin> bins)
-        {
-            var writer = new StreamWriter(file);
-            writer.AutoFlush = true;
-
-            var max = bins.Max(b => b.Items.Max(i => i.Length.ToString().Length));
-            var id = 1;
-
-            foreach (var bin in bins)
-            {
-                writer.WriteLine(id++.ToString() + ". " + bin.ToString());
-
-                var groups = bin.Items.GroupBy(i => i.Name);
-
-                foreach (var group in groups)
-                {
-                    writer.WriteLine("   {0}  {1}\" - {2}", ("(" + group.Count() + ")").PadRight(5), group.First().Length.ToString().PadLeft(max + 2), group.Key);
-                }
-
-                writer.WriteLine("---------------------------------------------------------------------");
-                writer.WriteLine();
-            }
-
-            writer.Close();
-
-            Process.Start(file);
-        }
-
         private void toolStripButton1_Click(object sender, EventArgs e)
         {
             Open();
