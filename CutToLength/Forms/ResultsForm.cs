@@ -85,15 +85,18 @@ namespace CutToLength.Forms
 			{
 				writer.WriteLine(id++.ToString() + ". " + bin.ToString());
 
-				var groups = bin.Items.GroupBy(i => i.Name);
+				var groups = bin.Items.GroupBy(i => $"{i.Name} {i.Length}");
 
 				foreach (var group in groups)
 				{
+					var first = group.First();
 					var count = group.Count();
-					var length = group.First().Length.ToString().PadLeft(max + 2);
-					var name = group.Key;
+					var length = first.Length.ToString().PadLeft(max);
+					var name = first.Name;
 
-					writer.WriteLine($"   {count}pcs  @  {length}\" LG   Tag:{name}");
+					var pcsSingularOrPlural = count == 1 ? "pc" : "pcs";
+
+					writer.WriteLine($"   {count}{pcsSingularOrPlural}  @  {length}\" LG   Tag:{name}");
 				}
 
 				writer.WriteLine("---------------------------------------------------------------------");
