@@ -43,6 +43,8 @@ namespace CutToLength.Forms
 
 			binLayoutView1.Bin = selectedBin;
 			binLayoutView1.Invalidate();
+
+			dataGridView2.DataSource = selectedBin.Items;
 		}
 
 		public List<Bin> Bins
