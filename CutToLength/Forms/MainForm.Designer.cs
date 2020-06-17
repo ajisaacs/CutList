@@ -1,4 +1,4 @@
-﻿namespace CutToLength
+﻿namespace CutToLength.Forms
 {
     partial class MainForm
     {

@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace CutToLength
+namespace CutToLength.Forms
 {
 	public partial class ResultsForm : Form
 	{
@@ -41,8 +41,8 @@ namespace CutToLength
 			if (selectedBin == null)
 				return;
 
-			class11.Bin = selectedBin;
-			class11.Invalidate();
+			binLayoutView1.Bin = selectedBin;
+			binLayoutView1.Invalidate();
 		}
 
 		public List<Bin> Bins

@@ -1,38 +1,38 @@
-﻿namespace CutToLength
+﻿namespace CutToLength.Forms
 {
-	partial class ResultsForm
-	{
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		private System.ComponentModel.IContainer components = null;
+    partial class ResultsForm
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
 
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
 
-		#region Windows Form Designer generated code
+        #region Windows Form Designer generated code
 
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
-		private void InitializeComponent()
-		{
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
             this.components = new System.ComponentModel.Container();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.binBindingSource = new System.Windows.Forms.BindingSource(this.components);
-            this.class11 = new CutToLength.BinLayoutView();
+            this.binLayoutView1 = new CutToLength.Controls.BinLayoutView();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.uIItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.spacingDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -79,14 +79,14 @@
             // 
             // class11
             // 
-            this.class11.BackColor = System.Drawing.Color.White;
-            this.class11.Bin = null;
-            this.class11.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.class11.Location = new System.Drawing.Point(0, 0);
-            this.class11.Name = "class11";
-            this.class11.Size = new System.Drawing.Size(892, 181);
-            this.class11.TabIndex = 1;
-            this.class11.Text = "class11";
+            this.binLayoutView1.BackColor = System.Drawing.Color.White;
+            this.binLayoutView1.Bin = null;
+            this.binLayoutView1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.binLayoutView1.Location = new System.Drawing.Point(0, 0);
+            this.binLayoutView1.Name = "class11";
+            this.binLayoutView1.Size = new System.Drawing.Size(892, 181);
+            this.binLayoutView1.TabIndex = 1;
+            this.binLayoutView1.Text = "class11";
             // 
             // splitContainer1
             // 
@@ -102,7 +102,7 @@
             // 
             // splitContainer1.Panel2
             // 
-            this.splitContainer1.Panel2.Controls.Add(this.class11);
+            this.splitContainer1.Panel2.Controls.Add(this.binLayoutView1);
             this.splitContainer1.Size = new System.Drawing.Size(892, 441);
             this.splitContainer1.SplitterDistance = 256;
             this.splitContainer1.TabIndex = 2;
@@ -167,15 +167,15 @@
             ((System.ComponentModel.ISupportInitialize)(this.uIItemBindingSource)).EndInit();
             this.ResumeLayout(false);
 
-		}
+        }
 
-		#endregion
+        #endregion
 
-		private System.Windows.Forms.DataGridView dataGridView1;
-		private BinLayoutView class11;
-		private System.Windows.Forms.BindingSource binBindingSource;
-		private System.Windows.Forms.SplitContainer splitContainer1;
-		private System.Windows.Forms.BindingSource uIItemBindingSource;
+        private System.Windows.Forms.DataGridView dataGridView1;
+        private Controls.BinLayoutView binLayoutView1;
+        private System.Windows.Forms.BindingSource binBindingSource;
+        private System.Windows.Forms.SplitContainer splitContainer1;
+        private System.Windows.Forms.BindingSource uIItemBindingSource;
         private System.Windows.Forms.DataGridViewTextBoxColumn spacingDataGridViewTextBoxColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn lengthDataGridViewTextBoxColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn usedLengthDataGridViewTextBoxColumn;

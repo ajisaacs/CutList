@@ -1,0 +1,91 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+
+namespace CutToLength.Nesting
+{
+    public class BestFitEngine : IEngine
+    {
+        public double StockLength { get; set; }
+
+        public double Spacing { get; set; }
+
+        private List<BinItem> Items { get; set; }
+
+        public Result Pack(List<BinItem> items)
+        {
+            if (StockLength <= 0)
+                throw new Exception("Stock length must be greater than 0");
+
+            Items = items.OrderByDescending(i => i.Length).ToList();
+
+            var result = new Result();
+            result.ItemsNotUsed = Items.Where(i => i.Length > StockLength).ToList();
+
+            foreach (var item in result.ItemsNotUsed)
+            {
+                Items.Remove(item);
+            }
+
+            result.Bins = GetBins();
+
+            return result;
+        }
+
+        private List<Bin> GetBins()
+        {
+            var bins = new List<Bin>();
+
+            foreach (var item in Items)
+            {
+                Bin best_bin;
+
+                if (!FindBin(bins.ToArray(), item.Length, out best_bin))
+                {
+                    if (item.Length > StockLength)
+                        continue;
+
+                    best_bin = CreateBin();
+                    bins.Add(best_bin);
+                }
+
+                best_bin.Items.Add(item);
+            }
+
+            return bins
+                .OrderByDescending(b => b.Utilization)
+                .ThenBy(b => b.Items.Count)
+                .ToList();
+        }
+
+        private Bin CreateBin()
+        {
+            var length = StockLength;
+
+            return new Bin(length)
+            {
+                Spacing = Spacing
+            };
+        }
+
+        private static bool FindBin(IEnumerable<Bin> bins, double length, out Bin found)
+        {
+            found = null;
+
+            foreach (var bin in bins)
+            {
+                if (bin.RemainingLength < length)
+                    continue;
+
+                if (found == null)
+                    found = bin;
+
+                if (bin.RemainingLength < found.RemainingLength)
+                    found = bin;
+            }
+
+            return (found != null);
+        }
+    }
+}

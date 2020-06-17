@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using CutToLength.Nesting;
+using Newtonsoft.Json;
 using SimpleExpressionEvaluator;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace CutToLength
+namespace CutToLength.Forms
 {
     public partial class MainForm : Form
     {
@@ -246,7 +247,7 @@ namespace CutToLength
 
         private string ToolsFilePath
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools.json"); }
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data\\Tools.json"); }
         }
 
         private List<Tool> GetTools()
