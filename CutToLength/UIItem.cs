@@ -19,9 +19,11 @@ namespace CutToLength
             {
                 try
                 {
+                    var input = Fraction.ReplaceFractionsWithDecimals(LengthInputValue);
+
                     double d;
 
-                    if (double.TryParse(LengthInputValue, out d))
+                    if (double.TryParse(input, out d))
                     {
                         LengthInputValue += "\"";
                         return d;
