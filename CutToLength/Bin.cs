@@ -38,12 +38,11 @@ namespace CutToLength
 
         public override string ToString()
         {
-            return string.Format(
-                "Length: {0}\", {1}\" remaining, {2} items, {3}% utilization",
-                Math.Round(Length, 4),
-                Math.Round(RemainingLength, 4),
-                Items.Count,
-                Math.Round(Utilization, 2));
+            var totalLength = Math.Round(Length, 4);
+            var remainingLength = Math.Round(RemainingLength, 4);
+            var utilitation = Math.Round(Utilization * 100, 2);
+
+            return $"Length: {totalLength}\", {remainingLength}\" remaining, {Items.Count} items, {utilitation}% utilization";
         }
     }
 }
