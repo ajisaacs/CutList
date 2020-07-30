@@ -94,7 +94,7 @@ namespace CutToLength.Forms
 					var length = first.Length.ToString().PadLeft(max);
 					var name = first.Name;
 
-					var pcsSingularOrPlural = count == 1 ? "pc" : "pcs";
+					var pcsSingularOrPlural = count == 1 ? "pc " : "pcs";
 
 					writer.WriteLine($"   {count}{pcsSingularOrPlural}  @  {length}\" LG   Tag:{name}");
 				}
