@@ -1,4 +1,4 @@
-﻿namespace CutToLength
+﻿namespace SawCut
 {
     public class BinItem
     {

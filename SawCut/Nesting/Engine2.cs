@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 
-namespace CutToLength.Nesting
+namespace SawCut.Nesting
 {
     public class Engine2 : IEngine
     {
@@ -59,7 +59,7 @@ namespace CutToLength.Nesting
                 .ThenBy(b => b.Items.Count)
                 .ToList();
         }
-
+        
         private void FillBin(Bin bin)
         {
             for (int i = 0; i < Items.Count; i++)

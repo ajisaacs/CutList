@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace CutToLength
+namespace SawCut
 {
     public class Bin
     {

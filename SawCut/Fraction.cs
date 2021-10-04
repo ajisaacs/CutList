@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 using System.Linq;
 
-namespace CutToLength
+namespace SawCut
 {
     public static class Fraction
     {

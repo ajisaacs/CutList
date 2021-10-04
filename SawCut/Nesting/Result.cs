@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace CutToLength.Nesting
+namespace SawCut.Nesting
 {
     public class Result
     {

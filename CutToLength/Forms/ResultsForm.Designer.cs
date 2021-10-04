@@ -29,23 +29,24 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.splitContainer2 = new System.Windows.Forms.SplitContainer();
-            this.dataGridView2 = new System.Windows.Forms.DataGridView();
-            this.label1 = new System.Windows.Forms.Label();
             this.spacingDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.usedLengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.remainingLengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.utilizationDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.binBindingSource = new System.Windows.Forms.BindingSource(this.components);
+            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.splitContainer2 = new System.Windows.Forms.SplitContainer();
+            this.dataGridView2 = new System.Windows.Forms.DataGridView();
             this.binLayoutView1 = new CutToLength.Controls.BinLayoutView();
+            this.label1 = new System.Windows.Forms.Label();
             this.uIItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.saveToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.binBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -55,7 +56,6 @@
             this.splitContainer2.Panel2.SuspendLayout();
             this.splitContainer2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.binBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.uIItemBindingSource)).BeginInit();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -83,6 +83,46 @@
             this.dataGridView1.Size = new System.Drawing.Size(994, 253);
             this.dataGridView1.TabIndex = 0;
             this.dataGridView1.RowEnter += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_RowEnter);
+            // 
+            // spacingDataGridViewTextBoxColumn
+            // 
+            this.spacingDataGridViewTextBoxColumn.DataPropertyName = "Spacing";
+            this.spacingDataGridViewTextBoxColumn.HeaderText = "Spacing";
+            this.spacingDataGridViewTextBoxColumn.Name = "spacingDataGridViewTextBoxColumn";
+            // 
+            // lengthDataGridViewTextBoxColumn
+            // 
+            this.lengthDataGridViewTextBoxColumn.DataPropertyName = "Length";
+            this.lengthDataGridViewTextBoxColumn.HeaderText = "Length";
+            this.lengthDataGridViewTextBoxColumn.Name = "lengthDataGridViewTextBoxColumn";
+            // 
+            // usedLengthDataGridViewTextBoxColumn
+            // 
+            this.usedLengthDataGridViewTextBoxColumn.DataPropertyName = "UsedLength";
+            this.usedLengthDataGridViewTextBoxColumn.HeaderText = "Used Length";
+            this.usedLengthDataGridViewTextBoxColumn.Name = "usedLengthDataGridViewTextBoxColumn";
+            this.usedLengthDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // remainingLengthDataGridViewTextBoxColumn
+            // 
+            this.remainingLengthDataGridViewTextBoxColumn.DataPropertyName = "RemainingLength";
+            this.remainingLengthDataGridViewTextBoxColumn.HeaderText = "Remaining Length";
+            this.remainingLengthDataGridViewTextBoxColumn.Name = "remainingLengthDataGridViewTextBoxColumn";
+            this.remainingLengthDataGridViewTextBoxColumn.ReadOnly = true;
+            this.remainingLengthDataGridViewTextBoxColumn.Width = 150;
+            // 
+            // utilizationDataGridViewTextBoxColumn
+            // 
+            this.utilizationDataGridViewTextBoxColumn.DataPropertyName = "Utilization";
+            dataGridViewCellStyle1.Format = "P2";
+            this.utilizationDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle1;
+            this.utilizationDataGridViewTextBoxColumn.HeaderText = "Utilization";
+            this.utilizationDataGridViewTextBoxColumn.Name = "utilizationDataGridViewTextBoxColumn";
+            this.utilizationDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // binBindingSource
+            // 
+            this.binBindingSource.DataSource = typeof(SawCut.Bin);
             // 
             // splitContainer1
             // 
@@ -136,6 +176,17 @@
             this.dataGridView2.Size = new System.Drawing.Size(276, 216);
             this.dataGridView2.TabIndex = 1;
             // 
+            // binLayoutView1
+            // 
+            this.binLayoutView1.BackColor = System.Drawing.Color.White;
+            this.binLayoutView1.Bin = null;
+            this.binLayoutView1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.binLayoutView1.Location = new System.Drawing.Point(0, 0);
+            this.binLayoutView1.Name = "binLayoutView1";
+            this.binLayoutView1.Size = new System.Drawing.Size(714, 216);
+            this.binLayoutView1.TabIndex = 1;
+            this.binLayoutView1.Text = "class11";
+            // 
             // label1
             // 
             this.label1.BackColor = System.Drawing.Color.LightSlateGray;
@@ -148,57 +199,6 @@
             this.label1.TabIndex = 2;
             this.label1.Text = "Items";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
-            // spacingDataGridViewTextBoxColumn
-            // 
-            this.spacingDataGridViewTextBoxColumn.DataPropertyName = "Spacing";
-            this.spacingDataGridViewTextBoxColumn.HeaderText = "Spacing";
-            this.spacingDataGridViewTextBoxColumn.Name = "spacingDataGridViewTextBoxColumn";
-            // 
-            // lengthDataGridViewTextBoxColumn
-            // 
-            this.lengthDataGridViewTextBoxColumn.DataPropertyName = "Length";
-            this.lengthDataGridViewTextBoxColumn.HeaderText = "Length";
-            this.lengthDataGridViewTextBoxColumn.Name = "lengthDataGridViewTextBoxColumn";
-            // 
-            // usedLengthDataGridViewTextBoxColumn
-            // 
-            this.usedLengthDataGridViewTextBoxColumn.DataPropertyName = "UsedLength";
-            this.usedLengthDataGridViewTextBoxColumn.HeaderText = "Used Length";
-            this.usedLengthDataGridViewTextBoxColumn.Name = "usedLengthDataGridViewTextBoxColumn";
-            this.usedLengthDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // remainingLengthDataGridViewTextBoxColumn
-            // 
-            this.remainingLengthDataGridViewTextBoxColumn.DataPropertyName = "RemainingLength";
-            this.remainingLengthDataGridViewTextBoxColumn.HeaderText = "Remaining Length";
-            this.remainingLengthDataGridViewTextBoxColumn.Name = "remainingLengthDataGridViewTextBoxColumn";
-            this.remainingLengthDataGridViewTextBoxColumn.ReadOnly = true;
-            this.remainingLengthDataGridViewTextBoxColumn.Width = 150;
-            // 
-            // utilizationDataGridViewTextBoxColumn
-            // 
-            this.utilizationDataGridViewTextBoxColumn.DataPropertyName = "Utilization";
-            dataGridViewCellStyle5.Format = "P2";
-            this.utilizationDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle5;
-            this.utilizationDataGridViewTextBoxColumn.HeaderText = "Utilization";
-            this.utilizationDataGridViewTextBoxColumn.Name = "utilizationDataGridViewTextBoxColumn";
-            this.utilizationDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // binBindingSource
-            // 
-            this.binBindingSource.DataSource = typeof(CutToLength.Bin);
-            // 
-            // binLayoutView1
-            // 
-            this.binLayoutView1.BackColor = System.Drawing.Color.White;
-            this.binLayoutView1.Bin = null;
-            this.binLayoutView1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.binLayoutView1.Location = new System.Drawing.Point(0, 0);
-            this.binLayoutView1.Name = "binLayoutView1";
-            this.binLayoutView1.Size = new System.Drawing.Size(714, 216);
-            this.binLayoutView1.TabIndex = 1;
-            this.binLayoutView1.Text = "class11";
             // 
             // uIItemBindingSource
             // 
@@ -234,6 +234,7 @@
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Results";
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.binBindingSource)).EndInit();
             this.splitContainer1.Panel1.ResumeLayout(false);
             this.splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
@@ -243,7 +244,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
             this.splitContainer2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.binBindingSource)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.uIItemBindingSource)).EndInit();
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
