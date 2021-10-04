@@ -2,7 +2,7 @@
 using SawCut;
 using System;
 
-namespace CutToLength
+namespace CutList
 {
     public class UIItem
     {

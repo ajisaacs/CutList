@@ -1,4 +1,4 @@
-﻿namespace CutToLength.Forms
+﻿namespace CutList.Forms
 {
     partial class MainForm
     {
@@ -124,7 +124,7 @@
             // 
             // itemBindingSource
             // 
-            this.itemBindingSource.DataSource = typeof(CutToLength.UIItem);
+            this.itemBindingSource.DataSource = typeof(CutList.UIItem);
             // 
             // label1
             // 
@@ -164,7 +164,7 @@
             // toolStripButton1
             // 
             this.toolStripButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.toolStripButton1.Image = global::CutToLength.Properties.Resources.Open_Folder_32;
+            this.toolStripButton1.Image = global::CutList.Properties.Resources.Open_Folder_32;
             this.toolStripButton1.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.toolStripButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toolStripButton1.Name = "toolStripButton1";
@@ -176,7 +176,7 @@
             // saveButton
             // 
             this.saveButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.saveButton.Image = global::CutToLength.Properties.Resources.Save_32;
+            this.saveButton.Image = global::CutList.Properties.Resources.Save_32;
             this.saveButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.saveButton.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.saveButton.Name = "saveButton";
@@ -193,7 +193,7 @@
             // runButton
             // 
             this.runButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.runButton.Image = global::CutToLength.Properties.Resources.Circled_Play_32;
+            this.runButton.Image = global::CutList.Properties.Resources.Circled_Play_32;
             this.runButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.runButton.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.runButton.Name = "runButton";

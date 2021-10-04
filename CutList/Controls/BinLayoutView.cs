@@ -3,9 +3,9 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
-namespace CutToLength.Controls
+namespace CutList.Controls
 {
-    class BinLayoutView : Control
+    public class BinLayoutView : Control
     {
         public Bin Bin { get; set; }
 

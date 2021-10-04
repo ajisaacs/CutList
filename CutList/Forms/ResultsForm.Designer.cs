@@ -1,4 +1,4 @@
-﻿namespace CutToLength.Forms
+﻿namespace CutList.Forms
 {
     partial class ResultsForm
     {
@@ -40,7 +40,7 @@
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.dataGridView2 = new System.Windows.Forms.DataGridView();
-            this.binLayoutView1 = new CutToLength.Controls.BinLayoutView();
+            this.binLayoutView1 = new CutList.Controls.BinLayoutView();
             this.label1 = new System.Windows.Forms.Label();
             this.uIItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
@@ -202,7 +202,7 @@
             // 
             // uIItemBindingSource
             // 
-            this.uIItemBindingSource.DataSource = typeof(CutToLength.UIItem);
+            this.uIItemBindingSource.DataSource = typeof(CutList.UIItem);
             // 
             // menuStrip1
             // 

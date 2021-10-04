@@ -11,7 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace CutToLength.Forms
+namespace CutList.Forms
 {
     public partial class MainForm : Form
     {

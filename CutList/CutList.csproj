@@ -7,7 +7,7 @@
     <ProjectGuid>{3E82A1E3-07A8-40C4-ABC4-DF24C5120073}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CutToLength</RootNamespace>
+    <RootNamespace>CutList</RootNamespace>
     <AssemblyName>CutList</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
