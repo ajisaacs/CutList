@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using CutList.Models;
+using Newtonsoft.Json;
 using SawCut;
 using SawCut.Nesting;
 using SimpleExpressionEvaluator;
@@ -15,13 +16,13 @@ namespace CutList.Forms
 {
     public partial class MainForm : Form
     {
-        private BindingList<UIItem> items;
+        private BindingList<Item> items;
 
         public MainForm()
         {
             InitializeComponent();
 
-            items = new BindingList<UIItem>();
+            items = new BindingList<Item>();
             items.ListChanged += Items_ListChanged;
 
             itemBindingSource.DataSource = items;
@@ -98,7 +99,7 @@ namespace CutList.Forms
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 var data = File.ReadAllText(openFileDialog.FileName);
-                items = JsonConvert.DeserializeObject<BindingList<UIItem>>(data);
+                items = JsonConvert.DeserializeObject<BindingList<Item>>(data);
 
                 dataGridView1.ClearSelection();
                 itemBindingSource.DataSource = items;
@@ -287,7 +288,7 @@ namespace CutList.Forms
         {
             if (e.ColumnIndex == lengthDataGridViewTextBoxColumn.Index)
             {
-                var item = dataGridView1.Rows[e.RowIndex].DataBoundItem as UIItem;
+                var item = dataGridView1.Rows[e.RowIndex].DataBoundItem as Item;
 
                 if (item == null)
                     return;

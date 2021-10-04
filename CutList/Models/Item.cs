@@ -2,11 +2,11 @@
 using SawCut;
 using System;
 
-namespace CutList
+namespace CutList.Models
 {
-    public class UIItem
+    public class Item
     {
-        public UIItem()
+        public Item()
         {
         }
 

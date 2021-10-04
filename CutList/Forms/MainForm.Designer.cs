@@ -124,7 +124,7 @@
             // 
             // itemBindingSource
             // 
-            this.itemBindingSource.DataSource = typeof(CutList.UIItem);
+            this.itemBindingSource.DataSource = typeof(CutList.Models.Item);
             // 
             // label1
             // 
