@@ -17,16 +17,20 @@ namespace CutList.Forms
     public partial class MainForm : Form
     {
         private BindingList<Item> items;
+        private BindingList<BinInputItem> bins;
 
         public MainForm()
         {
             InitializeComponent();
 
             items = new BindingList<Item>();
-            items.ListChanged += Items_ListChanged;
+            bins = new BindingList<BinInputItem>();
 
             itemBindingSource.DataSource = items;
             itemBindingSource.ListChanged += ItemBindingSource_ListChanged;
+
+            binInputItemBindingSource.DataSource = bins;
+            binInputItemBindingSource.ListChanged += BinInputItemBindingSource_ListChanged;
 
             if (!File.Exists(ToolsFilePath))
             {
@@ -46,13 +50,14 @@ namespace CutList.Forms
             }
         }
 
-        private void ItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
+        private void BinInputItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
         {
             UpdateRunButtonState();
         }
 
-        private void Items_ListChanged(object sender, ListChangedEventArgs e)
+        private void ItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
         {
+            UpdateRunButtonState();
         }
 
         protected override void OnLoad(EventArgs e)
@@ -74,7 +79,7 @@ namespace CutList.Forms
             if (!items.Any(i => i.Length > 0 && i.Quantity > 0))
                 return false;
 
-            if (Double.IsNaN(StockLengthInches))
+            if (!bins.Any(i => i.Length > 0 && i.Quantity > 0))
                 return false;
 
             for (int rowIndex = 0; rowIndex < dataGridView1.Rows.Count; rowIndex++)
@@ -122,44 +127,24 @@ namespace CutList.Forms
                 File.WriteAllText(saveFileDialog.FileName, json);
         }
 
-        private double StockLengthInches
-        {
-            get
-            {
-                return GetLengthInches(stockLengthBox);
-            }
-        }
-
-        private double GetLengthInches(TextBox tb)
-        {
-            try
-            {
-                double d;
-
-                if (double.TryParse(tb.Text, out d))
-                {
-                    return d;
-                }
-
-                var x = ArchUnits.ParseToInches(tb.Text);
-                tb.ForeColor = SystemColors.WindowText;
-                return x;
-
-            }
-            catch
-            {
-                tb.ForeColor = Color.Red;
-                return double.NaN;
-            }
-        }
-
         private void Run()
         {
             var cutTool = GetSelectedTool();
+            var stockBins = new List<MultiBin>();
 
-            var engine = new Engine2();
+            foreach (var item in bins)
+            {
+                stockBins.Add(new MultiBin
+                {
+                    Length = item.Length.Value,
+                    Quantity = item.Quantity,
+                    Priority = item.Priority
+                });
+            }
+
+            var engine = new MultiBinEngine();
             engine.Spacing = cutTool.Kerf;
-            engine.StockLength = StockLengthInches;
+            engine.Bins = stockBins;
 
             var items = GetItems();
             var result = engine.Pack(items);
@@ -167,14 +152,6 @@ namespace CutList.Forms
             var form = new ResultsForm();
             form.Bins = result.Bins;
             form.ShowDialog();
-
-            //var saveFileDialog = new SaveFileDialog();
-            //saveFileDialog.Filter = "Text File|*.txt";
-
-            //if (saveFileDialog.ShowDialog() == DialogResult.OK)
-            //{
-            //    SaveBins(saveFileDialog.FileName, bins);
-            //}
         }
 
         private List<BinItem> GetItems()
@@ -284,33 +261,6 @@ namespace CutList.Forms
             }
         }
 
-        private void DataGridView1_CellValidated(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.ColumnIndex == lengthDataGridViewTextBoxColumn.Index)
-            {
-                var item = dataGridView1.Rows[e.RowIndex].DataBoundItem as Item;
-
-                if (item == null)
-                    return;
-
-                var errorText = string.Empty;
-
-                if (item.Length == null)
-                {
-                    errorText = "Length is not in a valid format.";
-                }
-
-                dataGridView1.Rows[e.RowIndex].ErrorText = errorText;
-            }
-
-            UpdateRunButtonState();
-        }
-
-        private void StockLengthBox_TextChanged(object sender, EventArgs e)
-        {
-            UpdateRunButtonState();
-        }
-
         private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
             if (e.ColumnIndex == lengthDataGridViewTextBoxColumn.Index)
@@ -321,6 +271,17 @@ namespace CutList.Forms
         {
             dataGridView1.Rows[e.RowIndex].ErrorText = e.Exception.InnerException?.Message;
             e.ThrowException = false;
+        }
+
+        private void dataGridView2_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void dataGridView2_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.ColumnIndex == lengthInputValueDataGridViewTextBoxColumn.Index)
+                dataGridView2.Refresh();
         }
     }
 }

@@ -4,13 +4,11 @@ using System;
 
 namespace CutList.Models
 {
-    public class Item
+    public class BinInputItem
     {
-        public Item()
+        public BinInputItem()
         {
         }
-
-        public string Name { get; set; }
 
         public string LengthInputValue { get; set; }
 
@@ -42,17 +40,27 @@ namespace CutList.Models
         [JsonIgnore]
         public double? TotalLength
         {
-            get 
+            get
             {
                 var length = Length;
 
                 if (length == null)
                     return null;
 
-                return Math.Round(length.Value * Quantity, 8); 
+                return Math.Round(length.Value * Quantity, 8);
+            }
+        }
+
+        public string TotalLengthString
+        {
+            get 
+            { 
+                return TotalLength.HasValue ? ArchUnits.FormatFromInches(TotalLength.Value) : "-"; 
             }
         }
 
         public int Quantity { get; set; } = 1;
+
+        public int Priority { get; set; } = 10;
     }
 }

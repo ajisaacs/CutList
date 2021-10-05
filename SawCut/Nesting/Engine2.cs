@@ -11,6 +11,8 @@ namespace SawCut.Nesting
 
         public double Spacing { get; set; }
 
+        public int MaxBinCount { get; set; } = int.MaxValue;
+
         private List<BinItem> Items { get; set; }
 
         public Result Pack(List<BinItem> items)
@@ -30,6 +32,16 @@ namespace SawCut.Nesting
 
             result.Bins = GetBins();
 
+            foreach (var bin in result.Bins)
+            {
+                foreach (var item in bin.Items)
+                {
+                    Items.Remove(item);
+                }
+            }
+
+            result.ItemsNotUsed.AddRange(Items);
+
             return result;
         }
 
@@ -37,7 +49,7 @@ namespace SawCut.Nesting
         {
             var bins = new List<Bin>();
 
-            while (Items.Count > 0)
+            while (Items.Count > 0 && bins.Count < MaxBinCount)
             {
                 var bin = new Bin(StockLength);
                 bin.Spacing = Spacing;

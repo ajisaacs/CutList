@@ -7,6 +7,7 @@ namespace SawCut.Nesting
         public Result()
         {
             ItemsNotUsed = new List<BinItem>();
+            Bins = new List<Bin>();
         }
 
         public List<BinItem> ItemsNotUsed { get; set; }

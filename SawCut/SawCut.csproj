@@ -45,8 +45,10 @@
     <Compile Include="Bin.cs" />
     <Compile Include="BinItem.cs" />
     <Compile Include="Fraction.cs" />
+    <Compile Include="MultiBin.cs" />
     <Compile Include="Nesting\BestFitEngine.cs" />
     <Compile Include="Nesting\IEngine.cs" />
+    <Compile Include="Nesting\MultiBinEngine.cs" />
     <Compile Include="Nesting\Result.cs" />
     <Compile Include="Nesting\Engine2.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
