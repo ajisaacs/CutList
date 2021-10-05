@@ -79,7 +79,7 @@ namespace CutList.Forms
 			var writer = new StreamWriter(file);
 			writer.AutoFlush = true;
 
-			var max = Bins.Max(b => b.Items.Max(i => i.Length.ToString().Length));
+			var max = Bins.Max(b => b.Items.Max(i => ArchUnits.FormatFromInches(i.Length).Length));
 			var id = 1;
 
 			foreach (var bin in Bins)
@@ -92,16 +92,16 @@ namespace CutList.Forms
 				{
 					var first = group.First();
 					var count = group.Count();
-					var length = first.Length.ToString().PadLeft(max);
+					var length = ArchUnits.FormatFromInches(first.Length).ToString().PadLeft(max);
 					var name = first.Name;
 
 					var pcsSingularOrPlural = count == 1 ? "pc " : "pcs";
 
-					writer.WriteLine($"   {count}{pcsSingularOrPlural}  @  {length}\" LG   Tag:{name}");
+					writer.WriteLine($"   {count}{pcsSingularOrPlural}  @  {length} LG   Tag: {name}");
 				}
 
 				writer.WriteLine("---------------------------------------------------------------------");
-				writer.WriteLine();
+				//writer.WriteLine();
 			}
 
 			writer.Close();

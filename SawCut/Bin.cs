@@ -38,11 +38,11 @@ namespace SawCut
 
         public override string ToString()
         {
-            var totalLength = Math.Round(Length, 4);
-            var remainingLength = Math.Round(RemainingLength, 4);
+            var totalLength = ArchUnits.FormatFromInches(Math.Round(Length, 4));
+            var remainingLength = ArchUnits.FormatFromInches(Math.Round(RemainingLength, 4));
             var utilitation = Math.Round(Utilization * 100, 2);
 
-            return $"Length: {totalLength}\", {remainingLength}\" remaining, {Items.Count} items, {utilitation}% utilization";
+            return $"Length: {totalLength}, {remainingLength} remaining, {Items.Count} items, {utilitation}% utilization";
         }
     }
 }

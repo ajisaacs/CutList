@@ -65,7 +65,7 @@ namespace SawCut
 
             if (feet > 0)
             {
-                return $"{feet}' {inches}\"";
+                return $"{feet}'-{inches}\"";
             }
             else
             {
