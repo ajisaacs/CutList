@@ -2,11 +2,9 @@
 using Newtonsoft.Json;
 using SawCut;
 using SawCut.Nesting;
-using SimpleExpressionEvaluator;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -278,7 +276,6 @@ namespace CutList.Forms
 
         private void dataGridView2_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-
         }
 
         private void dataGridView2_CellEndEdit(object sender, DataGridViewCellEventArgs e)

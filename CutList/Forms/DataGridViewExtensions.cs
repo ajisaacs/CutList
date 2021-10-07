@@ -5,7 +5,7 @@ namespace CutList.Forms
 {
     public static class DataGridViewExtensions
     {
-        static readonly StringFormat CenterVerticallyFormat = new StringFormat
+        private static readonly StringFormat CenterVerticallyFormat = new StringFormat
         {
             Alignment = StringAlignment.Far,
             LineAlignment = StringAlignment.Center
@@ -25,7 +25,6 @@ namespace CutList.Forms
                     headerBounds,
                     CenterVerticallyFormat);
             };
-
         }
     }
 }

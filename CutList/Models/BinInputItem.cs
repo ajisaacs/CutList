@@ -53,9 +53,9 @@ namespace CutList.Models
 
         public string TotalLengthString
         {
-            get 
-            { 
-                return TotalLength.HasValue ? ArchUnits.FormatFromInches(TotalLength.Value) : "-"; 
+            get
+            {
+                return TotalLength.HasValue ? ArchUnits.FormatFromInches(TotalLength.Value) : "-";
             }
         }
 

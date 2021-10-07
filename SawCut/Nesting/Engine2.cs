@@ -57,7 +57,7 @@ namespace SawCut.Nesting
                 FillBin(bin);
 
                 int count = 0;
-                
+
                 while (TryImprovePacking(bin))
                 {
                     count++;
@@ -71,7 +71,7 @@ namespace SawCut.Nesting
                 .ThenBy(b => b.Items.Count)
                 .ToList();
         }
-        
+
         private void FillBin(Bin bin)
         {
             for (int i = 0; i < Items.Count; i++)

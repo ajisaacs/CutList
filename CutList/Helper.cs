@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace CutList
 {
-    static class Helper
+    internal static class Helper
     {
         public static double GetLengthInches(TextBox tb)
         {
@@ -20,7 +20,6 @@ namespace CutList
                 var x = ArchUnits.ParseToInches(tb.Text);
                 tb.ForeColor = SystemColors.WindowText;
                 return x;
-
             }
             catch
             {

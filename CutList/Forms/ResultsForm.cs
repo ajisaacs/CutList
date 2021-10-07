@@ -1,14 +1,9 @@
 ﻿using SawCut;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace CutList.Forms
@@ -49,7 +44,7 @@ namespace CutList.Forms
 
             s.FileName = name;
             s.Filter = "Text File|*.txt";
-            
+
             if (s.ShowDialog() != DialogResult.OK)
             {
                 return;

@@ -42,14 +42,14 @@ namespace CutList.Models
         [JsonIgnore]
         public double? TotalLength
         {
-            get 
+            get
             {
                 var length = Length;
 
                 if (length == null)
                     return null;
 
-                return Math.Round(length.Value * Quantity, 8); 
+                return Math.Round(length.Value * Quantity, 8);
             }
         }
 

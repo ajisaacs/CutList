@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Text.RegularExpressions;
 using System.Text;
-using SawCut;
+using System.Text.RegularExpressions;
 
 namespace SawCut
 {
