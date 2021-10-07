@@ -26,6 +26,9 @@ namespace CutList.Forms
             items = new BindingList<Item>();
             bins = new BindingList<BinInputItem>();
 
+            dataGridView1.DrawingRowNumbers();
+            dataGridView2.DrawingRowNumbers();
+
             itemBindingSource.DataSource = items;
             itemBindingSource.ListChanged += ItemBindingSource_ListChanged;
 
