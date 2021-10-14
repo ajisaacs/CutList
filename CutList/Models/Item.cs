@@ -4,13 +4,18 @@ using System;
 
 namespace CutList.Models
 {
-    public class Item
+    public class Item : LengthItem
     {
         public Item()
         {
         }
 
         public string Name { get; set; }
+    }
+
+    public class LengthItem
+    {
+        public int Quantity { get; set; } = 1;
 
         public string LengthInputValue { get; set; }
 
@@ -53,6 +58,12 @@ namespace CutList.Models
             }
         }
 
-        public int Quantity { get; set; } = 1;
+        public string TotalLengthString
+        {
+            get
+            {
+                return TotalLength.HasValue ? ArchUnits.FormatFromInches(TotalLength.Value) : "-";
+            }
+        }
     }
 }

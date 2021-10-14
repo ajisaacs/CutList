@@ -29,12 +29,11 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.TotalLength = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.toolStripButton1 = new System.Windows.Forms.ToolStripButton();
             this.saveButton = new System.Windows.Forms.ToolStripButton();
@@ -48,15 +47,16 @@
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.dataGridView2 = new System.Windows.Forms.DataGridView();
+            this.TotalLengthString = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.itemBindingSource = new System.Windows.Forms.BindingSource(this.components);
+            this.lengthInputValueDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.quantityDataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.priorityDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.binInputItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.nameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.quantityDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.itemBindingSource = new System.Windows.Forms.BindingSource(this.components);
-            this.binInputItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
-            this.lengthInputValueDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.quantityDataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.TotalLengthString = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.priorityDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.TotalLength = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.toolStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
@@ -95,18 +95,6 @@
             this.dataGridView1.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
             this.dataGridView1.CellValidated += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
             this.dataGridView1.DataError += new System.Windows.Forms.DataGridViewDataErrorEventHandler(this.dataGridView1_DataError);
-            // 
-            // TotalLength
-            // 
-            this.TotalLength.DataPropertyName = "TotalLength";
-            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Info;
-            dataGridViewCellStyle3.Format = "N3";
-            this.TotalLength.DefaultCellStyle = dataGridViewCellStyle3;
-            this.TotalLength.HeaderText = "Total Length (in)";
-            this.TotalLength.Name = "TotalLength";
-            this.TotalLength.ReadOnly = true;
-            this.TotalLength.Width = 150;
             // 
             // toolStrip1
             // 
@@ -233,10 +221,10 @@
             this.tabPage1.Controls.Add(this.comboBox1);
             this.tabPage1.Controls.Add(this.label4);
             this.tabPage1.Controls.Add(this.label3);
-            this.tabPage1.Location = new System.Drawing.Point(4, 26);
+            this.tabPage1.Location = new System.Drawing.Point(4, 22);
             this.tabPage1.Name = "tabPage1";
             this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(848, 465);
+            this.tabPage1.Size = new System.Drawing.Size(848, 469);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "STOCK LENGTHS";
             this.tabPage1.UseVisualStyleBackColor = true;
@@ -264,10 +252,45 @@
             this.dataGridView2.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
             this.dataGridView2.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
             this.dataGridView2.RowTemplate.Height = 26;
-            this.dataGridView2.Size = new System.Drawing.Size(836, 347);
+            this.dataGridView2.Size = new System.Drawing.Size(836, 343);
             this.dataGridView2.TabIndex = 12;
             this.dataGridView2.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView2_CellContentClick);
             this.dataGridView2.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView2_CellEndEdit);
+            // 
+            // TotalLengthString
+            // 
+            this.TotalLengthString.DataPropertyName = "TotalLengthString";
+            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Info;
+            this.TotalLengthString.DefaultCellStyle = dataGridViewCellStyle4;
+            this.TotalLengthString.HeaderText = "Total Length";
+            this.TotalLengthString.Name = "TotalLengthString";
+            this.TotalLengthString.ReadOnly = true;
+            // 
+            // itemBindingSource
+            // 
+            this.itemBindingSource.DataSource = typeof(CutList.Models.Item);
+            // 
+            // lengthInputValueDataGridViewTextBoxColumn
+            // 
+            this.lengthInputValueDataGridViewTextBoxColumn.DataPropertyName = "LengthInputValue";
+            this.lengthInputValueDataGridViewTextBoxColumn.HeaderText = "Length";
+            this.lengthInputValueDataGridViewTextBoxColumn.Name = "lengthInputValueDataGridViewTextBoxColumn";
+            // 
+            // quantityDataGridViewTextBoxColumn1
+            // 
+            this.quantityDataGridViewTextBoxColumn1.DataPropertyName = "Quantity";
+            this.quantityDataGridViewTextBoxColumn1.HeaderText = "Quantity";
+            this.quantityDataGridViewTextBoxColumn1.Name = "quantityDataGridViewTextBoxColumn1";
+            // 
+            // priorityDataGridViewTextBoxColumn
+            // 
+            this.priorityDataGridViewTextBoxColumn.DataPropertyName = "Priority";
+            this.priorityDataGridViewTextBoxColumn.HeaderText = "Priority";
+            this.priorityDataGridViewTextBoxColumn.Name = "priorityDataGridViewTextBoxColumn";
+            // 
+            // binInputItemBindingSource
+            // 
+            this.binInputItemBindingSource.DataSource = typeof(CutList.Models.BinInputItem);
             // 
             // nameDataGridViewTextBoxColumn
             // 
@@ -294,40 +317,17 @@
             this.quantityDataGridViewTextBoxColumn.Name = "quantityDataGridViewTextBoxColumn";
             this.quantityDataGridViewTextBoxColumn.Width = 50;
             // 
-            // itemBindingSource
+            // TotalLength
             // 
-            this.itemBindingSource.DataSource = typeof(CutList.Models.Item);
-            // 
-            // binInputItemBindingSource
-            // 
-            this.binInputItemBindingSource.DataSource = typeof(CutList.Models.BinInputItem);
-            // 
-            // lengthInputValueDataGridViewTextBoxColumn
-            // 
-            this.lengthInputValueDataGridViewTextBoxColumn.DataPropertyName = "LengthInputValue";
-            this.lengthInputValueDataGridViewTextBoxColumn.HeaderText = "Length";
-            this.lengthInputValueDataGridViewTextBoxColumn.Name = "lengthInputValueDataGridViewTextBoxColumn";
-            // 
-            // quantityDataGridViewTextBoxColumn1
-            // 
-            this.quantityDataGridViewTextBoxColumn1.DataPropertyName = "Quantity";
-            this.quantityDataGridViewTextBoxColumn1.HeaderText = "Quantity";
-            this.quantityDataGridViewTextBoxColumn1.Name = "quantityDataGridViewTextBoxColumn1";
-            // 
-            // TotalLengthString
-            // 
-            this.TotalLengthString.DataPropertyName = "TotalLengthString";
-            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Info;
-            this.TotalLengthString.DefaultCellStyle = dataGridViewCellStyle4;
-            this.TotalLengthString.HeaderText = "Total Length";
-            this.TotalLengthString.Name = "TotalLengthString";
-            this.TotalLengthString.ReadOnly = true;
-            // 
-            // priorityDataGridViewTextBoxColumn
-            // 
-            this.priorityDataGridViewTextBoxColumn.DataPropertyName = "Priority";
-            this.priorityDataGridViewTextBoxColumn.HeaderText = "Priority";
-            this.priorityDataGridViewTextBoxColumn.Name = "priorityDataGridViewTextBoxColumn";
+            this.TotalLength.DataPropertyName = "TotalLengthString";
+            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
+            dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Info;
+            dataGridViewCellStyle3.Format = "N3";
+            this.TotalLength.DefaultCellStyle = dataGridViewCellStyle3;
+            this.TotalLength.HeaderText = "Total Length";
+            this.TotalLength.Name = "TotalLength";
+            this.TotalLength.ReadOnly = true;
+            this.TotalLength.Width = 150;
             // 
             // MainForm
             // 
@@ -368,10 +368,6 @@
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.DataGridViewTextBoxColumn nameDataGridViewTextBoxColumn;
-        private System.Windows.Forms.DataGridViewTextBoxColumn lengthDataGridViewTextBoxColumn;
-        private System.Windows.Forms.DataGridViewTextBoxColumn quantityDataGridViewTextBoxColumn;
-        private System.Windows.Forms.DataGridViewTextBoxColumn TotalLength;
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.TabPage tabPage2;
@@ -381,6 +377,10 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn quantityDataGridViewTextBoxColumn1;
         private System.Windows.Forms.DataGridViewTextBoxColumn TotalLengthString;
         private System.Windows.Forms.DataGridViewTextBoxColumn priorityDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn nameDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn lengthDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn quantityDataGridViewTextBoxColumn;
+        private System.Windows.Forms.DataGridViewTextBoxColumn TotalLength;
     }
 }
 
