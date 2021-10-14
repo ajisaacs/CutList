@@ -62,6 +62,8 @@ namespace SawCut
             var feet = Math.Floor(totalInches / 12.0);
             var inches = totalInches - (feet * 12.0);
 
+            inches = Math.Round(inches, 8);
+
             if (feet > 0)
             {
                 return $"{feet}'-{inches}\"";
