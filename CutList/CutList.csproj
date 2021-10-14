@@ -83,9 +83,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Controls\BinLayoutView.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="Controls\BinLayoutView.cs" />
     <Compile Include="Forms\DataGridViewExtensions.cs" />
     <Compile Include="Forms\MainForm.cs">
       <SubType>Form</SubType>
@@ -93,9 +91,7 @@
     <Compile Include="Forms\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\ResultsForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Forms\ResultsForm.cs" />
     <Compile Include="Forms\ResultsForm.Designer.cs">
       <DependentUpon>ResultsForm.cs</DependentUpon>
     </Compile>

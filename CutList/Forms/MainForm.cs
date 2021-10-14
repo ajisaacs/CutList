@@ -56,22 +56,6 @@ namespace CutList.Forms
             }
         }
 
-        private void BinInputItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
-        {
-            UpdateRunButtonState();
-        }
-
-        private void ItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
-        {
-            UpdateRunButtonState();
-        }
-
-        protected override void OnLoad(EventArgs e)
-        {
-            base.OnLoad(e);
-            UpdateRunButtonState();
-        }
-
         private void UpdateRunButtonState()
         {
             var isValid = IsValid();
@@ -160,6 +144,19 @@ namespace CutList.Forms
             form.ShowDialog();
         }
 
+        private string ToolsFilePath
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data\\Tools.json"); }
+        }
+
+        private List<Tool> GetTools()
+        {
+            var json = File.ReadAllText(ToolsFilePath);
+            var list = JsonConvert.DeserializeObject<List<Tool>>(json);
+
+            return list;
+        }
+
         private List<BinItem> GetItems()
         {
             var items2 = new List<BinItem>();
@@ -187,6 +184,18 @@ namespace CutList.Forms
             return comboBox1.SelectedItem as Tool;
         }
 
+        private void SaveTools(IEnumerable<Tool> tools)
+        {
+            var json = JsonConvert.SerializeObject(tools, Formatting.Indented);
+            File.WriteAllText(ToolsFilePath, json);
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            UpdateRunButtonState();
+        }
+
         private void toolStripButton1_Click(object sender, EventArgs e)
         {
             Open();
@@ -200,25 +209,6 @@ namespace CutList.Forms
         private void runButton_Click(object sender, EventArgs e)
         {
             Run();
-        }
-
-        private string ToolsFilePath
-        {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data\\Tools.json"); }
-        }
-
-        private List<Tool> GetTools()
-        {
-            var json = File.ReadAllText(ToolsFilePath);
-            var list = JsonConvert.DeserializeObject<List<Tool>>(json);
-
-            return list;
-        }
-
-        private void SaveTools(IEnumerable<Tool> tools)
-        {
-            var json = JsonConvert.SerializeObject(tools, Formatting.Indented);
-            File.WriteAllText(ToolsFilePath, json);
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -287,6 +277,16 @@ namespace CutList.Forms
         {
             if (e.ColumnIndex == lengthInputValueDataGridViewTextBoxColumn.Index)
                 dataGridView2.Refresh();
+        }
+
+        private void BinInputItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
+        {
+            UpdateRunButtonState();
+        }
+
+        private void ItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
+        {
+            UpdateRunButtonState();
         }
     }
 }
