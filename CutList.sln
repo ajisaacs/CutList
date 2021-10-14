@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31402.337
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SawCut", "SawCut\SawCut.csproj", "{3D873FF0-6930-4BCE-A5A9-DA5C20354DEE}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CutList", "CutList\CutList.csproj", "{3E82A1E3-07A8-40C4-ABC4-DF24C5120073}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SawCut", "SawCut\SawCut.csproj", "{3D873FF0-6930-4BCE-A5A9-DA5C20354DEE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
