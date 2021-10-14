@@ -33,6 +33,11 @@ namespace CutList.Forms
             binInputItemBindingSource.DataSource = bins;
             binInputItemBindingSource.ListChanged += BinInputItemBindingSource_ListChanged;
 
+            LoadTools();
+        }
+
+        private void LoadTools()
+        {
             if (!File.Exists(ToolsFilePath))
             {
                 var tools = new List<Tool>
