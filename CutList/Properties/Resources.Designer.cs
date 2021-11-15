@@ -73,6 +73,16 @@ namespace CutList.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap gnome_document_new {
+            get {
+                object obj = ResourceManager.GetObject("gnome_document_new", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap Open_Folder_32 {
             get {
                 object obj = ResourceManager.GetObject("Open Folder-32", resourceCulture);

@@ -4,15 +4,6 @@ using System;
 
 namespace CutList.Models
 {
-    public class Item : LengthItem
-    {
-        public Item()
-        {
-        }
-
-        public string Name { get; set; }
-    }
-
     public class LengthItem
     {
         public int Quantity { get; set; } = 1;

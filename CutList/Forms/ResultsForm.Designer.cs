@@ -202,7 +202,7 @@
             // 
             // uIItemBindingSource
             // 
-            this.uIItemBindingSource.DataSource = typeof(CutList.Models.Item);
+            this.uIItemBindingSource.DataSource = typeof(CutList.Models.PartInputItem);
             // 
             // menuStrip1
             // 

@@ -10,10 +10,13 @@ namespace CutList.Forms
 {
     public partial class ResultsForm : Form
     {
-        public ResultsForm()
+        private string filename;
+        public ResultsForm(string filename)
         {
             InitializeComponent();
             dataGridView1.DrawingRowNumbers();
+
+            this.filename = filename;
         }
 
         private void dataGridView1_RowEnter(object sender, DataGridViewCellEventArgs e)
@@ -39,10 +42,7 @@ namespace CutList.Forms
         {
             var s = new SaveFileDialog();
 
-            var today = DateTime.Today;
-            var name = $"{today.Year}-{today.Month.ToString().PadLeft(2, '0')}-{today.Day.ToString().PadLeft(2, '0')} cut list.txt";
-
-            s.FileName = name;
+            s.FileName = filename;
             s.Filter = "Text File|*.txt";
 
             if (s.ShowDialog() != DialogResult.OK)

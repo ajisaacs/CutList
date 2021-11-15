@@ -14,20 +14,21 @@ namespace CutList.Forms
 {
     public partial class MainForm : Form
     {
-        private BindingList<Item> items;
+        private BindingList<PartInputItem> parts;
         private BindingList<BinInputItem> bins;
+        private string documentPath;
 
         public MainForm()
         {
             InitializeComponent();
 
-            items = new BindingList<Item>();
+            parts = new BindingList<PartInputItem>();
             bins = new BindingList<BinInputItem>();
 
             dataGridView1.DrawingRowNumbers();
             dataGridView2.DrawingRowNumbers();
 
-            itemBindingSource.DataSource = items;
+            itemBindingSource.DataSource = parts;
             itemBindingSource.ListChanged += ItemBindingSource_ListChanged;
 
             binInputItemBindingSource.DataSource = bins;
@@ -66,7 +67,7 @@ namespace CutList.Forms
 
         private bool IsValid()
         {
-            if (!items.Any(i => i.Length > 0 && i.Quantity > 0))
+            if (!parts.Any(i => i.Length > 0 && i.Quantity > 0))
                 return false;
 
             if (!bins.Any(i => i.Length > 0 && i.Quantity > 0))
@@ -93,19 +94,21 @@ namespace CutList.Forms
 
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                var data = File.ReadAllText(openFileDialog.FileName);
-                items = JsonConvert.DeserializeObject<BindingList<Item>>(data);
+                documentPath = openFileDialog.FileName;
+                var data = File.ReadAllText(documentPath);
+                parts = JsonConvert.DeserializeObject<BindingList<PartInputItem>>(data);
 
                 dataGridView1.ClearSelection();
-                itemBindingSource.DataSource = items;
+                itemBindingSource.DataSource = parts;
+                UpdateRunButtonState();
             }
         }
 
         private void Save()
         {
-            var itemsToSave = items;
+            var itemsToSave = parts;
 
-            if (dataGridView1.Rows[items.Count - 1].IsNewRow == true)
+            if (dataGridView1.Rows[parts.Count - 1].IsNewRow == true)
                 itemsToSave.RemoveAt(itemsToSave.Count - 1);
 
             var json = JsonConvert.SerializeObject(itemsToSave, Formatting.Indented);
@@ -139,9 +142,24 @@ namespace CutList.Forms
             var items = GetItems();
             var result = engine.Pack(items);
 
-            var form = new ResultsForm();
+            var filename = GetResultsSaveName();
+            var form = new ResultsForm(filename);
             form.Bins = result.Bins;
             form.ShowDialog();
+        }
+
+        private string GetResultsSaveName()
+        {
+            if (documentPath != null)
+                return Path.GetFileNameWithoutExtension(documentPath);
+
+            var today = DateTime.Today;
+            var year = today.Year.ToString();
+            var month = today.Month.ToString().PadLeft(2, '0');
+            var day = today.Day.ToString().PadLeft(2, '0');
+            var name = $"Cut List {year}-{month}-{day}";
+
+            return name;
         }
 
         private string ToolsFilePath
@@ -161,7 +179,7 @@ namespace CutList.Forms
         {
             var items2 = new List<BinItem>();
 
-            foreach (var item in items)
+            foreach (var item in parts)
             {
                 if (item.Length == null || item.Length == 0)
                     continue;
@@ -288,5 +306,33 @@ namespace CutList.Forms
         {
             UpdateRunButtonState();
         }
+
+        private void toolStripButton2_Click(object sender, EventArgs e)
+        {
+            documentPath = null;
+            parts = new BindingList<PartInputItem>();
+            bins = new BindingList<BinInputItem>();
+
+            dataGridView1.DataSource = parts;
+            dataGridView2.DataSource = bins;
+            UpdateRunButtonState();
+        }
+    }
+
+    public class Document
+    {
+        public Document()
+        {
+
+        }
+
+        [JsonIgnore]
+        public string SavePath { get; set; }
+
+        public List<Tool> Tools { get; set; }
+
+        public List<PartInputItem> PartsToNest  { get; set; }
+
+        public List<BinInputItem> StockBins { get; set; }
     }
 }
