@@ -22,6 +22,11 @@ namespace SawCut
         {
             get
             {
+                var usedLength = Math.Round(Items.Sum(i => i.Length) + Spacing * Items.Count, 8);
+
+                if (usedLength > Length && (usedLength - Length) <= Spacing)
+                    return Length;
+
                 return Math.Round(Items.Sum(i => i.Length) + Spacing * Items.Count, 8);
             }
         }
@@ -31,9 +36,13 @@ namespace SawCut
             get { return Math.Round(Length - UsedLength, 8); }
         }
 
+        /// <summary>
+        /// Returns a ratio of UsedLength to TotalLength
+        /// 1.0 = 100% utilization
+        /// </summary>
         public double Utilization
         {
-            get { return UsedLength / Length; }
+            get { return UsedLength / Length;  }
         }
 
         public override string ToString()

@@ -63,6 +63,8 @@ namespace CutList.Forms
 
             foreach (var bin in Bins)
             {
+                var idString = id++.ToString();
+                var binDescription = $"{idString}. {bin.ToString()}";
                 writer.WriteLine(id++.ToString() + ". " + bin.ToString());
 
                 var groups = bin.Items.GroupBy(i => $"{i.Name} {i.Length}");
