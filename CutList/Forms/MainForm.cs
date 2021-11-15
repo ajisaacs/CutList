@@ -114,6 +114,7 @@ namespace CutList.Forms
             var json = JsonConvert.SerializeObject(itemsToSave, Formatting.Indented);
 
             var saveFileDialog = new SaveFileDialog();
+            saveFileDialog.FileName = documentPath == null ? null : Path.GetFileName(documentPath);
             saveFileDialog.Filter = "Json File|*.json";
 
             if (saveFileDialog.ShowDialog() == DialogResult.OK)
@@ -313,8 +314,8 @@ namespace CutList.Forms
             parts = new BindingList<PartInputItem>();
             bins = new BindingList<BinInputItem>();
 
-            dataGridView1.DataSource = parts;
-            dataGridView2.DataSource = bins;
+            itemBindingSource.DataSource = parts;
+            binInputItemBindingSource.DataSource = bins;
             UpdateRunButtonState();
         }
     }
