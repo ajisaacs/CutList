@@ -123,6 +123,9 @@ namespace CutList.Forms
 
         private void Run()
         {
+            dataGridView1.EndEdit();
+            dataGridView2.EndEdit();
+
             var cutTool = GetSelectedTool();
             var stockBins = new List<MultiBin>();
 
