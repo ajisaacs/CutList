@@ -6,6 +6,9 @@
 
         public double Length { get; set; }
 
-        public int Priority { get; set; }
+        /// <summary>
+        /// Lower value priority with be used first. Default to 25
+        /// </summary>
+        public int Priority { get; set; } = 25;
     }
 }

@@ -10,6 +10,6 @@ namespace CutList.Models
         {
         }
 
-        public int Priority { get; set; } = 10;
+        public int Priority { get; set; } = 25;
     }
 }

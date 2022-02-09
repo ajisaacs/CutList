@@ -13,7 +13,7 @@ namespace SawCut.Nesting
         {
             var bins = Bins
                 .Where(b => b.Length > 0)
-                .OrderByDescending(b => b.Priority)
+                .OrderBy(b => b.Priority)
                 .ThenBy(b => b.Length)
                 .ToList();
 
