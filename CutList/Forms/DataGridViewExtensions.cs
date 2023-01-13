@@ -11,7 +11,7 @@ namespace CutList.Forms
             LineAlignment = StringAlignment.Center
         };
 
-        public static void DrawingRowNumbers(this DataGridView dataGridView)
+        public static void DrawRowNumbers(this DataGridView dataGridView)
         {
             dataGridView.RowPostPaint += (sender, e) =>
             {

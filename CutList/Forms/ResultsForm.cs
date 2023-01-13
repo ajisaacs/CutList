@@ -14,7 +14,8 @@ namespace CutList.Forms
         public ResultsForm(string filename)
         {
             InitializeComponent();
-            dataGridView1.DrawingRowNumbers();
+            dataGridView1.DrawRowNumbers();
+            dataGridView2.DrawRowNumbers();
 
             this.filename = filename;
         }
