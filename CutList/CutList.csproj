@@ -99,6 +99,7 @@
     <Compile Include="Forms\ResultsForm.Designer.cs">
       <DependentUpon>ResultsForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\Toolbox.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="Models\BinInputItem.cs" />
     <Compile Include="Models\LengthItem.cs" />

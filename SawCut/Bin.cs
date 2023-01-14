@@ -42,7 +42,7 @@ namespace SawCut
         /// </summary>
         public double Utilization
         {
-            get { return UsedLength / Length;  }
+            get { return UsedLength / Length; }
         }
 
         public override string ToString()

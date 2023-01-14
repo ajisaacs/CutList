@@ -1,8 +1,4 @@
-﻿using Newtonsoft.Json;
-using SawCut;
-using System;
-
-namespace CutList.Models
+﻿namespace CutList.Models
 {
     public class BinInputItem : LengthItem
     {

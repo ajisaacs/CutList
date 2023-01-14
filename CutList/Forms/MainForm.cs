@@ -9,6 +9,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace CutList.Forms
 {
@@ -17,6 +18,7 @@ namespace CutList.Forms
         private BindingList<PartInputItem> parts;
         private BindingList<BinInputItem> bins;
         private string documentPath;
+        private Toolbox toolbox;
 
         public MainForm()
         {
@@ -34,27 +36,8 @@ namespace CutList.Forms
             binInputItemBindingSource.DataSource = bins;
             binInputItemBindingSource.ListChanged += BinInputItemBindingSource_ListChanged;
 
-            LoadTools();
-        }
-
-        private void LoadTools()
-        {
-            if (!File.Exists(ToolsFilePath))
-            {
-                var tools = new List<Tool>
-                {
-                    new Tool { Name = "Shear", Kerf = 0.0 },
-                    new Tool { Name = "Saw", Kerf = 0.125 }
-                };
-
-                SaveTools(tools);
-
-                comboBox1.DataSource = tools;
-            }
-            else
-            {
-                comboBox1.DataSource = GetTools();
-            }
+            toolbox = new Toolbox();
+            comboBox1.DataSource = toolbox.Tools;
         }
 
         private void UpdateRunButtonState()
@@ -166,19 +149,6 @@ namespace CutList.Forms
             return name;
         }
 
-        private string ToolsFilePath
-        {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data\\Tools.json"); }
-        }
-
-        private List<Tool> GetTools()
-        {
-            var json = File.ReadAllText(ToolsFilePath);
-            var list = JsonConvert.DeserializeObject<List<Tool>>(json);
-
-            return list;
-        }
-
         private List<BinItem> GetItems()
         {
             var items2 = new List<BinItem>();
@@ -204,12 +174,6 @@ namespace CutList.Forms
         public Tool GetSelectedTool()
         {
             return comboBox1.SelectedItem as Tool;
-        }
-
-        private void SaveTools(IEnumerable<Tool> tools)
-        {
-            var json = JsonConvert.SerializeObject(tools, Formatting.Indented);
-            File.WriteAllText(ToolsFilePath, json);
         }
 
         protected override void OnLoad(EventArgs e)
@@ -275,7 +239,7 @@ namespace CutList.Forms
 
             if (tools != null)
             {
-                SaveTools(tools);
+                toolbox.Save();
             }
         }
 
@@ -333,9 +297,7 @@ namespace CutList.Forms
         [JsonIgnore]
         public string SavePath { get; set; }
 
-        public List<Tool> Tools { get; set; }
-
-        public List<PartInputItem> PartsToNest  { get; set; }
+        public List<PartInputItem> PartsToNest { get; set; }
 
         public List<BinInputItem> StockBins { get; set; }
     }
