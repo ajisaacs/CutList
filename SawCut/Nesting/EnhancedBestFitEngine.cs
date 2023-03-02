@@ -1,11 +1,13 @@
-﻿using System;
+﻿using SawCut.Nesting;
+using SawCut;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 
 namespace SawCut.Nesting
 {
-    public class Engine2 : IEngine
+    public class EnhancedBestFitEngine : IEngine
     {
         public double StockLength { get; set; }
 
@@ -156,3 +158,4 @@ namespace SawCut.Nesting
         }
     }
 }
+

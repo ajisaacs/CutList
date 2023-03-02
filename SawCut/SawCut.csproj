@@ -51,7 +51,7 @@
     <Compile Include="Nesting\IEngine.cs" />
     <Compile Include="Nesting\MultiBinEngine.cs" />
     <Compile Include="Nesting\Result.cs" />
-    <Compile Include="Nesting\Engine2.cs" />
+    <Compile Include="Nesting\EnhancedBestFitEngine.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tolerance.cs" />
   </ItemGroup>
