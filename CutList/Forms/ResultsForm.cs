@@ -59,12 +59,16 @@ namespace CutList.Forms
             var writer = new StreamWriter(file);
             writer.AutoFlush = true;
 
-            var max = Bins.Max(b => b.Items.Max(i => ArchUnits.FormatFromInches(i.Length).Length));
+            var max = Bins.Max(b => b.Items.Max(i => SawCut.Helper.ConvertToMixedFraction(i.Length).Length));
             var id = 1;
 
             foreach (var bin in Bins)
             {
-                var binDescription = $"{id++}. {bin}";
+                var totalLength = SawCut.Helper.ConvertToMixedFraction(bin.Length);
+                var remainingLength = SawCut.Helper.ConvertToMixedFraction(bin.RemainingLength);
+                var utilitation = Math.Round(bin.Utilization * 100, 2);
+
+                var binDescription = $"{id++}. Length: {{totalLength}}, {remainingLength} remaining, {bin.Items.Count} items, {utilitation}% utilization";
                 writer.WriteLine(binDescription);
 
                 var groups = bin.Items.GroupBy(i => $"{i.Name} {i.Length}");
@@ -73,7 +77,7 @@ namespace CutList.Forms
                 {
                     var first = group.First();
                     var count = group.Count();
-                    var length = ArchUnits.FormatFromInches(first.Length).ToString().PadLeft(max);
+                    var length = SawCut.Helper.ConvertToMixedFraction(first.Length).PadLeft(max);
                     var name = first.Name;
 
                     var pcsSingularOrPlural = count == 1 ? "pc " : "pcs";

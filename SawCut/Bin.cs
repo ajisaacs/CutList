@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 
 namespace SawCut
 {
@@ -47,8 +48,8 @@ namespace SawCut
 
         public override string ToString()
         {
-            var totalLength = ArchUnits.FormatFromInches(Math.Round(Length, 4));
-            var remainingLength = ArchUnits.FormatFromInches(Math.Round(RemainingLength, 4));
+            var totalLength = Helper.ConvertToMixedFraction(Math.Round(Length, 4));
+            var remainingLength = Helper.ConvertToMixedFraction(Math.Round(RemainingLength, 4));
             var utilitation = Math.Round(Utilization * 100, 2);
 
             return $"Length: {totalLength}, {remainingLength} remaining, {Items.Count} items, {utilitation}% utilization";
