@@ -65,6 +65,8 @@ namespace SawCut.Nesting
                     count++;
                 }
 
+                bin.Items = bin.Items.OrderByDescending(i => i.Length).ToList();
+
                 bins.Add(bin);
             }
 
