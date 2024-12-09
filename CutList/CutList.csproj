@@ -86,6 +86,7 @@
     <Compile Include="Controls\BinLayoutView.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Forms\BinFileSaver.cs" />
     <Compile Include="Forms\DataGridViewExtensions.cs" />
     <Compile Include="Forms\MainForm.cs">
       <SubType>Form</SubType>
