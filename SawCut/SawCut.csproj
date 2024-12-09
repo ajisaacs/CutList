@@ -46,6 +46,7 @@
     <Compile Include="Bin.cs" />
     <Compile Include="BinItem.cs" />
     <Compile Include="Fraction.cs" />
+    <Compile Include="Helper.cs" />
     <Compile Include="MultiBin.cs" />
     <Compile Include="Nesting\BestFitEngine.cs" />
     <Compile Include="Nesting\IEngine.cs" />
