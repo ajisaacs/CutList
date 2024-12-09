@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace SawCut.Nesting
@@ -22,7 +23,7 @@ namespace SawCut.Nesting
 
             foreach (var bin in bins)
             {
-                var e = new BestFitWithImproveAttempt();
+                var e = new EnhancedBestFitEngine();
                 e.MaxBinCount = bin.Quantity;
                 e.StockLength = bin.Length;
                 e.Spacing = Spacing;
