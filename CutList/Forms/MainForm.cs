@@ -286,14 +286,17 @@ namespace CutList.Forms
             UpdateRunButtonState();
         }
 
-        private void LoadExampleData()
+        private void LoadExampleData(bool clearCurrentData = true)
         {
             const int PartCount = 50;
             const double Min = 1;
             const double Max = 120;
 
-            parts.Clear();
-            bins.Clear();
+            if (clearCurrentData)
+            {
+                parts.Clear();
+                bins.Clear();
+            }
 
             var random = new Random();
 
@@ -314,7 +317,6 @@ namespace CutList.Forms
                 LengthInputValue = "144\"",
                 Quantity = 9999
             });
-
         }
 
         private static readonly Random random = new Random();
@@ -326,14 +328,19 @@ namespace CutList.Forms
 
         private void toolStripButton3_Click(object sender, EventArgs e)
         {
+            var clearData = true;
+
             if (parts.Count > 0 || bins.Count > 0)
             {
-                var result = MessageBox.Show("Are you sure you want to clear the current data?", "Clear Data", MessageBoxButtons.YesNo);
-                if (result == DialogResult.No)
+                var dialogResult = MessageBox.Show("Are you sure you want to clear the current data?", "Clear Data", MessageBoxButtons.YesNoCancel);
+
+                if (dialogResult == DialogResult.Cancel)
                     return;
+
+                clearData = dialogResult == DialogResult.Yes;
             }
 
-            LoadExampleData();
+            LoadExampleData(clearData);
         }
     }
 
