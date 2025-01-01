@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace SawCut.Nesting
 {
-    public class EnhancedBestFitEngine : IEngine
+    public class AdvancedFitEngine : IEngine
     {
         public double StockLength { get; set; }
 

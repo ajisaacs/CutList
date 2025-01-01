@@ -23,7 +23,7 @@ namespace SawCut.Nesting
 
             foreach (var bin in bins)
             {
-                var e = new EnhancedBestFitEngine();
+                var e = new AdvancedFitEngine();
                 e.MaxBinCount = bin.Quantity;
                 e.StockLength = bin.Length;
                 e.Spacing = Spacing;
