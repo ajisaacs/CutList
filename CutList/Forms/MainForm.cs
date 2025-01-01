@@ -285,6 +285,56 @@ namespace CutList.Forms
             binInputItemBindingSource.DataSource = bins;
             UpdateRunButtonState();
         }
+
+        private void LoadExampleData()
+        {
+            const int PartCount = 50;
+            const double Min = 1;
+            const double Max = 120;
+
+            parts.Clear();
+            bins.Clear();
+
+            var random = new Random();
+
+            for (int i = 0; i < PartCount; i++)
+            {
+                var length = GetRandomLength(Min, Max);
+
+                parts.Add(new PartInputItem
+                {
+                    Name = $"Part {i + 1}",
+                    LengthInputValue = length.ToString(),
+                    Quantity = random.Next(1, 100)
+                });
+            }
+
+            bins.Add(new BinInputItem
+            {
+                LengthInputValue = "144\"",
+                Quantity = 9999
+            });
+
+        }
+
+        private static readonly Random random = new Random();
+
+        private double GetRandomLength(double min, double max)
+        {
+            return Math.Round(random.NextDouble() * (max - min) + min, 2);
+        }
+
+        private void toolStripButton3_Click(object sender, EventArgs e)
+        {
+            if (parts.Count > 0 || bins.Count > 0)
+            {
+                var result = MessageBox.Show("Are you sure you want to clear the current data?", "Clear Data", MessageBoxButtons.YesNo);
+                if (result == DialogResult.No)
+                    return;
+            }
+
+            LoadExampleData();
+        }
     }
 
     public class Document

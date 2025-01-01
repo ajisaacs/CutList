@@ -29,16 +29,12 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.nameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.lengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.quantityDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.TotalLength = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.itemBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.toolStripButton2 = new System.Windows.Forms.ToolStripButton();
             this.toolStripButton1 = new System.Windows.Forms.ToolStripButton();
@@ -53,18 +49,23 @@
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.dataGridView2 = new System.Windows.Forms.DataGridView();
+            this.TotalLengthString = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.toolStripButton3 = new System.Windows.Forms.ToolStripButton();
+            this.nameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.lengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.quantityDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.itemBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.lengthInputValueDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.quantityDataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.TotalLengthString = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.priorityDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.binInputItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.itemBindingSource)).BeginInit();
             this.toolStrip1.SuspendLayout();
             this.tabControl1.SuspendLayout();
             this.tabPage2.SuspendLayout();
             this.tabPage1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.itemBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.binInputItemBindingSource)).BeginInit();
             this.SuspendLayout();
             // 
@@ -97,31 +98,6 @@
             this.dataGridView1.CellValidated += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
             this.dataGridView1.DataError += new System.Windows.Forms.DataGridViewDataErrorEventHandler(this.dataGridView1_DataError);
             // 
-            // nameDataGridViewTextBoxColumn
-            // 
-            this.nameDataGridViewTextBoxColumn.DataPropertyName = "Name";
-            this.nameDataGridViewTextBoxColumn.HeaderText = "Name";
-            this.nameDataGridViewTextBoxColumn.Name = "nameDataGridViewTextBoxColumn";
-            this.nameDataGridViewTextBoxColumn.Width = 200;
-            // 
-            // lengthDataGridViewTextBoxColumn
-            // 
-            this.lengthDataGridViewTextBoxColumn.DataPropertyName = "LengthInputValue";
-            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            this.lengthDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle1;
-            this.lengthDataGridViewTextBoxColumn.HeaderText = "Length";
-            this.lengthDataGridViewTextBoxColumn.Name = "lengthDataGridViewTextBoxColumn";
-            this.lengthDataGridViewTextBoxColumn.Width = 120;
-            // 
-            // quantityDataGridViewTextBoxColumn
-            // 
-            this.quantityDataGridViewTextBoxColumn.DataPropertyName = "Quantity";
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            this.quantityDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle2;
-            this.quantityDataGridViewTextBoxColumn.HeaderText = "Qty";
-            this.quantityDataGridViewTextBoxColumn.Name = "quantityDataGridViewTextBoxColumn";
-            this.quantityDataGridViewTextBoxColumn.Width = 50;
-            // 
             // TotalLength
             // 
             this.TotalLength.DataPropertyName = "TotalLengthString";
@@ -134,10 +110,6 @@
             this.TotalLength.ReadOnly = true;
             this.TotalLength.Width = 150;
             // 
-            // itemBindingSource
-            // 
-            this.itemBindingSource.DataSource = typeof(CutList.Models.PartInputItem);
-            // 
             // toolStrip1
             // 
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -145,7 +117,8 @@
             this.toolStripButton1,
             this.saveButton,
             this.toolStripSeparator1,
-            this.runButton});
+            this.runButton,
+            this.toolStripButton3});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.Size = new System.Drawing.Size(880, 39);
@@ -308,10 +281,61 @@
             this.dataGridView2.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
             this.dataGridView2.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
             this.dataGridView2.RowTemplate.Height = 26;
-            this.dataGridView2.Size = new System.Drawing.Size(836, 335);
+            this.dataGridView2.Size = new System.Drawing.Size(836, 331);
             this.dataGridView2.TabIndex = 12;
             this.dataGridView2.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView2_CellContentClick);
             this.dataGridView2.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView2_CellEndEdit);
+            // 
+            // TotalLengthString
+            // 
+            this.TotalLengthString.DataPropertyName = "TotalLengthString";
+            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Info;
+            this.TotalLengthString.DefaultCellStyle = dataGridViewCellStyle4;
+            this.TotalLengthString.HeaderText = "Total Length";
+            this.TotalLengthString.Name = "TotalLengthString";
+            this.TotalLengthString.ReadOnly = true;
+            // 
+            // toolStripButton3
+            // 
+            this.toolStripButton3.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.toolStripButton3.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.toolStripButton3.Image = global::CutList.Properties.Resources.Circled_Play_32;
+            this.toolStripButton3.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
+            this.toolStripButton3.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toolStripButton3.Name = "toolStripButton3";
+            this.toolStripButton3.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.toolStripButton3.Size = new System.Drawing.Size(121, 36);
+            this.toolStripButton3.Text = "Load Example Data";
+            this.toolStripButton3.Click += new System.EventHandler(this.toolStripButton3_Click);
+            // 
+            // nameDataGridViewTextBoxColumn
+            // 
+            this.nameDataGridViewTextBoxColumn.DataPropertyName = "Name";
+            this.nameDataGridViewTextBoxColumn.HeaderText = "Name";
+            this.nameDataGridViewTextBoxColumn.Name = "nameDataGridViewTextBoxColumn";
+            this.nameDataGridViewTextBoxColumn.Width = 200;
+            // 
+            // lengthDataGridViewTextBoxColumn
+            // 
+            this.lengthDataGridViewTextBoxColumn.DataPropertyName = "LengthInputValue";
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
+            this.lengthDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle1;
+            this.lengthDataGridViewTextBoxColumn.HeaderText = "Length";
+            this.lengthDataGridViewTextBoxColumn.Name = "lengthDataGridViewTextBoxColumn";
+            this.lengthDataGridViewTextBoxColumn.Width = 120;
+            // 
+            // quantityDataGridViewTextBoxColumn
+            // 
+            this.quantityDataGridViewTextBoxColumn.DataPropertyName = "Quantity";
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
+            this.quantityDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle2;
+            this.quantityDataGridViewTextBoxColumn.HeaderText = "Qty";
+            this.quantityDataGridViewTextBoxColumn.Name = "quantityDataGridViewTextBoxColumn";
+            this.quantityDataGridViewTextBoxColumn.Width = 50;
+            // 
+            // itemBindingSource
+            // 
+            this.itemBindingSource.DataSource = typeof(CutList.Models.PartInputItem);
             // 
             // lengthInputValueDataGridViewTextBoxColumn
             // 
@@ -324,15 +348,6 @@
             this.quantityDataGridViewTextBoxColumn1.DataPropertyName = "Quantity";
             this.quantityDataGridViewTextBoxColumn1.HeaderText = "Quantity";
             this.quantityDataGridViewTextBoxColumn1.Name = "quantityDataGridViewTextBoxColumn1";
-            // 
-            // TotalLengthString
-            // 
-            this.TotalLengthString.DataPropertyName = "TotalLengthString";
-            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Info;
-            this.TotalLengthString.DefaultCellStyle = dataGridViewCellStyle4;
-            this.TotalLengthString.HeaderText = "Total Length";
-            this.TotalLengthString.Name = "TotalLengthString";
-            this.TotalLengthString.ReadOnly = true;
             // 
             // priorityDataGridViewTextBoxColumn
             // 
@@ -357,7 +372,6 @@
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Cut List";
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.itemBindingSource)).EndInit();
             this.toolStrip1.ResumeLayout(false);
             this.toolStrip1.PerformLayout();
             this.tabControl1.ResumeLayout(false);
@@ -365,6 +379,7 @@
             this.tabPage1.ResumeLayout(false);
             this.tabPage1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.itemBindingSource)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.binInputItemBindingSource)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -397,6 +412,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn quantityDataGridViewTextBoxColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn TotalLength;
         private System.Windows.Forms.ToolStripButton toolStripButton2;
+        private System.Windows.Forms.ToolStripButton toolStripButton3;
     }
 }
 
