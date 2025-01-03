@@ -15,17 +15,16 @@ namespace CutList.Forms
 {
     public partial class MainForm : Form
     {
+        private static readonly Random random = new Random();
+
         private BindingList<PartInputItem> parts;
         private BindingList<BinInputItem> bins;
-        private string documentPath;
         private Toolbox toolbox;
+        private Document currentDocument;
 
         public MainForm()
         {
             InitializeComponent();
-
-            parts = new BindingList<PartInputItem>();
-            bins = new BindingList<BinInputItem>();
 
             dataGridView1.DrawRowNumbers();
             dataGridView2.DrawRowNumbers();
@@ -37,7 +36,17 @@ namespace CutList.Forms
             binInputItemBindingSource.ListChanged += BinInputItemBindingSource_ListChanged;
 
             toolbox = new Toolbox();
-            comboBox1.DataSource = toolbox.Tools;
+            cutMethodComboBox.DataSource = toolbox.Tools;
+
+            currentDocument = new Document();
+
+#if DEBUG
+            loadExampleDataButton.Visible = true;
+#else
+            loadExampleDataButton.Visible = false;
+#endif
+
+            LoadDocumentData();
         }
 
         private void UpdateRunButtonState()
@@ -71,37 +80,64 @@ namespace CutList.Forms
 
         private void Open()
         {
-            var openFileDialog = new OpenFileDialog();
-            openFileDialog.Multiselect = true;
-            openFileDialog.Filter = "Json File|*.json";
-
-            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            try
             {
-                documentPath = openFileDialog.FileName;
-                var data = File.ReadAllText(documentPath);
-                parts = JsonConvert.DeserializeObject<BindingList<PartInputItem>>(data);
+                var openFileDialog = new OpenFileDialog
+                {
+                    Multiselect = false,
+                    Filter = "Json File|*.json"
+                };
 
-                dataGridView1.ClearSelection();
-                itemBindingSource.DataSource = parts;
-                UpdateRunButtonState();
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    currentDocument = Document.Load(openFileDialog.FileName);
+
+                    if (currentDocument == null)
+                        return;
+
+                    LoadDocumentData();
+                    UpdateRunButtonState();
+                }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadDocumentData()
+        {
+            parts = new BindingList<PartInputItem>(currentDocument.PartsToNest);
+            bins = new BindingList<BinInputItem>(currentDocument.StockBins);
+
+            itemBindingSource.DataSource = parts;
+            binInputItemBindingSource.DataSource = bins;
+        }
+
+        private void DataBindingComplete(object sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            dataGridView1.AutoResizeColumns();
+            dataGridView2.AutoResizeColumns();
         }
 
         private void Save()
         {
-            var itemsToSave = parts;
+            if (!currentDocument.Validate(out string validationMessage))
+            {
+                MessageBox.Show(validationMessage, "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
-            if (dataGridView1.Rows[parts.Count - 1].IsNewRow == true)
-                itemsToSave.RemoveAt(itemsToSave.Count - 1);
-
-            var json = JsonConvert.SerializeObject(itemsToSave, Formatting.Indented);
-
-            var saveFileDialog = new SaveFileDialog();
-            saveFileDialog.FileName = documentPath == null ? null : Path.GetFileName(documentPath);
-            saveFileDialog.Filter = "Json File|*.json";
+            var saveFileDialog = new SaveFileDialog
+            {
+                FileName = currentDocument.LastFilePath == null ? "NewDocument.json" : Path.GetFileName(currentDocument.LastFilePath),
+                Filter = "Json File|*.json"
+            };
 
             if (saveFileDialog.ShowDialog() == DialogResult.OK)
-                File.WriteAllText(saveFileDialog.FileName, json);
+            {
+                currentDocument.Save(saveFileDialog.FileName);
+            }
         }
 
         private void Run()
@@ -137,9 +173,6 @@ namespace CutList.Forms
 
         private string GetResultsSaveName()
         {
-            if (documentPath != null)
-                return Path.GetFileNameWithoutExtension(documentPath);
-
             var today = DateTime.Today;
             var year = today.Year.ToString();
             var month = today.Month.ToString().PadLeft(2, '0');
@@ -173,117 +206,12 @@ namespace CutList.Forms
 
         public Tool GetSelectedTool()
         {
-            return comboBox1.SelectedItem as Tool;
+            return cutMethodComboBox.SelectedItem as Tool;
         }
 
-        protected override void OnLoad(EventArgs e)
+        private double GetRandomLength(double min, double max)
         {
-            base.OnLoad(e);
-            UpdateRunButtonState();
-        }
-
-        private void toolStripButton1_Click(object sender, EventArgs e)
-        {
-            Open();
-        }
-
-        private void saveButton_Click(object sender, EventArgs e)
-        {
-            Save();
-        }
-
-        private void runButton_Click(object sender, EventArgs e)
-        {
-            Run();
-        }
-
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            var tool = comboBox1.SelectedItem as Tool;
-
-            if (tool == null)
-                return;
-
-            textBox1.Text = tool.Kerf.ToString();
-
-            if (tool.AllowUserToChange)
-            {
-                textBox1.ReadOnly = false;
-                textBox1.BackColor = Color.White;
-            }
-            else
-            {
-                textBox1.ReadOnly = true;
-                textBox1.BackColor = SystemColors.Info;
-            }
-        }
-
-        private void textBox1_TextChanged(object sender, EventArgs e)
-        {
-            double value;
-
-            if (!double.TryParse(textBox1.Text, out value))
-                return;
-
-            var tool = comboBox1.SelectedItem as Tool;
-
-            if (tool == null)
-                return;
-
-            if (!tool.AllowUserToChange)
-                return;
-
-            tool.Kerf = value;
-
-            var tools = comboBox1.DataSource as List<Tool>;
-
-            if (tools != null)
-            {
-                toolbox.Save();
-            }
-        }
-
-        private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.ColumnIndex == lengthDataGridViewTextBoxColumn.Index)
-                dataGridView1.Refresh();
-        }
-
-        private void dataGridView1_DataError(object sender, DataGridViewDataErrorEventArgs e)
-        {
-            dataGridView1.Rows[e.RowIndex].ErrorText = e.Exception.InnerException?.Message;
-            e.ThrowException = false;
-        }
-
-        private void dataGridView2_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-        }
-
-        private void dataGridView2_CellEndEdit(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.ColumnIndex == lengthInputValueDataGridViewTextBoxColumn.Index)
-                dataGridView2.Refresh();
-        }
-
-        private void BinInputItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
-        {
-            UpdateRunButtonState();
-        }
-
-        private void ItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
-        {
-            UpdateRunButtonState();
-        }
-
-        private void toolStripButton2_Click(object sender, EventArgs e)
-        {
-            documentPath = null;
-            parts = new BindingList<PartInputItem>();
-            bins = new BindingList<BinInputItem>();
-
-            itemBindingSource.DataSource = parts;
-            binInputItemBindingSource.DataSource = bins;
-            UpdateRunButtonState();
+            return Math.Round(random.NextDouble() * (max - min) + min, 2);
         }
 
         private void LoadExampleData(bool clearCurrentData = true)
@@ -319,14 +247,112 @@ namespace CutList.Forms
             });
         }
 
-        private static readonly Random random = new Random();
-
-        private double GetRandomLength(double min, double max)
+        protected override void OnLoad(EventArgs e)
         {
-            return Math.Round(random.NextDouble() * (max - min) + min, 2);
+            base.OnLoad(e);
+            UpdateRunButtonState();
         }
 
-        private void toolStripButton3_Click(object sender, EventArgs e)
+        private void openFileButton_Click(object sender, EventArgs e)
+        {
+            Open();
+        }
+
+        private void saveButton_Click(object sender, EventArgs e)
+        {
+            Save();
+        }
+
+        private void runButton_Click(object sender, EventArgs e)
+        {
+            Run();
+        }
+
+        private void cutMethodComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var tool = cutMethodComboBox.SelectedItem as Tool;
+
+            if (tool == null)
+                return;
+
+            cutWidthTextBox.Text = tool.Kerf.ToString();
+
+            if (tool.AllowUserToChange)
+            {
+                cutWidthTextBox.ReadOnly = false;
+                cutWidthTextBox.BackColor = Color.White;
+            }
+            else
+            {
+                cutWidthTextBox.ReadOnly = true;
+                cutWidthTextBox.BackColor = SystemColors.Info;
+            }
+        }
+
+        private void cutWidthTextBox_TextChanged(object sender, EventArgs e)
+        {
+            double value;
+
+            if (!double.TryParse(cutWidthTextBox.Text, out value))
+                return;
+
+            var tool = cutMethodComboBox.SelectedItem as Tool;
+
+            if (tool == null)
+                return;
+
+            if (!tool.AllowUserToChange)
+                return;
+
+            tool.Kerf = value;
+
+            var tools = cutMethodComboBox.DataSource as List<Tool>;
+
+            if (tools != null)
+            {
+                toolbox.Save();
+            }
+        }
+
+        private void dataGridView1_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.ColumnIndex == lengthDataGridViewTextBoxColumn.Index)
+                dataGridView1.Refresh();
+        }
+
+        private void dataGridView1_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            dataGridView1.Rows[e.RowIndex].ErrorText = e.Exception.InnerException?.Message;
+            e.ThrowException = false;
+        }
+
+        private void dataGridView2_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.ColumnIndex == lengthInputValueDataGridViewTextBoxColumn.Index)
+                dataGridView2.Refresh();
+        }
+
+        private void BinInputItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
+        {
+            UpdateRunButtonState();
+        }
+
+        private void ItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
+        {
+            UpdateRunButtonState();
+        }
+
+        private void newDocumentButton_Click(object sender, EventArgs e)
+        {
+            parts = new BindingList<PartInputItem>();
+            bins = new BindingList<BinInputItem>();
+
+            itemBindingSource.DataSource = parts;
+            binInputItemBindingSource.DataSource = bins;
+            UpdateRunButtonState();
+        }
+        
+        private void loadExampleDataButton_Click(object sender, EventArgs e)
         {
             var clearData = true;
 
@@ -342,20 +368,5 @@ namespace CutList.Forms
 
             LoadExampleData(clearData);
         }
-    }
-
-    public class Document
-    {
-        public Document()
-        {
-
-        }
-
-        [JsonIgnore]
-        public string SavePath { get; set; }
-
-        public List<PartInputItem> PartsToNest { get; set; }
-
-        public List<BinInputItem> StockBins { get; set; }
     }
 }

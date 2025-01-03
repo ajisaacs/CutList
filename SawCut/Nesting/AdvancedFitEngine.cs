@@ -24,14 +24,14 @@ namespace SawCut.Nesting
 
             Items = items.OrderByDescending(i => i.Length).ToList();
 
-            var result = new Result();
-            result.ItemsNotUsed = Items.Where(i => i.Length > StockLength).ToList();
-
-            foreach (var item in result.ItemsNotUsed)
+            var result = new Result
             {
-                Items.Remove(item);
-            }
+                ItemsNotUsed = Items.Where(i => i.Length > StockLength).ToList()
+            };
 
+            Items.RemoveAll(item => result.ItemsNotUsed.Contains(item));
+
+            result.ItemsNotUsed = Items.Where(i => i.Length > StockLength).ToList();
             result.Bins = GetBins();
 
             foreach (var bin in result.Bins)
