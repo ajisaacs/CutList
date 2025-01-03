@@ -1,4 +1,5 @@
 ﻿using SawCut;
+using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -11,13 +12,18 @@ namespace CutList.Controls
 
         private const int BorderPixels = 15;
         private const int BorderPixelsX2 = BorderPixels * 2;
-        private const int BinHeightPixels = 100;
+        private const int DefaultBinHeightPixels = 100;
 
-        private readonly HatchBrush hBrush = new HatchBrush(HatchStyle.DiagonalCross, Color.Pink, Color.Transparent);
+        public Color ItemBackgroundColor { get; set; } = Color.White;
+        public Color ItemBorderColor { get; set; } = Color.Blue;
+        public Color BinBackgroundColor { get; set; } = Color.Pink;
+
+        private readonly HatchBrush binBackgroundBrush;
 
         public BinLayoutView()
         {
             SetStyle(ControlStyles.ResizeRedraw | ControlStyles.OptimizedDoubleBuffer, true);
+            binBackgroundBrush = new HatchBrush(HatchStyle.DiagonalCross, BinBackgroundColor, Color.Transparent);
         }
 
         private static readonly StringFormat StringFormatCentered = new StringFormat
@@ -28,49 +34,64 @@ namespace CutList.Controls
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            if (Bin == null)
+            if (Bin == null || Bin.Items == null || Bin.Length <= 0)
                 return;
 
-            var rect = GetBinRectangle();
+            var binRectangle = GetBinRectangle();
 
-            e.Graphics.FillRectangle(hBrush, rect);
-
-            var id = 1;
-            var scale = rect.Width / (float)Bin.Length;
-            var x = rect.X;
-
-            for (int i = 0; i < Bin.Items.Count; i++)
-            {
-                var item = Bin.Items[i];
-
-                var w = item.Length / Bin.Length * rect.Width;
-                var r = new RectangleF(x, rect.Y, (float)w, rect.Height);
-
-                e.Graphics.FillRectangle(Brushes.White, r);
-                e.Graphics.DrawRectangle(Pens.Blue, r.X, r.Y, r.Width, r.Height);
-                e.Graphics.DrawString(id++.ToString(), Font, Brushes.Blue, r, StringFormatCentered);
-
-                x += (float)item.Length * scale;
-
-                if (i < Bin.Items.Count - 1)
-                    x += (float)Bin.Spacing * scale;
-            }
-
-            e.Graphics.DrawRectangle(Pens.Blue, rect.X, rect.Y, rect.Width, rect.Height);
+            DrawBinBackground(e.Graphics, binRectangle);
+            DrawBinItems(e.Graphics, binRectangle);
+            DrawBinBorder(e.Graphics, binRectangle);
         }
 
         private RectangleF GetBinRectangle()
         {
             var displayWidth = Width - BorderPixelsX2;
-            var heightMinusBorder = Height - BorderPixelsX2;
-            var displayHeight = Height > BinHeightPixels ? BinHeightPixels : Height;
+            var displayHeight = Math.Min(Height - BorderPixelsX2, DefaultBinHeightPixels);
 
             var x = (Width - displayWidth) / 2.0f;
             var y = (Height - displayHeight) / 2.0f;
 
-            var rect = new RectangleF(x, y, displayWidth, displayHeight);
+            return new RectangleF(x, y, displayWidth, displayHeight);
+        }
 
-            return rect;
+        private void DrawBinBackground(Graphics graphics, RectangleF binRectangle)
+        {
+            graphics.FillRectangle(binBackgroundBrush, binRectangle);
+        }
+
+        private void DrawBinItems(Graphics graphics, RectangleF binRectangle)
+        {
+            float scale = binRectangle.Width / (float)Bin.Length;
+            float currentX = binRectangle.X;
+            int id = 1;
+
+            foreach (var item in Bin.Items)
+            {
+                float itemWidth = (float)item.Length * scale;
+                var itemRect = new RectangleF(currentX, binRectangle.Y, itemWidth, binRectangle.Height);
+
+                graphics.FillRectangle(new SolidBrush(ItemBackgroundColor), itemRect);
+                graphics.DrawRectangle(new Pen(ItemBorderColor), itemRect.X, itemRect.Y, itemRect.Width, itemRect.Height);
+                graphics.DrawString(id++.ToString(), Font, new SolidBrush(ItemBorderColor), itemRect, StringFormatCentered);
+
+                currentX += itemWidth + ((float)Bin.Spacing * scale);
+            }
+        }
+
+        private void DrawBinBorder(Graphics graphics, RectangleF binRectangle)
+        {
+            graphics.DrawRectangle(new Pen(ItemBorderColor), binRectangle.X, binRectangle.Y, binRectangle.Width, binRectangle.Height);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                binBackgroundBrush?.Dispose();
+            }
+
+            base.Dispose(disposing);
         }
     }
 }
