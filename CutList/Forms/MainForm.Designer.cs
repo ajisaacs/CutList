@@ -29,10 +29,10 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle6 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle7 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle8 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.nameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -92,7 +92,7 @@
             this.dataGridView1.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
             this.dataGridView1.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
             this.dataGridView1.RowTemplate.Height = 26;
-            this.dataGridView1.Size = new System.Drawing.Size(842, 459);
+            this.dataGridView1.Size = new System.Drawing.Size(757, 533);
             this.dataGridView1.TabIndex = 11;
             this.dataGridView1.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
             this.dataGridView1.CellValidated += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
@@ -108,8 +108,8 @@
             // lengthDataGridViewTextBoxColumn
             // 
             this.lengthDataGridViewTextBoxColumn.DataPropertyName = "LengthInputValue";
-            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            this.lengthDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle1;
+            dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
+            this.lengthDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle5;
             this.lengthDataGridViewTextBoxColumn.HeaderText = "Length";
             this.lengthDataGridViewTextBoxColumn.Name = "lengthDataGridViewTextBoxColumn";
             this.lengthDataGridViewTextBoxColumn.Width = 120;
@@ -117,8 +117,8 @@
             // quantityDataGridViewTextBoxColumn
             // 
             this.quantityDataGridViewTextBoxColumn.DataPropertyName = "Quantity";
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            this.quantityDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle2;
+            dataGridViewCellStyle6.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
+            this.quantityDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle6;
             this.quantityDataGridViewTextBoxColumn.HeaderText = "Qty";
             this.quantityDataGridViewTextBoxColumn.Name = "quantityDataGridViewTextBoxColumn";
             this.quantityDataGridViewTextBoxColumn.Width = 50;
@@ -126,10 +126,10 @@
             // TotalLength
             // 
             this.TotalLength.DataPropertyName = "TotalLengthString";
-            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Info;
-            dataGridViewCellStyle3.Format = "N3";
-            this.TotalLength.DefaultCellStyle = dataGridViewCellStyle3;
+            dataGridViewCellStyle7.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
+            dataGridViewCellStyle7.BackColor = System.Drawing.SystemColors.Info;
+            dataGridViewCellStyle7.Format = "N3";
+            this.TotalLength.DefaultCellStyle = dataGridViewCellStyle7;
             this.TotalLength.HeaderText = "Total Length";
             this.TotalLength.Name = "TotalLength";
             this.TotalLength.ReadOnly = true;
@@ -150,11 +150,11 @@
             this.loadExampleDataButton});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(880, 39);
+            this.toolStrip1.Size = new System.Drawing.Size(795, 39);
             this.toolStrip1.TabIndex = 0;
             this.toolStrip1.Text = "toolStrip1";
             // 
-            // toolStripButton2
+            // newDocumentButton
             // 
             this.newDocumentButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
             this.newDocumentButton.Image = global::CutList.Properties.Resources.gnome_document_new;
@@ -166,7 +166,7 @@
             this.newDocumentButton.Text = "New";
             this.newDocumentButton.Click += new System.EventHandler(this.newDocumentButton_Click);
             // 
-            // toolStripButton1
+            // openFileButton
             // 
             this.openFileButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
             this.openFileButton.Image = global::CutList.Properties.Resources.Open_Folder_32;
@@ -207,7 +207,7 @@
             this.runButton.Text = "Run";
             this.runButton.Click += new System.EventHandler(this.runButton_Click);
             // 
-            // toolStripButton3
+            // loadExampleDataButton
             // 
             this.loadExampleDataButton.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
             this.loadExampleDataButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
@@ -215,48 +215,48 @@
             this.loadExampleDataButton.Image = global::CutList.Properties.Resources.Circled_Play_32;
             this.loadExampleDataButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.loadExampleDataButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.loadExampleDataButton.Name = "toolStripButton3";
+            this.loadExampleDataButton.Name = "loadExampleDataButton";
             this.loadExampleDataButton.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.loadExampleDataButton.Size = new System.Drawing.Size(121, 36);
             this.loadExampleDataButton.Text = "Load Example Data";
             this.loadExampleDataButton.Click += new System.EventHandler(this.loadExampleDataButton_Click);
             // 
-            // comboBox1
+            // cutMethodComboBox
             // 
             this.cutMethodComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cutMethodComboBox.FormattingEnabled = true;
             this.cutMethodComboBox.Location = new System.Drawing.Point(107, 22);
-            this.cutMethodComboBox.Name = "comboBox1";
+            this.cutMethodComboBox.Name = "cutMethodComboBox";
             this.cutMethodComboBox.Size = new System.Drawing.Size(184, 25);
             this.cutMethodComboBox.TabIndex = 7;
             this.cutMethodComboBox.SelectedIndexChanged += new System.EventHandler(this.cutMethodComboBox_SelectedIndexChanged);
             // 
-            // textBox1
+            // cutWidthTextBox
             // 
             this.cutWidthTextBox.Location = new System.Drawing.Point(107, 53);
-            this.cutWidthTextBox.Name = "textBox1";
+            this.cutWidthTextBox.Name = "cutWidthTextBox";
             this.cutWidthTextBox.Size = new System.Drawing.Size(184, 25);
             this.cutWidthTextBox.TabIndex = 9;
             this.cutWidthTextBox.TextChanged += new System.EventHandler(this.cutWidthTextBox_TextChanged);
             // 
-            // label3
+            // cutMethodLabel
             // 
             this.cutMethodLabel.AutoSize = true;
             this.cutMethodLabel.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cutMethodLabel.ForeColor = System.Drawing.Color.Blue;
             this.cutMethodLabel.Location = new System.Drawing.Point(20, 25);
-            this.cutMethodLabel.Name = "label3";
+            this.cutMethodLabel.Name = "cutMethodLabel";
             this.cutMethodLabel.Size = new System.Drawing.Size(81, 17);
             this.cutMethodLabel.TabIndex = 6;
             this.cutMethodLabel.Text = "Cut method";
             // 
-            // label4
+            // cutWidthLabel
             // 
             this.cutWidthLabel.AutoSize = true;
             this.cutWidthLabel.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.cutWidthLabel.ForeColor = System.Drawing.Color.Blue;
             this.cutWidthLabel.Location = new System.Drawing.Point(34, 56);
-            this.cutWidthLabel.Name = "label4";
+            this.cutWidthLabel.Name = "cutWidthLabel";
             this.cutWidthLabel.Size = new System.Drawing.Size(67, 17);
             this.cutWidthLabel.TabIndex = 8;
             this.cutWidthLabel.Text = "Cut width";
@@ -272,7 +272,7 @@
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.Padding = new System.Drawing.Point(20, 3);
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(856, 495);
+            this.tabControl1.Size = new System.Drawing.Size(771, 569);
             this.tabControl1.TabIndex = 12;
             // 
             // tabPage2
@@ -281,7 +281,7 @@
             this.tabPage2.Location = new System.Drawing.Point(4, 26);
             this.tabPage2.Name = "tabPage2";
             this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(848, 465);
+            this.tabPage2.Size = new System.Drawing.Size(763, 539);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "ITEMS TO NEST";
             this.tabPage2.UseVisualStyleBackColor = true;
@@ -343,8 +343,8 @@
             // TotalLengthString
             // 
             this.TotalLengthString.DataPropertyName = "TotalLengthString";
-            dataGridViewCellStyle4.BackColor = System.Drawing.SystemColors.Info;
-            this.TotalLengthString.DefaultCellStyle = dataGridViewCellStyle4;
+            dataGridViewCellStyle8.BackColor = System.Drawing.SystemColors.Info;
+            this.TotalLengthString.DefaultCellStyle = dataGridViewCellStyle8;
             this.TotalLengthString.HeaderText = "Total Length";
             this.TotalLengthString.Name = "TotalLengthString";
             this.TotalLengthString.ReadOnly = true;
@@ -362,7 +362,7 @@
             // MainForm
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.ClientSize = new System.Drawing.Size(880, 549);
+            this.ClientSize = new System.Drawing.Size(795, 623);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.toolStrip1);
             this.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));

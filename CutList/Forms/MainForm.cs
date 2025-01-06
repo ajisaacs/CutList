@@ -62,7 +62,7 @@ namespace CutList.Forms
             if (!parts.Any(i => i.Length > 0 && i.Quantity > 0))
                 return false;
 
-            if (!bins.Any(i => i.Length > 0 && i.Quantity > 0))
+            if (!bins.Any(i => i.Length > 0 && (i.Quantity > 0 || i.Quantity == -1)))
                 return false;
 
             for (int rowIndex = 0; rowIndex < dataGridView1.Rows.Count; rowIndex++)
@@ -216,9 +216,9 @@ namespace CutList.Forms
 
         private void LoadExampleData(bool clearCurrentData = true)
         {
-            const int PartCount = 50;
+            const int PartCount = 25;
             const double Min = 1;
-            const double Max = 120;
+            const double Max = 60;
 
             if (clearCurrentData)
             {

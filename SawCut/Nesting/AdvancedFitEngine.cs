@@ -51,7 +51,7 @@ namespace SawCut.Nesting
         {
             var bins = new List<Bin>();
 
-            while (Items.Count > 0 && bins.Count < MaxBinCount)
+            while (Items.Count > 0 && (MaxBinCount == -1 || bins.Count < MaxBinCount))
             {
                 var bin = new Bin(StockLength);
                 bin.Spacing = Spacing;
