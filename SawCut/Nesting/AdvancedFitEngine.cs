@@ -9,6 +9,11 @@ namespace SawCut.Nesting
 {
     public class AdvancedFitEngine : IEngine
     {
+        public AdvancedFitEngine()
+        {
+            Bins = new List<Bin>();
+        }
+
         public double StockLength { get; set; }
 
         public double Spacing { get; set; }
@@ -16,6 +21,8 @@ namespace SawCut.Nesting
         public int MaxBinCount { get; set; } = int.MaxValue;
 
         private List<BinItem> Items { get; set; }
+
+        private List<Bin> Bins { get; set; }
 
         public Result Pack(List<BinItem> items)
         {
@@ -31,8 +38,10 @@ namespace SawCut.Nesting
 
             Items.RemoveAll(item => result.ItemsNotUsed.Contains(item));
 
+            CreateBins();
+
             result.ItemsNotUsed = Items.Where(i => i.Length > StockLength).ToList();
-            result.Bins = GetBins();
+            result.Bins = Bins;
 
             foreach (var bin in result.Bins)
             {
@@ -47,49 +56,99 @@ namespace SawCut.Nesting
             return result;
         }
 
-        private List<Bin> GetBins()
+        private void CreateBins()
         {
-            var bins = new List<Bin>();
-
-            while (Items.Count > 0 && (MaxBinCount == -1 || bins.Count < MaxBinCount))
+            while (Items.Count > 0 && CanAddMoreBins())
             {
-                var bin = new Bin(StockLength);
-                bin.Spacing = Spacing;
+                var bin = new Bin(StockLength)
+                {
+                    Spacing = Spacing
+                };
 
                 FillBin(bin);
 
-                int count = 0;
-
                 while (TryImprovePacking(bin))
                 {
-                    count++;
                 }
+                
+                bin.Items.Sort((a, b) =>
+                {
+                    int comparison = b.Length.CompareTo(a.Length);
+                    return comparison != 0 ? comparison : a.Length.CompareTo(b.Length);
+                });
 
-                bin.Items = bin.Items.OrderByDescending(i => i.Length).ToList();
+                Bins.Add(bin);
 
-                bins.Add(bin);
+                CreateDuplicateBins(bin);
             }
 
-            return bins
+            Bins = Bins
                 .OrderByDescending(b => b.Utilization)
                 .ThenBy(b => b.Items.Count)
                 .ToList();
+        }
+
+        private bool CanAddMoreBins()
+        {
+            if (MaxBinCount == -1)
+                return true;
+
+            if (Bins.Count < MaxBinCount)
+                return true;
+
+            return false;
         }
 
         private void FillBin(Bin bin)
         {
             for (int i = 0; i < Items.Count; i++)
             {
-                var item = Items[i];
-
-                if (bin.RemainingLength >= item.Length)
-                    bin.Items.Add(item);
+                if (bin.RemainingLength >= Items[i].Length)
+                {
+                    bin.Items.Add(Items[i]);
+                    Items.RemoveAt(i);
+                    i--;
+                }
             }
+        }
 
-            foreach (var item in bin.Items)
+        private void CreateDuplicateBins(Bin originalBin)
+        {
+            // Count how many times the bin can be duplicated
+            int duplicateCount = GetDuplicateCount(originalBin);
+
+            for (int i = 0; i < duplicateCount; i++)
             {
-                Items.Remove(item);
+                if (!CanAddMoreBins())
+                    break;
+
+                var newBin = new Bin(originalBin.Length)
+                {
+                    Spacing = Spacing
+                };
+
+                foreach (var item in originalBin.Items)
+                {
+                    var newItem = Items.FirstOrDefault(a => a.Length == item.Length);
+                    newBin.Items.Add(item);
+                    Items.Remove(newItem);
+                }
+
+                Bins.Add(newBin);
             }
+        }
+
+        private int GetDuplicateCount(Bin bin)
+        {
+            int count = int.MaxValue;
+
+            foreach (var item in bin.Items.GroupBy(i => i.Length))
+            {
+                int availableCount = Items.Count(i => i.Length == item.Key);
+                count = Math.Min(count, availableCount / item.Count());
+            }
+
+            return count;
         }
 
         private bool TryImprovePacking(Bin bin)
@@ -100,18 +159,14 @@ namespace SawCut.Nesting
             if (Items.Count < 2)
                 return false;
 
-            var lengthGroups = bin.Items
-                .OrderByDescending(i => i.Length)
-                .GroupBy(i => i.Length)
-                .Skip(1);
+            var lengthGroups = GroupItemsByLength(bin.Items);
 
-            var minItemLength = Items.Min(i => i.Length);
+            var shortestLengthItemAvailable = Items.Min(i => i.Length);
 
             foreach (var group in lengthGroups)
             {
                 var minRemainingLength = bin.RemainingLength;
-
-                var firstItem = group.First();
+                var firstItem = group.Items.FirstOrDefault();
                 bin.Items.Remove(firstItem);
 
                 for (int i = 0; i < Items.Count; i++)
@@ -127,7 +182,7 @@ namespace SawCut.Nesting
 
                     for (int j = i + 1; j < Items.Count; j++)
                     {
-                        if (bin2.RemainingLength < minItemLength)
+                        if (bin2.RemainingLength < shortestLengthItemAvailable)
                             break;
 
                         var item2 = Items[j];
@@ -158,6 +213,41 @@ namespace SawCut.Nesting
 
             return false;
         }
+
+        private List<LengthGroup> GroupItemsByLength(List<BinItem> items)
+        {
+            var groups = new List<LengthGroup>();
+            var groupMap = new Dictionary<double, LengthGroup>();
+
+            foreach (var item in items)
+            {
+                if (!groupMap.TryGetValue(item.Length, out var group))
+                {
+                    group = new LengthGroup
+                    {
+                        Length = item.Length,
+                        Items = new List<BinItem>()
+                    };
+                    groupMap[item.Length] = group;
+                    groups.Add(group);
+                }
+                group.Items.Add(item);
+            }
+
+            groups.Sort((a, b) => b.Length.CompareTo(a.Length));
+            if (groups.Count > 0)
+            {
+                groups.RemoveAt(0); // Remove the largest length group
+            }
+
+            return groups;
+        }
+    }
+
+    internal class LengthGroup
+    {
+        public double Length { get; set; }
+        public List<BinItem> Items { get; set; }
     }
 }
 
