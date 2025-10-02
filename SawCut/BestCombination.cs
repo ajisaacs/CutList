@@ -7,23 +7,20 @@ namespace SawCut
         public static BestComboResult FindFrom2(double length1, double length2, double stockLength)
         {
             var result = InitializeResult(length1, length2);
-            stockLength += Tolerance.Epsilon;
 
-            if (length1 > stockLength)
-            {
-                if (length2 > stockLength)
-                    return null;
+            bool item1Fits = length1 <= stockLength;
+            bool item2Fits = length2 <= stockLength;
 
+            if (!item1Fits && !item2Fits)
+                return null;
+
+            if (!item1Fits)
                 return CalculateSingleItemResult(result, length2, stockLength, false);
-            }
-            else if (length2 > stockLength)
-            {
+
+            if (!item2Fits)
                 return CalculateSingleItemResult(result, length1, stockLength, true);
-            }
-            else
-            {
-                return CalculateOptimalCombination(result, length1, length2, stockLength);
-            }
+
+            return CalculateOptimalCombination(result, length1, length2, stockLength);
         }
 
         private static BestComboResult InitializeResult(double length1, double length2)
