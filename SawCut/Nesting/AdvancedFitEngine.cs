@@ -130,7 +130,7 @@ namespace SawCut.Nesting
                 foreach (var item in originalBin.Items)
                 {
                     var newItem = Items.FirstOrDefault(a => a.Length == item.Length);
-                    newBin.Items.Add(item);
+                    newBin.Items.Add(newItem);
                     Items.Remove(newItem);
                 }
 
