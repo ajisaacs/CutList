@@ -65,7 +65,10 @@ namespace SawCut.Nesting
                     }
                 }
 
-                best_bin.Items.Add(item);
+                if (best_bin != null)
+                    best_bin.Items.Add(item);
+
+                
             }
 
             return bins
