@@ -105,6 +105,22 @@ namespace CutList.Forms
             }
         }
 
+        private void SyncDocumentFromUI()
+        {
+            if (currentDocument == null)
+            {
+                currentDocument = new Document();
+            }
+
+            // Flush any in-cell edits that haven’t committed yet.
+            dataGridView1.EndEdit();
+            dataGridView2.EndEdit();
+
+            currentDocument.PartsToNest = parts.ToList();   // parts is the binding list
+            currentDocument.StockBins = bins.ToList();    // bins  is the binding list
+            currentDocument.Tool = GetSelectedTool(); // whatever tool the user picked
+        }
+
         private void LoadDocumentData()
         {
             parts = new BindingList<PartInputItem>(currentDocument.PartsToNest);
@@ -122,6 +138,8 @@ namespace CutList.Forms
 
         private void Save()
         {
+            SyncDocumentFromUI();
+
             if (!currentDocument.Validate(out string validationMessage))
             {
                 MessageBox.Show(validationMessage, "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
