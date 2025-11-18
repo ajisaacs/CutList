@@ -29,11 +29,11 @@ namespace SawCut.Nesting
                 e.Spacing = Spacing;
                 var r = e.Pack(remainingItems);
 
-                result.Bins.AddRange(r.Bins);
-                remainingItems = r.ItemsNotUsed;
+                result.AddBins(r.Bins);
+                remainingItems = r.ItemsNotUsed.ToList();
             }
 
-            result.ItemsNotUsed = remainingItems;
+            result.AddItemsNotUsed(remainingItems);
 
             return result;
         }

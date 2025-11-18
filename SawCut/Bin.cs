@@ -7,12 +7,34 @@ namespace SawCut
 {
     public class Bin
     {
-        public List<BinItem> Items;
+        private readonly List<BinItem> _items;
 
         public Bin(double length)
         {
-            Items = new List<BinItem>();
+            _items = new List<BinItem>();
             Length = length;
+        }
+
+        public IReadOnlyList<BinItem> Items => _items;
+
+        public void AddItem(BinItem item)
+        {
+            _items.Add(item);
+        }
+
+        public void AddItems(IEnumerable<BinItem> items)
+        {
+            _items.AddRange(items);
+        }
+
+        public void RemoveItem(BinItem item)
+        {
+            _items.Remove(item);
+        }
+
+        public void SortItems(Comparison<BinItem> comparison)
+        {
+            _items.Sort(comparison);
         }
 
         public double Spacing { get; set; }

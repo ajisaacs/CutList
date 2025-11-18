@@ -31,17 +31,17 @@ namespace SawCut.Nesting
 
             Items = items.OrderByDescending(i => i.Length).ToList();
 
-            var result = new Result
-            {
-                ItemsNotUsed = Items.Where(i => i.Length > StockLength).ToList()
-            };
+            var result = new Result();
+            var itemsTooLarge = Items.Where(i => i.Length > StockLength).ToList();
+            result.AddItemsNotUsed(itemsTooLarge);
 
-            Items.RemoveAll(item => result.ItemsNotUsed.Contains(item));
+            Items.RemoveAll(item => itemsTooLarge.Contains(item));
 
             CreateBins();
 
-            result.ItemsNotUsed = Items.Where(i => i.Length > StockLength).ToList();
-            result.Bins = Bins;
+            var finalItemsTooLarge = Items.Where(i => i.Length > StockLength).ToList();
+            result.AddItemsNotUsed(finalItemsTooLarge);
+            result.AddBins(Bins);
 
             foreach (var bin in result.Bins)
             {
@@ -51,7 +51,7 @@ namespace SawCut.Nesting
                 }
             }
 
-            result.ItemsNotUsed.AddRange(Items);
+            result.AddItemsNotUsed(Items);
 
             return result;
         }
@@ -70,8 +70,8 @@ namespace SawCut.Nesting
                 while (TryImprovePacking(bin))
                 {
                 }
-                
-                bin.Items.Sort((a, b) =>
+
+                bin.SortItems((a, b) =>
                 {
                     int comparison = b.Length.CompareTo(a.Length);
                     return comparison != 0 ? comparison : a.Length.CompareTo(b.Length);
@@ -105,7 +105,7 @@ namespace SawCut.Nesting
             {
                 if (bin.RemainingLength >= Items[i].Length)
                 {
-                    bin.Items.Add(Items[i]);
+                    bin.AddItem(Items[i]);
                     Items.RemoveAt(i);
                     i--;
                 }
@@ -130,7 +130,7 @@ namespace SawCut.Nesting
                 foreach (var item in originalBin.Items)
                 {
                     var newItem = Items.FirstOrDefault(a => a.Length == item.Length);
-                    newBin.Items.Add(newItem);
+                    newBin.AddItem(newItem);
                     Items.Remove(newItem);
                 }
 
@@ -167,7 +167,7 @@ namespace SawCut.Nesting
             {
                 var minRemainingLength = bin.RemainingLength;
                 var firstItem = group.Items.FirstOrDefault();
-                bin.Items.Remove(firstItem);
+                bin.RemoveItem(firstItem);
 
                 for (int i = 0; i < Items.Count; i++)
                 {
@@ -178,7 +178,7 @@ namespace SawCut.Nesting
 
                     var bin2 = new Bin(bin.RemainingLength);
                     bin2.Spacing = bin.Spacing;
-                    bin2.Items.Add(item1);
+                    bin2.AddItem(item1);
 
                     for (int j = i + 1; j < Items.Count; j++)
                     {
@@ -190,13 +190,13 @@ namespace SawCut.Nesting
                         if (item2.Length > bin2.RemainingLength)
                             continue;
 
-                        bin2.Items.Add(item2);
+                        bin2.AddItem(item2);
                     }
 
                     if (bin2.RemainingLength < minRemainingLength)
                     {
                         Items.Add(firstItem);
-                        bin.Items.AddRange(bin2.Items);
+                        bin.AddItems(bin2.Items);
 
                         foreach (var item in bin2.Items)
                         {
@@ -208,13 +208,13 @@ namespace SawCut.Nesting
                     }
                 }
 
-                bin.Items.Add(firstItem);
+                bin.AddItem(firstItem);
             }
 
             return false;
         }
 
-        private List<LengthGroup> GroupItemsByLength(List<BinItem> items)
+        private List<LengthGroup> GroupItemsByLength(IEnumerable<BinItem> items)
         {
             var groups = new List<LengthGroup>();
             var groupMap = new Dictionary<double, LengthGroup>();

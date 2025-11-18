@@ -23,16 +23,18 @@ namespace SawCut.Nesting
             Items = items.OrderByDescending(i => i.Length).ToList();
 
             var result = new Result();
-            result.ItemsNotUsed = Items.Where(i => i.Length > StockLength).ToList();
+            var itemsTooLarge = Items.Where(i => i.Length > StockLength).ToList();
+            result.AddItemsNotUsed(itemsTooLarge);
 
-            foreach (var item in result.ItemsNotUsed)
+            foreach (var item in itemsTooLarge)
             {
                 Items.Remove(item);
             }
 
-            result.Bins = GetBins();
+            var bins = GetBins();
+            result.AddBins(bins);
 
-            foreach (var bin in result.Bins)
+            foreach (var bin in bins)
             {
                 foreach (var item in bin.Items)
                 {
@@ -40,7 +42,7 @@ namespace SawCut.Nesting
                 }
             }
 
-            result.ItemsNotUsed.AddRange(Items);
+            result.AddItemsNotUsed(Items);
 
             return result;
         }
@@ -66,7 +68,7 @@ namespace SawCut.Nesting
                 }
 
                 if (best_bin != null)
-                    best_bin.Items.Add(item);
+                    best_bin.AddItem(item);
 
                 
             }
