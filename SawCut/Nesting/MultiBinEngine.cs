@@ -6,6 +6,17 @@ namespace SawCut.Nesting
 {
     public class MultiBinEngine : IEngine
     {
+        private readonly IEngineFactory _engineFactory;
+
+        public MultiBinEngine() : this(new EngineFactory())
+        {
+        }
+
+        public MultiBinEngine(IEngineFactory engineFactory)
+        {
+            _engineFactory = engineFactory ?? throw new ArgumentNullException(nameof(engineFactory));
+        }
+
         public List<MultiBin> Bins { get; set; }
 
         public double Spacing { get; set; }
@@ -23,11 +34,8 @@ namespace SawCut.Nesting
 
             foreach (var bin in bins)
             {
-                var e = new AdvancedFitEngine();
-                e.MaxBinCount = bin.Quantity;
-                e.StockLength = bin.Length;
-                e.Spacing = Spacing;
-                var r = e.Pack(remainingItems);
+                var engine = _engineFactory.CreateEngine(bin.Length, Spacing, bin.Quantity);
+                var r = engine.Pack(remainingItems);
 
                 result.AddBins(r.Bins);
                 remainingItems = r.ItemsNotUsed.ToList();
