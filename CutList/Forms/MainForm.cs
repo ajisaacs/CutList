@@ -1,34 +1,33 @@
 ﻿using CutList.Models;
+using CutList.Presenters;
 using CutList.Services;
-using SawCut.Nesting;
+using SawCut;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace CutList.Forms
 {
-    public partial class MainForm : Form
+    public partial class MainForm : Form, IMainView
     {
         private static readonly Random random = new Random();
 
         private BindingList<PartInputItem> parts;
         private BindingList<BinInputItem> bins;
         private Toolbox toolbox;
-        private Document currentDocument;
-        private readonly CutListService cutListService;
-        private readonly DocumentService documentService;
+        private MainFormPresenter presenter;
 
         public MainForm()
         {
             InitializeComponent();
 
-            cutListService = new CutListService();
-            documentService = new DocumentService();
+            var cutListService = new CutListService();
+            var documentService = new DocumentService();
+            presenter = new MainFormPresenter(this, cutListService, documentService);
 
             dataGridView1.DrawRowNumbers();
             dataGridView2.DrawRowNumbers();
@@ -50,88 +49,113 @@ namespace CutList.Forms
             loadExampleDataButton.Visible = false;
 #endif
 
-            LoadDocumentData();
+            LoadDocumentData(new List<PartInputItem>(), new List<BinInputItem>());
         }
 
-        private void UpdateRunButtonState()
-        {
-            var isValid = IsValid();
+        // IMainView implementation
+        public List<PartInputItem> Parts => parts.ToList();
+        public List<BinInputItem> StockBins => bins.ToList();
+        public Tool SelectedTool => cutMethodComboBox.SelectedItem as Tool;
 
-            runButton.Enabled = isValid;
-            saveButton.Enabled = isValid;
+        public void ShowError(string message)
+        {
+            MessageBox.Show(message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        private bool IsValid()
+        public void ShowWarning(string message)
         {
-            if (!parts.Any(i => i.Length > 0 && i.Quantity > 0))
-                return false;
+            MessageBox.Show(message, "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
 
-            if (!bins.Any(i => i.Length > 0 && (i.Quantity > 0 || i.Quantity == -1)))
-                return false;
+        public void ShowInfo(string message)
+        {
+            MessageBox.Show(message, "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
 
-            for (int rowIndex = 0; rowIndex < dataGridView1.Rows.Count; rowIndex++)
+        public bool AskYesNo(string question, string title)
+        {
+            return MessageBox.Show(question, title, MessageBoxButtons.YesNo) == DialogResult.Yes;
+        }
+
+        public bool? AskYesNoCancel(string question, string title)
+        {
+            var result = MessageBox.Show(question, title, MessageBoxButtons.YesNoCancel);
+            if (result == DialogResult.Cancel)
+                return null;
+            return result == DialogResult.Yes;
+        }
+
+        public bool PromptOpenFile(string filter, out string filePath)
+        {
+            var openFileDialog = new OpenFileDialog
             {
-                var row = dataGridView1.Rows[rowIndex];
+                Multiselect = false,
+                Filter = filter
+            };
 
-                if (!string.IsNullOrWhiteSpace(row.ErrorText))
-                {
-                    return false;
-                }
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                filePath = openFileDialog.FileName;
+                return true;
             }
 
-            return true;
+            filePath = null;
+            return false;
         }
 
-        private void Open()
+        public bool PromptSaveFile(string filter, string defaultFileName, out string filePath)
         {
-            try
+            var saveFileDialog = new SaveFileDialog
             {
-                var openFileDialog = new OpenFileDialog
-                {
-                    Multiselect = false,
-                    Filter = "Json File|*.json"
-                };
+                FileName = defaultFileName,
+                Filter = filter
+            };
 
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    currentDocument = documentService.Load(openFileDialog.FileName);
-
-                    if (currentDocument == null)
-                        return;
-
-                    LoadDocumentData();
-                    UpdateRunButtonState();
-                }
-            }
-            catch (Exception ex)
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
             {
-                MessageBox.Show($"Failed to load file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                filePath = saveFileDialog.FileName;
+                return true;
             }
+
+            filePath = null;
+            return false;
         }
 
-        private void SyncDocumentFromUI()
+        public void LoadDocumentData(List<PartInputItem> partsData, List<BinInputItem> stockBinsData)
         {
-            if (currentDocument == null)
-            {
-                currentDocument = new Document();
-            }
-
-            // Flush any in-cell edits that haven’t committed yet.
-            dataGridView1.EndEdit();
-            dataGridView2.EndEdit();
-
-            currentDocument.PartsToNest = parts.ToList();   // parts is the binding list
-            currentDocument.StockBins = bins.ToList();    // bins  is the binding list
-            currentDocument.Tool = GetSelectedTool(); // whatever tool the user picked
-        }
-
-        private void LoadDocumentData()
-        {
-            parts = new BindingList<PartInputItem>(currentDocument.PartsToNest);
-            bins = new BindingList<BinInputItem>(currentDocument.StockBins);
+            parts = new BindingList<PartInputItem>(partsData);
+            bins = new BindingList<BinInputItem>(stockBinsData);
 
             itemBindingSource.DataSource = parts;
             binInputItemBindingSource.DataSource = bins;
+        }
+
+        public void ShowResults(List<Bin> binResults, string fileName)
+        {
+            var form = new ResultsForm(fileName);
+            form.Bins = binResults;
+            form.ShowDialog();
+        }
+
+        public void UpdateRunButtonState(bool enabled)
+        {
+            runButton.Enabled = enabled;
+            saveButton.Enabled = enabled;
+        }
+
+        public void ClearData()
+        {
+            parts = new BindingList<PartInputItem>();
+            bins = new BindingList<BinInputItem>();
+
+            itemBindingSource.DataSource = parts;
+            binInputItemBindingSource.DataSource = bins;
+        }
+
+        // Event handler delegates to presenter
+        private void Open()
+        {
+            presenter.OpenDocument();
         }
 
         private void DataBindingComplete(object sender, DataGridViewBindingCompleteEventArgs e)
@@ -142,61 +166,20 @@ namespace CutList.Forms
 
         private void Save()
         {
-            try
-            {
-                SyncDocumentFromUI();
+            // Flush any in-cell edits that haven't committed yet
+            dataGridView1.EndEdit();
+            dataGridView2.EndEdit();
 
-                if (!documentService.Validate(currentDocument, out string validationMessage))
-                {
-                    MessageBox.Show(validationMessage, "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                var saveFileDialog = new SaveFileDialog
-                {
-                    FileName = currentDocument.LastFilePath == null ? "NewDocument.json" : Path.GetFileName(currentDocument.LastFilePath),
-                    Filter = "Json File|*.json"
-                };
-
-                if (saveFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    documentService.Save(currentDocument, saveFileDialog.FileName);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to save file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            presenter.SaveDocument();
         }
 
         private void Run()
         {
+            // Flush any in-cell edits that haven't committed yet
             dataGridView1.EndEdit();
             dataGridView2.EndEdit();
 
-            var cutTool = GetSelectedTool();
-            var result = cutListService.Pack(parts.ToList(), bins.ToList(), cutTool);
-
-            var filename = GetResultsSaveName();
-            var form = new ResultsForm(filename);
-            form.Bins = result.Bins.ToList();
-            form.ShowDialog();
-        }
-
-        private string GetResultsSaveName()
-        {
-            var today = DateTime.Today;
-            var year = today.Year.ToString();
-            var month = today.Month.ToString().PadLeft(2, '0');
-            var day = today.Day.ToString().PadLeft(2, '0');
-            var name = $"Cut List {year}-{month}-{day}";
-
-            return name;
-        }
-
-        public Tool GetSelectedTool()
-        {
-            return cutMethodComboBox.SelectedItem as Tool;
+            presenter.Run();
         }
 
         private double GetRandomLength(double min, double max)
@@ -240,7 +223,7 @@ namespace CutList.Forms
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            UpdateRunButtonState();
+            presenter.UpdateRunButtonState();
         }
 
         private void openFileButton_Click(object sender, EventArgs e)
@@ -324,39 +307,22 @@ namespace CutList.Forms
 
         private void BinInputItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
         {
-            UpdateRunButtonState();
+            presenter.UpdateRunButtonState();
         }
 
         private void ItemBindingSource_ListChanged(object sender, ListChangedEventArgs e)
         {
-            UpdateRunButtonState();
+            presenter.UpdateRunButtonState();
         }
 
         private void newDocumentButton_Click(object sender, EventArgs e)
         {
-            parts = new BindingList<PartInputItem>();
-            bins = new BindingList<BinInputItem>();
-
-            itemBindingSource.DataSource = parts;
-            binInputItemBindingSource.DataSource = bins;
-            UpdateRunButtonState();
+            presenter.NewDocument();
         }
-        
+
         private void loadExampleDataButton_Click(object sender, EventArgs e)
         {
-            var clearData = true;
-
-            if (parts.Count > 0 || bins.Count > 0)
-            {
-                var dialogResult = MessageBox.Show("Are you sure you want to clear the current data?", "Clear Data", MessageBoxButtons.YesNoCancel);
-
-                if (dialogResult == DialogResult.Cancel)
-                    return;
-
-                clearData = dialogResult == DialogResult.Yes;
-            }
-
-            LoadExampleData(clearData);
+            presenter.OnLoadExampleDataRequested();
         }
     }
 }
