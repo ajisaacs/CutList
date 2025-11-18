@@ -22,7 +22,6 @@ namespace CutList.Models
 
                     if (double.TryParse(input, out d))
                     {
-                        LengthInputValue += "\"";
                         return d;
                     }
 
