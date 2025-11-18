@@ -1,6 +1,5 @@
 ﻿using CutList.Models;
-using Newtonsoft.Json;
-using SawCut;
+using CutList.Services;
 using SawCut.Nesting;
 using System;
 using System.Collections.Generic;
@@ -21,10 +20,15 @@ namespace CutList.Forms
         private BindingList<BinInputItem> bins;
         private Toolbox toolbox;
         private Document currentDocument;
+        private readonly CutListService cutListService;
+        private readonly DocumentService documentService;
 
         public MainForm()
         {
             InitializeComponent();
+
+            cutListService = new CutListService();
+            documentService = new DocumentService();
 
             dataGridView1.DrawRowNumbers();
             dataGridView2.DrawRowNumbers();
@@ -90,7 +94,7 @@ namespace CutList.Forms
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    currentDocument = Document.Load(openFileDialog.FileName);
+                    currentDocument = documentService.Load(openFileDialog.FileName);
 
                     if (currentDocument == null)
                         return;
@@ -138,23 +142,30 @@ namespace CutList.Forms
 
         private void Save()
         {
-            SyncDocumentFromUI();
-
-            if (!currentDocument.Validate(out string validationMessage))
+            try
             {
-                MessageBox.Show(validationMessage, "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                SyncDocumentFromUI();
+
+                if (!documentService.Validate(currentDocument, out string validationMessage))
+                {
+                    MessageBox.Show(validationMessage, "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                var saveFileDialog = new SaveFileDialog
+                {
+                    FileName = currentDocument.LastFilePath == null ? "NewDocument.json" : Path.GetFileName(currentDocument.LastFilePath),
+                    Filter = "Json File|*.json"
+                };
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    documentService.Save(currentDocument, saveFileDialog.FileName);
+                }
             }
-
-            var saveFileDialog = new SaveFileDialog
+            catch (Exception ex)
             {
-                FileName = currentDocument.LastFilePath == null ? "NewDocument.json" : Path.GetFileName(currentDocument.LastFilePath),
-                Filter = "Json File|*.json"
-            };
-
-            if (saveFileDialog.ShowDialog() == DialogResult.OK)
-            {
-                currentDocument.Save(saveFileDialog.FileName);
+                MessageBox.Show($"Failed to save file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -164,28 +175,11 @@ namespace CutList.Forms
             dataGridView2.EndEdit();
 
             var cutTool = GetSelectedTool();
-            var stockBins = new List<MultiBin>();
-
-            foreach (var item in bins)
-            {
-                stockBins.Add(new MultiBin
-                {
-                    Length = item.Length.Value,
-                    Quantity = item.Quantity,
-                    Priority = item.Priority
-                });
-            }
-
-            var engine = new MultiBinEngine();
-            engine.Spacing = cutTool.Kerf;
-            engine.Bins = stockBins;
-
-            var items = GetItems();
-            var result = engine.Pack(items);
+            var result = cutListService.Pack(parts.ToList(), bins.ToList(), cutTool);
 
             var filename = GetResultsSaveName();
             var form = new ResultsForm(filename);
-            form.Bins = result.Bins;
+            form.Bins = result.Bins.ToList();
             form.ShowDialog();
         }
 
@@ -198,28 +192,6 @@ namespace CutList.Forms
             var name = $"Cut List {year}-{month}-{day}";
 
             return name;
-        }
-
-        private List<BinItem> GetItems()
-        {
-            var items2 = new List<BinItem>();
-
-            foreach (var item in parts)
-            {
-                if (item.Length == null || item.Length == 0)
-                    continue;
-
-                for (int i = 0; i < item.Quantity; i++)
-                {
-                    items2.Add(new BinItem
-                    {
-                        Name = item.Name,
-                        Length = item.Length.Value
-                    });
-                }
-            }
-
-            return items2;
         }
 
         public Tool GetSelectedTool()
