@@ -32,40 +32,26 @@ namespace CutList.Forms
         /// </summary>
         public void Load()
         {
-            try
+            if (!File.Exists(ToolsFilePath))
             {
-                if (!File.Exists(ToolsFilePath))
-                {
-                    LoadDefaultTools();
-                    Save();
-                }
-                else
-                {
-                    var json = File.ReadAllText(ToolsFilePath);
-                    var list = JsonConvert.DeserializeObject<List<Tool>>(json);
-                    Tools = list;
-                }
+                LoadDefaultTools();
+                Save();
             }
-            catch (Exception ex)
+            else
             {
-                throw;
+                var json = File.ReadAllText(ToolsFilePath);
+                var list = JsonConvert.DeserializeObject<List<Tool>>(json);
+                Tools = list;
             }
         }
 
         public void Save()
         {
-            try
-            {
-                if (Tools == null)
-                    return;
+            if (Tools == null)
+                return;
 
-                var json = JsonConvert.SerializeObject(Tools, Formatting.Indented);
-                File.WriteAllText(ToolsFilePath, json);
-            }
-            catch (Exception ex)
-            {
-                throw;
-            }
+            var json = JsonConvert.SerializeObject(Tools, Formatting.Indented);
+            File.WriteAllText(ToolsFilePath, json);
         }
     }
 }
