@@ -1,3 +1,4 @@
+using CutList.Common;
 using CutList.Forms;
 using Newtonsoft.Json;
 using System;
@@ -16,49 +17,58 @@ namespace CutList.Services
         /// </summary>
         /// <param name="document">The document to save</param>
         /// <param name="filePath">The file path to save to</param>
-        /// <exception cref="IOException">Thrown when file cannot be saved</exception>
-        public void Save(Document document, string filePath)
+        /// <returns>Result indicating success or failure with error message</returns>
+        public Result Save(Document document, string filePath)
         {
-            var json = JsonConvert.SerializeObject(document, Formatting.Indented);
-            File.WriteAllText(filePath, json);
+            try
+            {
+                var json = JsonConvert.SerializeObject(document, Formatting.Indented);
+                File.WriteAllText(filePath, json);
+                return Result.Success();
+            }
+            catch (Exception ex)
+            {
+                return Result.Failure($"Failed to save file: {ex.Message}");
+            }
         }
 
         /// <summary>
         /// Loads a document from the specified file path.
         /// </summary>
         /// <param name="filePath">The file path to load from</param>
-        /// <returns>The loaded document</returns>
-        /// <exception cref="IOException">Thrown when file cannot be read</exception>
-        /// <exception cref="JsonException">Thrown when file contains invalid JSON</exception>
-        public Document Load(string filePath)
+        /// <returns>Result containing the loaded document or error message</returns>
+        public Result<Document> Load(string filePath)
         {
-            var json = File.ReadAllText(filePath);
-            var document = JsonConvert.DeserializeObject<Document>(json);
-            return document;
+            try
+            {
+                var json = File.ReadAllText(filePath);
+                var document = JsonConvert.DeserializeObject<Document>(json);
+                return Result<Document>.Success(document);
+            }
+            catch (Exception ex)
+            {
+                return Result<Document>.Failure($"Failed to load file: {ex.Message}");
+            }
         }
 
         /// <summary>
         /// Validates that a document has the minimum required data.
         /// </summary>
         /// <param name="document">The document to validate</param>
-        /// <param name="validationMessage">Output parameter containing validation error message</param>
-        /// <returns>True if document is valid, false otherwise</returns>
-        public bool Validate(Document document, out string validationMessage)
+        /// <returns>Result indicating success or failure with validation error message</returns>
+        public Result Validate(Document document)
         {
             if (document.PartsToNest == null || document.PartsToNest.Count == 0)
             {
-                validationMessage = "No parts to nest.";
-                return false;
+                return Result.Failure("No parts to nest.");
             }
 
             if (document.StockBins == null || document.StockBins.Count == 0)
             {
-                validationMessage = "No stock bins available.";
-                return false;
+                return Result.Failure("No stock bins available.");
             }
 
-            validationMessage = string.Empty;
-            return true;
+            return Result.Success();
         }
     }
 }

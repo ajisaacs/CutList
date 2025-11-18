@@ -1,6 +1,8 @@
+using CutList.Common;
 using CutList.Models;
 using SawCut;
 using SawCut.Nesting;
+using System;
 using System.Collections.Generic;
 
 namespace CutList.Services
@@ -17,19 +19,27 @@ namespace CutList.Services
         /// <param name="parts">The parts to be nested</param>
         /// <param name="stockBins">The available stock bins</param>
         /// <param name="cuttingTool">The cutting tool to use (determines kerf/spacing)</param>
-        /// <returns>The packing result with optimized bins and unused items</returns>
-        public Result Pack(List<PartInputItem> parts, List<BinInputItem> stockBins, Tool cuttingTool)
+        /// <returns>Result containing the packing result with optimized bins and unused items, or error message</returns>
+        public Result<SawCut.Nesting.Result> Pack(List<PartInputItem> parts, List<BinInputItem> stockBins, Tool cuttingTool)
         {
-            var multiBins = ConvertToMultiBins(stockBins);
-            var binItems = ConvertToBinItems(parts);
-
-            var engine = new MultiBinEngine
+            try
             {
-                Spacing = cuttingTool.Kerf,
-                Bins = multiBins
-            };
+                var multiBins = ConvertToMultiBins(stockBins);
+                var binItems = ConvertToBinItems(parts);
 
-            return engine.Pack(binItems);
+                var engine = new MultiBinEngine
+                {
+                    Spacing = cuttingTool.Kerf,
+                    Bins = multiBins
+                };
+
+                var packResult = engine.Pack(binItems);
+                return Result<SawCut.Nesting.Result>.Success(packResult);
+            }
+            catch (Exception ex)
+            {
+                return Result<SawCut.Nesting.Result>.Failure($"Packing failed: {ex.Message}");
+            }
         }
 
         private List<MultiBin> ConvertToMultiBins(List<BinInputItem> stockBins)
