@@ -114,8 +114,44 @@ namespace CutList.Presenters
         /// <param name="clearCurrentData">Whether to clear existing data first</param>
         public void LoadExampleData(bool clearCurrentData)
         {
-            // Example data loading logic would go here
-            // For now, just delegate to view if needed
+            const int PartCount = 25;
+            const double Min = 1;
+            const double Max = 60;
+
+            if (clearCurrentData)
+            {
+                _view.ClearData();
+            }
+
+            var parts = new List<PartInputItem>();
+            var bins = new List<BinInputItem>();
+            var random = new Random();
+
+            for (int i = 0; i < PartCount; i++)
+            {
+                var length = GetRandomLength(random, Min, Max);
+
+                parts.Add(new PartInputItem
+                {
+                    Name = $"Part {i + 1}",
+                    LengthInputValue = length.ToString(),
+                    Quantity = random.Next(1, 100)
+                });
+            }
+
+            bins.Add(new BinInputItem
+            {
+                LengthInputValue = "144\"",
+                Quantity = 9999
+            });
+
+            _view.LoadDocumentData(parts, bins);
+            UpdateRunButtonState();
+        }
+
+        private double GetRandomLength(Random random, double min, double max)
+        {
+            return Math.Round(random.NextDouble() * (max - min) + min, 2);
         }
 
         /// <summary>
