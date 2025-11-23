@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace SawCut
 {
@@ -11,9 +11,9 @@ namespace SawCut
         /// Converts a decimal measurement to a mixed fraction string representation.
         /// </summary>
         /// <param name="input">The decimal value to convert</param>
-        /// <param name="precision">The denominator precision (default 32 for 1/32")</param>
+        /// <param name="precision">The denominator precision (default 16 for 1/16")</param>
         /// <returns>A string in the format "whole-numerator/denominator"</returns>
-        public static string ConvertToMixedFraction(decimal input, int precision = 32)
+        public static string ConvertToMixedFraction(decimal input, int precision = 16)
         {
             // Get the whole number part
             int wholeNumber = (int)input;
@@ -34,6 +34,12 @@ namespace SawCut
             int gcd = GetGreatestCommonDivisor(numerator, denominator);
             numerator /= gcd;
             denominator /= gcd;
+
+            // If rounding wiped out the fraction → return whole number only
+            if (numerator == 0)
+            {
+                return wholeNumber.ToString();
+            }
 
             return $"{wholeNumber}-{numerator}/{denominator}";
         }
