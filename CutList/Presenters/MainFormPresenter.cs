@@ -180,7 +180,7 @@ namespace CutList.Presenters
             {
                 var result = _view.AskYesNoCancel("Are you sure you want to clear the current data?", "Clear Data");
 
-                if (result == null) // Cancel
+                if (result == null || !result.Value)
                     return;
 
                 LoadExampleData(result.Value);
