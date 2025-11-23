@@ -60,7 +60,7 @@ namespace SawCut
         public static string FormatFromInches(double totalInches)
         {
             var feet = Math.Floor(totalInches / 12.0);
-            var inches = Helper.ConvertToMixedFraction(totalInches - (feet * 12.0));
+            var inches = FormatHelper.ConvertToMixedFraction(totalInches - (feet * 12.0));
 
             if (feet > 0)
             {

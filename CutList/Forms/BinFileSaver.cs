@@ -25,7 +25,7 @@ namespace CutList.Forms
             using (var writer = new StreamWriter(file))
             {
                 writer.AutoFlush = true;
-                PaddingWidthOfItemLength = _bins.Max(b => b.Items.Max(i => SawCut.Helper.ConvertToMixedFraction(i.Length).Length));
+                PaddingWidthOfItemLength = _bins.Max(b => b.Items.Max(i => SawCut.FormatHelper.ConvertToMixedFraction(i.Length).Length));
                 var id = 1;
 
                 foreach (var bin in _bins)
@@ -55,8 +55,8 @@ namespace CutList.Forms
 
         private void WriteBinSummary(StreamWriter writer, Bin bin, int id)
         {
-            var totalLength = SawCut.Helper.ConvertToMixedFraction(bin.Length);
-            var remainingLength = SawCut.Helper.ConvertToMixedFraction(bin.RemainingLength);
+            var totalLength = SawCut.FormatHelper.ConvertToMixedFraction(bin.Length);
+            var remainingLength = SawCut.FormatHelper.ConvertToMixedFraction(bin.RemainingLength);
             var utilization = Math.Round(bin.Utilization * 100, 2);
 
             writer.WriteLine($"{id}. Length: {totalLength}, {remainingLength} remaining, {bin.Items.Count} items, {utilization}% utilization");
@@ -72,7 +72,7 @@ namespace CutList.Forms
             {
                 var first = group.First();
                 var count = group.Count();
-                var length = SawCut.Helper.ConvertToMixedFraction(first.Length).PadLeft(PaddingWidthOfItemLength);
+                var length = SawCut.FormatHelper.ConvertToMixedFraction(first.Length).PadLeft(PaddingWidthOfItemLength);
                 var name = first.Name;
                 var pcsSingularOrPlural = count == 1 ? "pc " : "pcs";
 

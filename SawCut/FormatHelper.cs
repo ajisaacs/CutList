@@ -1,10 +1,18 @@
-﻿using System;
-using System.Drawing;
+using System;
 
 namespace SawCut
 {
-    public static class Helper
+    /// <summary>
+    /// Provides formatting utilities for displaying measurements and values.
+    /// </summary>
+    public static class FormatHelper
     {
+        /// <summary>
+        /// Converts a decimal measurement to a mixed fraction string representation.
+        /// </summary>
+        /// <param name="input">The decimal value to convert</param>
+        /// <param name="precision">The denominator precision (default 32 for 1/32")</param>
+        /// <returns>A string in the format "whole-numerator/denominator"</returns>
         public static string ConvertToMixedFraction(decimal input, int precision = 32)
         {
             // Get the whole number part
@@ -30,6 +38,11 @@ namespace SawCut
             return $"{wholeNumber}-{numerator}/{denominator}";
         }
 
+        /// <summary>
+        /// Converts a double measurement to a mixed fraction string representation.
+        /// </summary>
+        /// <param name="input">The double value to convert</param>
+        /// <returns>A string in the format "whole-numerator/denominator"</returns>
         public static string ConvertToMixedFraction(double input)
         {
             return ConvertToMixedFraction((decimal)input);
