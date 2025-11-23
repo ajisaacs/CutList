@@ -11,6 +11,7 @@ namespace CutList.Forms
     public partial class ResultsForm : Form
     {
         private string filename;
+        private List<Bin> _originalBins = new List<Bin>();
 
         public ResultsForm(string filename)
         {
@@ -23,21 +24,27 @@ namespace CutList.Forms
 
         private void dataGridView1_RowEnter(object sender, DataGridViewCellEventArgs e)
         {
-            var selectedBin = dataGridView1.Rows[e.RowIndex].DataBoundItem as Bin;
+            var selectedGroup = dataGridView1.Rows[e.RowIndex].DataBoundItem as BinGroup;
 
-            if (selectedBin == null)
+            if (selectedGroup == null)
                 return;
 
-            binLayoutView1.Bin = selectedBin;
+            var representativeBin = selectedGroup.RepresentativeBin;
+            binLayoutView1.Bin = representativeBin;
             binLayoutView1.Invalidate();
 
-            dataGridView2.DataSource = selectedBin.Items;
+            dataGridView2.DataSource = representativeBin.Items;
         }
 
         public List<Bin> Bins
         {
-            get { return dataGridView1.DataSource as List<Bin>; }
-            set { dataGridView1.DataSource = value; }
+            get { return _originalBins; }
+            set
+            {
+                _originalBins = value;
+                var groupedBins = BinGroupingHelper.GroupIdenticalBins(value);
+                dataGridView1.DataSource = groupedBins;
+            }
         }
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
@@ -47,7 +54,7 @@ namespace CutList.Forms
 
         public void Save(string filepath)
         {
-            var writer = new BinFileSaver(Bins);
+            var writer = new BinFileSaver(_originalBins);
             writer.SaveBinsToFile(filepath);
         }
 

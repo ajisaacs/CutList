@@ -31,6 +31,7 @@
             this.components = new System.ComponentModel.Container();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.countDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.spacingDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.lengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.usedLengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -68,6 +69,7 @@
             this.dataGridView1.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
             this.dataGridView1.ColumnHeadersHeight = 30;
             this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.countDataGridViewTextBoxColumn,
             this.spacingDataGridViewTextBoxColumn,
             this.lengthDataGridViewTextBoxColumn,
             this.usedLengthDataGridViewTextBoxColumn,
@@ -83,9 +85,16 @@
             this.dataGridView1.Size = new System.Drawing.Size(994, 253);
             this.dataGridView1.TabIndex = 0;
             this.dataGridView1.RowEnter += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_RowEnter);
-            // 
+            //
+            // countDataGridViewTextBoxColumn
+            //
+            this.countDataGridViewTextBoxColumn.DataPropertyName = "Count";
+            this.countDataGridViewTextBoxColumn.HeaderText = "Count";
+            this.countDataGridViewTextBoxColumn.Name = "countDataGridViewTextBoxColumn";
+            this.countDataGridViewTextBoxColumn.Width = 60;
+            //
             // spacingDataGridViewTextBoxColumn
-            // 
+            //
             this.spacingDataGridViewTextBoxColumn.DataPropertyName = "Spacing";
             this.spacingDataGridViewTextBoxColumn.HeaderText = "Spacing";
             this.spacingDataGridViewTextBoxColumn.Name = "spacingDataGridViewTextBoxColumn";
@@ -121,8 +130,8 @@
             this.utilizationDataGridViewTextBoxColumn.ReadOnly = true;
             // 
             // binBindingSource
-            // 
-            this.binBindingSource.DataSource = typeof(SawCut.Bin);
+            //
+            this.binBindingSource.DataSource = typeof(SawCut.BinGroup);
             // 
             // splitContainer1
             // 
@@ -260,6 +269,7 @@
         private System.Windows.Forms.BindingSource binBindingSource;
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.BindingSource uIItemBindingSource;
+        private System.Windows.Forms.DataGridViewTextBoxColumn countDataGridViewTextBoxColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn spacingDataGridViewTextBoxColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn lengthDataGridViewTextBoxColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn usedLengthDataGridViewTextBoxColumn;
