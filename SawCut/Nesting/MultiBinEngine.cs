@@ -15,15 +15,34 @@ namespace SawCut.Nesting
         public MultiBinEngine(IEngineFactory engineFactory)
         {
             _engineFactory = engineFactory ?? throw new ArgumentNullException(nameof(engineFactory));
+            _bins = new List<MultiBin>();
         }
 
-        public List<MultiBin> Bins { get; set; }
+        private readonly List<MultiBin> _bins;
+
+        /// <summary>
+        /// Gets the read-only collection of bins.
+        /// Use SetBins() to configure bins for packing.
+        /// </summary>
+        public IReadOnlyList<MultiBin> Bins => _bins.AsReadOnly();
+
+        /// <summary>
+        /// Sets the bins to use for packing.
+        /// </summary>
+        public void SetBins(IEnumerable<MultiBin> bins)
+        {
+            _bins.Clear();
+            if (bins != null)
+            {
+                _bins.AddRange(bins);
+            }
+        }
 
         public double Spacing { get; set; }
 
         public Result Pack(List<BinItem> items)
         {
-            var bins = Bins
+            var bins = _bins
                 .Where(b => b.Length > 0)
                 .OrderBy(b => b.Priority)
                 .ThenBy(b => b.Length)

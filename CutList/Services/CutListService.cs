@@ -27,11 +27,9 @@ namespace CutList.Services
                 var multiBins = ConvertToMultiBins(stockBins);
                 var binItems = ConvertToBinItems(parts);
 
-                var engine = new MultiBinEngine
-                {
-                    Spacing = cuttingTool.Kerf,
-                    Bins = multiBins
-                };
+                var engine = new MultiBinEngine();
+                engine.SetBins(multiBins);
+                engine.Spacing = cuttingTool.Kerf;
 
                 var packResult = engine.Pack(binItems);
                 return Result<SawCut.Nesting.Result>.Success(packResult);

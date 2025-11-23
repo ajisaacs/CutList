@@ -41,8 +41,6 @@ namespace CutList.Forms
             toolbox = new Toolbox();
             cutMethodComboBox.DataSource = toolbox.Tools;
 
-            currentDocument = new Document();
-
 #if DEBUG
             loadExampleDataButton.Visible = true;
 #else
