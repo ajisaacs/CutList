@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SawCut
+namespace CutList.Core
 {
     public static class Tolerance
     {

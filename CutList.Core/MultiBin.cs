@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SawCut
+namespace CutList.Core
 {
     /// <summary>
     /// Represents a type of bin with quantity and priority.

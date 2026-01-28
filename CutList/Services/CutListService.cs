@@ -1,7 +1,7 @@
 using CutList.Common;
 using CutList.Models;
-using SawCut;
-using SawCut.Nesting;
+using CutList.Core;
+using CutList.Core.Nesting;
 using System;
 using System.Collections.Generic;
 
@@ -20,7 +20,7 @@ namespace CutList.Services
         /// <param name="stockBins">The available stock bins</param>
         /// <param name="cuttingTool">The cutting tool to use (determines kerf/spacing)</param>
         /// <returns>Result containing the packing result with optimized bins and unused items, or error message</returns>
-        public Result<SawCut.Nesting.Result> Pack(List<PartInputItem> parts, List<BinInputItem> stockBins, Tool cuttingTool)
+        public Result<CutList.Core.Nesting.Result> Pack(List<PartInputItem> parts, List<BinInputItem> stockBins, Tool cuttingTool)
         {
             try
             {
@@ -32,11 +32,11 @@ namespace CutList.Services
                 engine.Spacing = cuttingTool.Kerf;
 
                 var packResult = engine.Pack(binItems);
-                return Result<SawCut.Nesting.Result>.Success(packResult);
+                return Result<CutList.Core.Nesting.Result>.Success(packResult);
             }
             catch (Exception ex)
             {
-                return Result<SawCut.Nesting.Result>.Failure($"Packing failed: {ex.Message}");
+                return Result<CutList.Core.Nesting.Result>.Failure($"Packing failed: {ex.Message}");
             }
         }
 

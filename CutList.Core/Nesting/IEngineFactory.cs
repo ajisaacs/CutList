@@ -1,4 +1,4 @@
-namespace SawCut.Nesting
+namespace CutList.Core.Nesting
 {
     /// <summary>
     /// Factory interface for creating bin packing engines.

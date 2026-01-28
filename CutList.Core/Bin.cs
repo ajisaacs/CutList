@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SawCut
+namespace CutList.Core
 {
     public class Bin
     {

@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json;
-using SawCut;
+using CutList.Core;
 using System;
 
 namespace CutList.Models

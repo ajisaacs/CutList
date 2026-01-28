@@ -1,4 +1,4 @@
-namespace SawCut.Nesting
+namespace CutList.Core.Nesting
 {
     /// <summary>
     /// Default implementation of IEngineFactory that creates AdvancedFitEngine instances.

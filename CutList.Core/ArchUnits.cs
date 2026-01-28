@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace SawCut
+namespace CutList.Core
 {
     public static class ArchUnits
     {

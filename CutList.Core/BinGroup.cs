@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SawCut
+namespace CutList.Core
 {
     /// <summary>
     /// Represents a group of identical bins (bins with the same items in the same order).

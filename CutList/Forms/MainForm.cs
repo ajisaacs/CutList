@@ -1,7 +1,7 @@
 ﻿using CutList.Models;
 using CutList.Presenters;
 using CutList.Services;
-using SawCut;
+using CutList.Core;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SawCut
+namespace CutList.Core
 {
     /// <summary>
     /// Represents an item to be placed in a bin.

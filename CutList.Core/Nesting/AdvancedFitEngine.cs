@@ -1,11 +1,11 @@
-﻿using SawCut.Nesting;
-using SawCut;
+﻿using CutList.Core.Nesting;
+using CutList.Core;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 
-namespace SawCut.Nesting
+namespace CutList.Core.Nesting
 {
     public class AdvancedFitEngine : IEngine
     {

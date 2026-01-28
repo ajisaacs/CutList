@@ -131,7 +131,7 @@
             // 
             // binBindingSource
             //
-            this.binBindingSource.DataSource = typeof(SawCut.BinGroup);
+            this.binBindingSource.DataSource = typeof(CutList.Core.BinGroup);
             // 
             // splitContainer1
             // 

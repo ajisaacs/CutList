@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 
-namespace SawCut.Nesting
+namespace CutList.Core.Nesting
 {
     public class BestFitEngine : IEngine
     {

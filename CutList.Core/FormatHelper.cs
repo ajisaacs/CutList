@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SawCut
+namespace CutList.Core
 {
     /// <summary>
     /// Provides formatting utilities for displaying measurements and values.

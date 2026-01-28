@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SawCut
+namespace CutList.Core
 {
     /// <summary>
     /// Compares bins to determine if they are identical (same items in same order).

@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SawCut\SawCut.csproj" />
+    <ProjectReference Include="..\CutList.Core\CutList.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
