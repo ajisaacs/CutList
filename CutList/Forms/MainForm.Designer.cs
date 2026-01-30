@@ -28,361 +28,343 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle6 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle7 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle8 = new System.Windows.Forms.DataGridViewCellStyle();
-            this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.nameDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.lengthDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.quantityDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.TotalLength = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.itemBindingSource = new System.Windows.Forms.BindingSource(this.components);
-            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-            this.newDocumentButton = new System.Windows.Forms.ToolStripButton();
-            this.openFileButton = new System.Windows.Forms.ToolStripButton();
-            this.saveButton = new System.Windows.Forms.ToolStripButton();
-            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.runButton = new System.Windows.Forms.ToolStripButton();
-            this.loadExampleDataButton = new System.Windows.Forms.ToolStripButton();
-            this.cutMethodComboBox = new System.Windows.Forms.ComboBox();
-            this.cutWidthTextBox = new System.Windows.Forms.TextBox();
-            this.cutMethodLabel = new System.Windows.Forms.Label();
-            this.cutWidthLabel = new System.Windows.Forms.Label();
-            this.tabControl1 = new System.Windows.Forms.TabControl();
-            this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.tabPage1 = new System.Windows.Forms.TabPage();
-            this.dataGridView2 = new System.Windows.Forms.DataGridView();
-            this.lengthInputValueDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.quantityDataGridViewTextBoxColumn1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.TotalLengthString = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.priorityDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.binInputItemBindingSource = new System.Windows.Forms.BindingSource(this.components);
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.itemBindingSource)).BeginInit();
-            this.toolStrip1.SuspendLayout();
-            this.tabControl1.SuspendLayout();
-            this.tabPage2.SuspendLayout();
-            this.tabPage1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.binInputItemBindingSource)).BeginInit();
-            this.SuspendLayout();
+            components = new System.ComponentModel.Container();
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle2 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle3 = new DataGridViewCellStyle();
+            DataGridViewCellStyle dataGridViewCellStyle4 = new DataGridViewCellStyle();
+            dataGridView1 = new DataGridView();
+            nameDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            lengthDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            quantityDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            TotalLength = new DataGridViewTextBoxColumn();
+            itemBindingSource = new BindingSource(components);
+            toolStrip1 = new ToolStrip();
+            newDocumentButton = new ToolStripButton();
+            openFileButton = new ToolStripButton();
+            saveButton = new ToolStripButton();
+            toolStripSeparator1 = new ToolStripSeparator();
+            runButton = new ToolStripButton();
+            loadExampleDataButton = new ToolStripButton();
+            cutMethodComboBox = new ComboBox();
+            cutWidthTextBox = new TextBox();
+            cutMethodLabel = new Label();
+            cutWidthLabel = new Label();
+            tabControl1 = new TabControl();
+            tabPage2 = new TabPage();
+            tabPage1 = new TabPage();
+            dataGridView2 = new DataGridView();
+            lengthInputValueDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            quantityDataGridViewTextBoxColumn1 = new DataGridViewTextBoxColumn();
+            TotalLengthString = new DataGridViewTextBoxColumn();
+            priorityDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
+            binInputItemBindingSource = new BindingSource(components);
+            ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)itemBindingSource).BeginInit();
+            toolStrip1.SuspendLayout();
+            tabControl1.SuspendLayout();
+            tabPage2.SuspendLayout();
+            tabPage1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dataGridView2).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)binInputItemBindingSource).BeginInit();
+            SuspendLayout();
             // 
             // dataGridView1
             // 
-            this.dataGridView1.AllowUserToResizeRows = false;
-            this.dataGridView1.AutoGenerateColumns = false;
-            this.dataGridView1.BackgroundColor = System.Drawing.Color.White;
-            this.dataGridView1.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.dataGridView1.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableAlwaysIncludeHeaderText;
-            this.dataGridView1.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
-            this.dataGridView1.ColumnHeadersHeight = 30;
-            this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.nameDataGridViewTextBoxColumn,
-            this.lengthDataGridViewTextBoxColumn,
-            this.quantityDataGridViewTextBoxColumn,
-            this.TotalLength});
-            this.dataGridView1.DataSource = this.itemBindingSource;
-            this.dataGridView1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dataGridView1.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.dataGridView1.Location = new System.Drawing.Point(3, 3);
-            this.dataGridView1.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.dataGridView1.Name = "dataGridView1";
-            this.dataGridView1.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
-            this.dataGridView1.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
-            this.dataGridView1.RowTemplate.Height = 26;
-            this.dataGridView1.Size = new System.Drawing.Size(757, 533);
-            this.dataGridView1.TabIndex = 11;
-            this.dataGridView1.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
-            this.dataGridView1.CellValidated += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellEndEdit);
-            this.dataGridView1.DataError += new System.Windows.Forms.DataGridViewDataErrorEventHandler(this.dataGridView1_DataError);
+            dataGridView1.AllowUserToResizeRows = false;
+            dataGridView1.AutoGenerateColumns = false;
+            dataGridView1.BackgroundColor = Color.White;
+            dataGridView1.BorderStyle = BorderStyle.None;
+            dataGridView1.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableAlwaysIncludeHeaderText;
+            dataGridView1.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
+            dataGridView1.ColumnHeadersHeight = 30;
+            dataGridView1.Columns.AddRange(new DataGridViewColumn[] { nameDataGridViewTextBoxColumn, lengthDataGridViewTextBoxColumn, quantityDataGridViewTextBoxColumn, TotalLength });
+            dataGridView1.DataSource = itemBindingSource;
+            dataGridView1.Dock = DockStyle.Fill;
+            dataGridView1.GridColor = Color.FromArgb(224, 224, 224);
+            dataGridView1.Location = new Point(3, 3);
+            dataGridView1.Margin = new Padding(3, 4, 3, 4);
+            dataGridView1.Name = "dataGridView1";
+            dataGridView1.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
+            dataGridView1.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.DisableResizing;
+            dataGridView1.RowTemplate.Height = 26;
+            dataGridView1.Size = new Size(806, 573);
+            dataGridView1.TabIndex = 11;
+            dataGridView1.CellEndEdit += dataGridView1_CellEndEdit;
+            dataGridView1.CellValidated += dataGridView1_CellEndEdit;
+            dataGridView1.DataError += dataGridView1_DataError;
             // 
             // nameDataGridViewTextBoxColumn
             // 
-            this.nameDataGridViewTextBoxColumn.DataPropertyName = "Name";
-            this.nameDataGridViewTextBoxColumn.HeaderText = "Name";
-            this.nameDataGridViewTextBoxColumn.Name = "nameDataGridViewTextBoxColumn";
-            this.nameDataGridViewTextBoxColumn.Width = 200;
+            nameDataGridViewTextBoxColumn.DataPropertyName = "Name";
+            nameDataGridViewTextBoxColumn.HeaderText = "Name";
+            nameDataGridViewTextBoxColumn.Name = "nameDataGridViewTextBoxColumn";
+            nameDataGridViewTextBoxColumn.Width = 200;
             // 
             // lengthDataGridViewTextBoxColumn
             // 
-            this.lengthDataGridViewTextBoxColumn.DataPropertyName = "LengthInputValue";
-            dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            this.lengthDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle5;
-            this.lengthDataGridViewTextBoxColumn.HeaderText = "Length";
-            this.lengthDataGridViewTextBoxColumn.Name = "lengthDataGridViewTextBoxColumn";
-            this.lengthDataGridViewTextBoxColumn.Width = 120;
+            lengthDataGridViewTextBoxColumn.DataPropertyName = "LengthInputValue";
+            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleRight;
+            lengthDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle1;
+            lengthDataGridViewTextBoxColumn.HeaderText = "Length";
+            lengthDataGridViewTextBoxColumn.Name = "lengthDataGridViewTextBoxColumn";
+            lengthDataGridViewTextBoxColumn.Width = 120;
             // 
             // quantityDataGridViewTextBoxColumn
             // 
-            this.quantityDataGridViewTextBoxColumn.DataPropertyName = "Quantity";
-            dataGridViewCellStyle6.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            this.quantityDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle6;
-            this.quantityDataGridViewTextBoxColumn.HeaderText = "Qty";
-            this.quantityDataGridViewTextBoxColumn.Name = "quantityDataGridViewTextBoxColumn";
-            this.quantityDataGridViewTextBoxColumn.Width = 50;
+            quantityDataGridViewTextBoxColumn.DataPropertyName = "Quantity";
+            dataGridViewCellStyle2.Alignment = DataGridViewContentAlignment.MiddleRight;
+            quantityDataGridViewTextBoxColumn.DefaultCellStyle = dataGridViewCellStyle2;
+            quantityDataGridViewTextBoxColumn.HeaderText = "Qty";
+            quantityDataGridViewTextBoxColumn.Name = "quantityDataGridViewTextBoxColumn";
+            quantityDataGridViewTextBoxColumn.Width = 50;
             // 
             // TotalLength
             // 
-            this.TotalLength.DataPropertyName = "TotalLengthString";
-            dataGridViewCellStyle7.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            dataGridViewCellStyle7.BackColor = System.Drawing.SystemColors.Info;
-            dataGridViewCellStyle7.Format = "N3";
-            this.TotalLength.DefaultCellStyle = dataGridViewCellStyle7;
-            this.TotalLength.HeaderText = "Total Length";
-            this.TotalLength.Name = "TotalLength";
-            this.TotalLength.ReadOnly = true;
-            this.TotalLength.Width = 150;
+            TotalLength.DataPropertyName = "TotalLengthString";
+            dataGridViewCellStyle3.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridViewCellStyle3.BackColor = SystemColors.Info;
+            dataGridViewCellStyle3.Format = "N3";
+            TotalLength.DefaultCellStyle = dataGridViewCellStyle3;
+            TotalLength.HeaderText = "Total Length";
+            TotalLength.Name = "TotalLength";
+            TotalLength.ReadOnly = true;
+            TotalLength.Width = 150;
             // 
             // itemBindingSource
             // 
-            this.itemBindingSource.DataSource = typeof(CutList.Models.PartInputItem);
+            itemBindingSource.DataSource = typeof(Models.PartInputItem);
             // 
             // toolStrip1
             // 
-            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.newDocumentButton,
-            this.openFileButton,
-            this.saveButton,
-            this.toolStripSeparator1,
-            this.runButton,
-            this.loadExampleDataButton});
-            this.toolStrip1.Location = new System.Drawing.Point(0, 0);
-            this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(795, 39);
-            this.toolStrip1.TabIndex = 0;
-            this.toolStrip1.Text = "toolStrip1";
+            toolStrip1.Items.AddRange(new ToolStripItem[] { newDocumentButton, openFileButton, saveButton, toolStripSeparator1, runButton, loadExampleDataButton });
+            toolStrip1.Location = new Point(0, 0);
+            toolStrip1.Name = "toolStrip1";
+            toolStrip1.Size = new Size(844, 39);
+            toolStrip1.TabIndex = 0;
+            toolStrip1.Text = "toolStrip1";
             // 
             // newDocumentButton
             // 
-            this.newDocumentButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.newDocumentButton.Image = global::CutList.Properties.Resources.gnome_document_new;
-            this.newDocumentButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
-            this.newDocumentButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.newDocumentButton.Name = "newDocumentButton";
-            this.newDocumentButton.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.newDocumentButton.Size = new System.Drawing.Size(46, 36);
-            this.newDocumentButton.Text = "New";
-            this.newDocumentButton.Click += new System.EventHandler(this.newDocumentButton_Click);
+            newDocumentButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            newDocumentButton.Image = Properties.Resources.gnome_document_new;
+            newDocumentButton.ImageScaling = ToolStripItemImageScaling.None;
+            newDocumentButton.ImageTransparentColor = Color.Magenta;
+            newDocumentButton.Name = "newDocumentButton";
+            newDocumentButton.Padding = new Padding(5, 0, 5, 0);
+            newDocumentButton.Size = new Size(46, 36);
+            newDocumentButton.Text = "New";
+            newDocumentButton.Click += newDocumentButton_Click;
             // 
             // openFileButton
             // 
-            this.openFileButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.openFileButton.Image = global::CutList.Properties.Resources.Open_Folder_32;
-            this.openFileButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
-            this.openFileButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.openFileButton.Name = "openFileButton";
-            this.openFileButton.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.openFileButton.Size = new System.Drawing.Size(46, 36);
-            this.openFileButton.Text = "Open";
-            this.openFileButton.Click += new System.EventHandler(this.openFileButton_Click);
+            openFileButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            openFileButton.Image = Properties.Resources.Open_Folder_32;
+            openFileButton.ImageScaling = ToolStripItemImageScaling.None;
+            openFileButton.ImageTransparentColor = Color.Magenta;
+            openFileButton.Name = "openFileButton";
+            openFileButton.Padding = new Padding(5, 0, 5, 0);
+            openFileButton.Size = new Size(46, 36);
+            openFileButton.Text = "Open";
+            openFileButton.Click += openFileButton_Click;
             // 
             // saveButton
             // 
-            this.saveButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.saveButton.Image = global::CutList.Properties.Resources.Save_32;
-            this.saveButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
-            this.saveButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.saveButton.Name = "saveButton";
-            this.saveButton.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.saveButton.Size = new System.Drawing.Size(46, 36);
-            this.saveButton.Text = "Save";
-            this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
+            saveButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            saveButton.Image = Properties.Resources.Save_32;
+            saveButton.ImageScaling = ToolStripItemImageScaling.None;
+            saveButton.ImageTransparentColor = Color.Magenta;
+            saveButton.Name = "saveButton";
+            saveButton.Padding = new Padding(5, 0, 5, 0);
+            saveButton.Size = new Size(46, 36);
+            saveButton.Text = "Save";
+            saveButton.Click += saveButton_Click;
             // 
             // toolStripSeparator1
             // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 39);
+            toolStripSeparator1.Name = "toolStripSeparator1";
+            toolStripSeparator1.Size = new Size(6, 39);
             // 
             // runButton
             // 
-            this.runButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.runButton.Image = global::CutList.Properties.Resources.Circled_Play_32;
-            this.runButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
-            this.runButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.runButton.Name = "runButton";
-            this.runButton.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.runButton.Size = new System.Drawing.Size(46, 36);
-            this.runButton.Text = "Run";
-            this.runButton.Click += new System.EventHandler(this.runButton_Click);
+            runButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            runButton.Image = Properties.Resources.Circled_Play_32;
+            runButton.ImageScaling = ToolStripItemImageScaling.None;
+            runButton.ImageTransparentColor = Color.Magenta;
+            runButton.Name = "runButton";
+            runButton.Padding = new Padding(5, 0, 5, 0);
+            runButton.Size = new Size(46, 36);
+            runButton.Text = "Run";
+            runButton.Click += runButton_Click;
             // 
             // loadExampleDataButton
             // 
-            this.loadExampleDataButton.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.loadExampleDataButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.loadExampleDataButton.ForeColor = System.Drawing.Color.DimGray;
-            this.loadExampleDataButton.Image = global::CutList.Properties.Resources.Circled_Play_32;
-            this.loadExampleDataButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
-            this.loadExampleDataButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.loadExampleDataButton.Name = "loadExampleDataButton";
-            this.loadExampleDataButton.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.loadExampleDataButton.Size = new System.Drawing.Size(121, 36);
-            this.loadExampleDataButton.Text = "Load Example Data";
-            this.loadExampleDataButton.Click += new System.EventHandler(this.loadExampleDataButton_Click);
+            loadExampleDataButton.Alignment = ToolStripItemAlignment.Right;
+            loadExampleDataButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            loadExampleDataButton.ForeColor = Color.DimGray;
+            loadExampleDataButton.Image = Properties.Resources.Circled_Play_32;
+            loadExampleDataButton.ImageScaling = ToolStripItemImageScaling.None;
+            loadExampleDataButton.ImageTransparentColor = Color.Magenta;
+            loadExampleDataButton.Name = "loadExampleDataButton";
+            loadExampleDataButton.Padding = new Padding(5, 0, 5, 0);
+            loadExampleDataButton.Size = new Size(122, 36);
+            loadExampleDataButton.Text = "Load Example Data";
+            loadExampleDataButton.Click += loadExampleDataButton_Click;
             // 
             // cutMethodComboBox
             // 
-            this.cutMethodComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cutMethodComboBox.FormattingEnabled = true;
-            this.cutMethodComboBox.Location = new System.Drawing.Point(107, 22);
-            this.cutMethodComboBox.Name = "cutMethodComboBox";
-            this.cutMethodComboBox.Size = new System.Drawing.Size(184, 25);
-            this.cutMethodComboBox.TabIndex = 7;
-            this.cutMethodComboBox.SelectedIndexChanged += new System.EventHandler(this.cutMethodComboBox_SelectedIndexChanged);
+            cutMethodComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            cutMethodComboBox.FormattingEnabled = true;
+            cutMethodComboBox.Location = new Point(107, 22);
+            cutMethodComboBox.Name = "cutMethodComboBox";
+            cutMethodComboBox.Size = new Size(184, 25);
+            cutMethodComboBox.TabIndex = 7;
+            cutMethodComboBox.SelectedIndexChanged += cutMethodComboBox_SelectedIndexChanged;
             // 
             // cutWidthTextBox
             // 
-            this.cutWidthTextBox.Location = new System.Drawing.Point(107, 53);
-            this.cutWidthTextBox.Name = "cutWidthTextBox";
-            this.cutWidthTextBox.Size = new System.Drawing.Size(184, 25);
-            this.cutWidthTextBox.TabIndex = 9;
-            this.cutWidthTextBox.TextChanged += new System.EventHandler(this.cutWidthTextBox_TextChanged);
+            cutWidthTextBox.Location = new Point(107, 53);
+            cutWidthTextBox.Name = "cutWidthTextBox";
+            cutWidthTextBox.Size = new Size(184, 25);
+            cutWidthTextBox.TabIndex = 9;
+            cutWidthTextBox.TextChanged += cutWidthTextBox_TextChanged;
             // 
             // cutMethodLabel
             // 
-            this.cutMethodLabel.AutoSize = true;
-            this.cutMethodLabel.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.cutMethodLabel.ForeColor = System.Drawing.Color.Blue;
-            this.cutMethodLabel.Location = new System.Drawing.Point(20, 25);
-            this.cutMethodLabel.Name = "cutMethodLabel";
-            this.cutMethodLabel.Size = new System.Drawing.Size(81, 17);
-            this.cutMethodLabel.TabIndex = 6;
-            this.cutMethodLabel.Text = "Cut method";
+            cutMethodLabel.AutoSize = true;
+            cutMethodLabel.Font = new Font("Segoe UI Semibold", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            cutMethodLabel.ForeColor = Color.Blue;
+            cutMethodLabel.Location = new Point(20, 25);
+            cutMethodLabel.Name = "cutMethodLabel";
+            cutMethodLabel.Size = new Size(81, 17);
+            cutMethodLabel.TabIndex = 6;
+            cutMethodLabel.Text = "Cut method";
             // 
             // cutWidthLabel
             // 
-            this.cutWidthLabel.AutoSize = true;
-            this.cutWidthLabel.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.cutWidthLabel.ForeColor = System.Drawing.Color.Blue;
-            this.cutWidthLabel.Location = new System.Drawing.Point(34, 56);
-            this.cutWidthLabel.Name = "cutWidthLabel";
-            this.cutWidthLabel.Size = new System.Drawing.Size(67, 17);
-            this.cutWidthLabel.TabIndex = 8;
-            this.cutWidthLabel.Text = "Cut width";
+            cutWidthLabel.AutoSize = true;
+            cutWidthLabel.Font = new Font("Segoe UI Semibold", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            cutWidthLabel.ForeColor = Color.Blue;
+            cutWidthLabel.Location = new Point(34, 56);
+            cutWidthLabel.Name = "cutWidthLabel";
+            cutWidthLabel.Size = new Size(67, 17);
+            cutWidthLabel.TabIndex = 8;
+            cutWidthLabel.Text = "Cut width";
             // 
             // tabControl1
             // 
-            this.tabControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.tabControl1.Controls.Add(this.tabPage2);
-            this.tabControl1.Controls.Add(this.tabPage1);
-            this.tabControl1.Location = new System.Drawing.Point(12, 42);
-            this.tabControl1.Name = "tabControl1";
-            this.tabControl1.Padding = new System.Drawing.Point(20, 3);
-            this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(771, 569);
-            this.tabControl1.TabIndex = 12;
+            tabControl1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            tabControl1.Controls.Add(tabPage2);
+            tabControl1.Controls.Add(tabPage1);
+            tabControl1.Location = new Point(12, 42);
+            tabControl1.Name = "tabControl1";
+            tabControl1.Padding = new Point(20, 3);
+            tabControl1.SelectedIndex = 0;
+            tabControl1.Size = new Size(820, 609);
+            tabControl1.TabIndex = 12;
             // 
             // tabPage2
             // 
-            this.tabPage2.Controls.Add(this.dataGridView1);
-            this.tabPage2.Location = new System.Drawing.Point(4, 26);
-            this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(763, 539);
-            this.tabPage2.TabIndex = 1;
-            this.tabPage2.Text = "ITEMS TO NEST";
-            this.tabPage2.UseVisualStyleBackColor = true;
+            tabPage2.Controls.Add(dataGridView1);
+            tabPage2.Location = new Point(4, 26);
+            tabPage2.Name = "tabPage2";
+            tabPage2.Padding = new Padding(3);
+            tabPage2.Size = new Size(812, 579);
+            tabPage2.TabIndex = 1;
+            tabPage2.Text = "ITEMS TO NEST";
+            tabPage2.UseVisualStyleBackColor = true;
             // 
             // tabPage1
             // 
-            this.tabPage1.Controls.Add(this.dataGridView2);
-            this.tabPage1.Controls.Add(this.cutWidthTextBox);
-            this.tabPage1.Controls.Add(this.cutMethodComboBox);
-            this.tabPage1.Controls.Add(this.cutWidthLabel);
-            this.tabPage1.Controls.Add(this.cutMethodLabel);
-            this.tabPage1.Location = new System.Drawing.Point(4, 22);
-            this.tabPage1.Name = "tabPage1";
-            this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(848, 469);
-            this.tabPage1.TabIndex = 0;
-            this.tabPage1.Text = "STOCK LENGTHS";
-            this.tabPage1.UseVisualStyleBackColor = true;
+            tabPage1.Controls.Add(dataGridView2);
+            tabPage1.Controls.Add(cutWidthTextBox);
+            tabPage1.Controls.Add(cutMethodComboBox);
+            tabPage1.Controls.Add(cutWidthLabel);
+            tabPage1.Controls.Add(cutMethodLabel);
+            tabPage1.Location = new Point(4, 26);
+            tabPage1.Name = "tabPage1";
+            tabPage1.Padding = new Padding(3);
+            tabPage1.Size = new Size(812, 579);
+            tabPage1.TabIndex = 0;
+            tabPage1.Text = "STOCK LENGTHS";
+            tabPage1.UseVisualStyleBackColor = true;
             // 
             // dataGridView2
             // 
-            this.dataGridView2.AllowUserToResizeRows = false;
-            this.dataGridView2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.dataGridView2.AutoGenerateColumns = false;
-            this.dataGridView2.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableAlwaysIncludeHeaderText;
-            this.dataGridView2.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
-            this.dataGridView2.ColumnHeadersHeight = 30;
-            this.dataGridView2.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.lengthInputValueDataGridViewTextBoxColumn,
-            this.quantityDataGridViewTextBoxColumn1,
-            this.TotalLengthString,
-            this.priorityDataGridViewTextBoxColumn});
-            this.dataGridView2.DataSource = this.binInputItemBindingSource;
-            this.dataGridView2.GridColor = System.Drawing.Color.FromArgb(((int)(((byte)(224)))), ((int)(((byte)(224)))), ((int)(((byte)(224)))));
-            this.dataGridView2.Location = new System.Drawing.Point(6, 103);
-            this.dataGridView2.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.dataGridView2.Name = "dataGridView2";
-            this.dataGridView2.RowHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
-            this.dataGridView2.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
-            this.dataGridView2.RowTemplate.Height = 26;
-            this.dataGridView2.Size = new System.Drawing.Size(836, 327);
-            this.dataGridView2.TabIndex = 12;
-            this.dataGridView2.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView2_CellEndEdit);
+            dataGridView2.AllowUserToResizeRows = false;
+            dataGridView2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            dataGridView2.AutoGenerateColumns = false;
+            dataGridView2.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableAlwaysIncludeHeaderText;
+            dataGridView2.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
+            dataGridView2.ColumnHeadersHeight = 30;
+            dataGridView2.Columns.AddRange(new DataGridViewColumn[] { lengthInputValueDataGridViewTextBoxColumn, quantityDataGridViewTextBoxColumn1, TotalLengthString, priorityDataGridViewTextBoxColumn });
+            dataGridView2.DataSource = binInputItemBindingSource;
+            dataGridView2.GridColor = Color.FromArgb(224, 224, 224);
+            dataGridView2.Location = new Point(6, 103);
+            dataGridView2.Margin = new Padding(3, 4, 3, 4);
+            dataGridView2.Name = "dataGridView2";
+            dataGridView2.RowHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single;
+            dataGridView2.RowHeadersWidthSizeMode = DataGridViewRowHeadersWidthSizeMode.DisableResizing;
+            dataGridView2.RowTemplate.Height = 26;
+            dataGridView2.Size = new Size(800, 467);
+            dataGridView2.TabIndex = 12;
+            dataGridView2.CellEndEdit += dataGridView2_CellEndEdit;
             // 
             // lengthInputValueDataGridViewTextBoxColumn
             // 
-            this.lengthInputValueDataGridViewTextBoxColumn.DataPropertyName = "LengthInputValue";
-            this.lengthInputValueDataGridViewTextBoxColumn.HeaderText = "Length";
-            this.lengthInputValueDataGridViewTextBoxColumn.Name = "lengthInputValueDataGridViewTextBoxColumn";
+            lengthInputValueDataGridViewTextBoxColumn.DataPropertyName = "LengthInputValue";
+            lengthInputValueDataGridViewTextBoxColumn.HeaderText = "Length";
+            lengthInputValueDataGridViewTextBoxColumn.Name = "lengthInputValueDataGridViewTextBoxColumn";
             // 
             // quantityDataGridViewTextBoxColumn1
             // 
-            this.quantityDataGridViewTextBoxColumn1.DataPropertyName = "Quantity";
-            this.quantityDataGridViewTextBoxColumn1.HeaderText = "Quantity";
-            this.quantityDataGridViewTextBoxColumn1.Name = "quantityDataGridViewTextBoxColumn1";
+            quantityDataGridViewTextBoxColumn1.DataPropertyName = "Quantity";
+            quantityDataGridViewTextBoxColumn1.HeaderText = "Quantity";
+            quantityDataGridViewTextBoxColumn1.Name = "quantityDataGridViewTextBoxColumn1";
             // 
             // TotalLengthString
             // 
-            this.TotalLengthString.DataPropertyName = "TotalLengthString";
-            dataGridViewCellStyle8.BackColor = System.Drawing.SystemColors.Info;
-            this.TotalLengthString.DefaultCellStyle = dataGridViewCellStyle8;
-            this.TotalLengthString.HeaderText = "Total Length";
-            this.TotalLengthString.Name = "TotalLengthString";
-            this.TotalLengthString.ReadOnly = true;
+            TotalLengthString.DataPropertyName = "TotalLengthString";
+            dataGridViewCellStyle4.BackColor = SystemColors.Info;
+            TotalLengthString.DefaultCellStyle = dataGridViewCellStyle4;
+            TotalLengthString.HeaderText = "Total Length";
+            TotalLengthString.Name = "TotalLengthString";
+            TotalLengthString.ReadOnly = true;
             // 
             // priorityDataGridViewTextBoxColumn
             // 
-            this.priorityDataGridViewTextBoxColumn.DataPropertyName = "Priority";
-            this.priorityDataGridViewTextBoxColumn.HeaderText = "Priority";
-            this.priorityDataGridViewTextBoxColumn.Name = "priorityDataGridViewTextBoxColumn";
+            priorityDataGridViewTextBoxColumn.DataPropertyName = "Priority";
+            priorityDataGridViewTextBoxColumn.HeaderText = "Priority";
+            priorityDataGridViewTextBoxColumn.Name = "priorityDataGridViewTextBoxColumn";
             // 
             // binInputItemBindingSource
             // 
-            this.binInputItemBindingSource.DataSource = typeof(CutList.Models.BinInputItem);
+            binInputItemBindingSource.DataSource = typeof(Models.BinInputItem);
             // 
             // MainForm
             // 
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
-            this.ClientSize = new System.Drawing.Size(795, 623);
-            this.Controls.Add(this.tabControl1);
-            this.Controls.Add(this.toolStrip1);
-            this.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.MinimumSize = new System.Drawing.Size(570, 457);
-            this.Name = "MainForm";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Cut List";
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.itemBindingSource)).EndInit();
-            this.toolStrip1.ResumeLayout(false);
-            this.toolStrip1.PerformLayout();
-            this.tabControl1.ResumeLayout(false);
-            this.tabPage2.ResumeLayout(false);
-            this.tabPage1.ResumeLayout(false);
-            this.tabPage1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView2)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.binInputItemBindingSource)).EndInit();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleMode = AutoScaleMode.None;
+            ClientSize = new Size(844, 663);
+            Controls.Add(tabControl1);
+            Controls.Add(toolStrip1);
+            Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            Margin = new Padding(3, 4, 3, 4);
+            MinimumSize = new Size(570, 457);
+            Name = "MainForm";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Cut List";
+            ((System.ComponentModel.ISupportInitialize)dataGridView1).EndInit();
+            ((System.ComponentModel.ISupportInitialize)itemBindingSource).EndInit();
+            toolStrip1.ResumeLayout(false);
+            toolStrip1.PerformLayout();
+            tabControl1.ResumeLayout(false);
+            tabPage2.ResumeLayout(false);
+            tabPage1.ResumeLayout(false);
+            tabPage1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dataGridView2).EndInit();
+            ((System.ComponentModel.ISupportInitialize)binInputItemBindingSource).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
 
         }
 
