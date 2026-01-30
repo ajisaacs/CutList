@@ -1,6 +1,4 @@
-﻿using CutList.Core;
-using System.Drawing;
-using System.Windows.Forms;
+﻿using CutList.Core.Formatting;
 
 namespace CutList
 {

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using CutList.Core.Formatting;
 
 namespace CutList.Core
 {

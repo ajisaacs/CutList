@@ -1,10 +1,5 @@
-using CutList.Forms;
 using CutList.Models;
 using CutList.Services;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 
 namespace CutList.Presenters
 {

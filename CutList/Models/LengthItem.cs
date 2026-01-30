@@ -1,6 +1,5 @@
-﻿using Newtonsoft.Json;
-using CutList.Core;
-using System;
+﻿using CutList.Core.Formatting;
+using Newtonsoft.Json;
 
 namespace CutList.Models
 {
