@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Windows.Forms;
-using System.Xml.Linq;
-using CutList.Models;
 using Newtonsoft.Json;
 
-namespace CutList.Forms
+namespace CutList.Models
 {
     public class Document
     {

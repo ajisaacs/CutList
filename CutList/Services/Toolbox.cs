@@ -1,9 +1,6 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.IO;
+using Newtonsoft.Json;
 
-namespace CutList.Forms
+namespace CutList.Services
 {
     public class Toolbox
     {
@@ -12,7 +9,7 @@ namespace CutList.Forms
             Load();
         }
 
-        public List<Tool> Tools { get; set; } 
+        public List<Tool> Tools { get; set; }
 
         public string ToolsFilePath { get; set; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data\\Tools.json");
 
