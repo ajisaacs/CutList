@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
+﻿using System.Data;
 
 namespace CutList.Core.Nesting
 {
@@ -70,7 +67,7 @@ namespace CutList.Core.Nesting
                 if (best_bin != null)
                     best_bin.AddItem(item);
 
-                
+
             }
 
             return bins

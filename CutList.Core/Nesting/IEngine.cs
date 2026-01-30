@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace CutList.Core.Nesting
+﻿namespace CutList.Core.Nesting
 {
     public interface IEngine
     {

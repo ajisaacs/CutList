@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace CutList.Core.Nesting
+﻿namespace CutList.Core.Nesting
 {
     public class MultiBinEngine : IEngine
     {

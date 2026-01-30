@@ -1,7 +1,4 @@
-﻿using System;
-using System.Windows.Forms;
-
-namespace CutList
+﻿namespace CutList
 {
     internal static class Program
     {

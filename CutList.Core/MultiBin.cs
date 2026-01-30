@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace CutList.Core
+﻿namespace CutList.Core
 {
     /// <summary>
     /// Represents a type of bin with quantity and priority.

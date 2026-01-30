@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace CutList
+﻿namespace CutList
 {
     /// <summary>
     /// Represents a cutting tool with its kerf (blade width).

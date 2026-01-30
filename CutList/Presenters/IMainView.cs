@@ -1,6 +1,5 @@
-using CutList.Models;
 using CutList.Core;
-using System.Collections.Generic;
+using CutList.Models;
 
 namespace CutList.Presenters
 {

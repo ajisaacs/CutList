@@ -1,7 +1,4 @@
-﻿using System.Drawing;
-using System.Windows.Forms;
-
-namespace CutList.Forms
+﻿namespace CutList.Forms
 {
     public static class DataGridViewExtensions
     {

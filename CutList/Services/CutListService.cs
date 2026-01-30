@@ -1,9 +1,7 @@
 using CutList.Common;
-using CutList.Models;
 using CutList.Core;
 using CutList.Core.Nesting;
-using System;
-using System.Collections.Generic;
+using CutList.Models;
 
 namespace CutList.Services
 {

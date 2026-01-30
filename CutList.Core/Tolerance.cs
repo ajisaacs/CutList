@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace CutList.Core
+﻿namespace CutList.Core
 {
     public static class Tolerance
     {

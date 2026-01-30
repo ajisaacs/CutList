@@ -1,14 +1,8 @@
-﻿using CutList.Models;
+﻿using CutList.Core;
+using CutList.Models;
 using CutList.Presenters;
 using CutList.Services;
-using CutList.Core;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Drawing;
-using System.Linq;
-using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace CutList.Forms
 {
