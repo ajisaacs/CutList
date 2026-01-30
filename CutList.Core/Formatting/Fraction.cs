@@ -1,9 +1,7 @@
-﻿using System;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace CutList.Core
+namespace CutList.Core.Formatting
 {
     public static class Fraction
     {

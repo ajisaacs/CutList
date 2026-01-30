@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace CutList.Core
+namespace CutList.Core.Formatting
 {
     /// <summary>
     /// Provides formatting utilities for displaying measurements and values.
