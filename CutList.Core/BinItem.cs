@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace CutList.Core
+﻿namespace CutList.Core
 {
     /// <summary>
     /// Represents an item to be placed in a bin.
@@ -8,18 +6,15 @@ namespace CutList.Core
     /// </summary>
     public class BinItem
     {
-        private string _name;
+        private string _name = string.Empty;
         private double _length;
 
-        public BinItem(string name, double length)
+        public BinItem(string? name, double length)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Item name cannot be empty", nameof(name));
-
             if (length <= 0)
                 throw new ArgumentException("Item length must be greater than zero", nameof(length));
 
-            _name = name;
+            _name = name ?? string.Empty;
             _length = length;
         }
 
@@ -34,12 +29,7 @@ namespace CutList.Core
         public string Name
         {
             get => _name;
-            set
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                    throw new ArgumentException("Item name cannot be empty", nameof(value));
-                _name = value;
-            }
+            set => _name = value ?? string.Empty;
         }
 
         public double Length
