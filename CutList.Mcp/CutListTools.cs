@@ -31,49 +31,15 @@ public static class CutListTools
     {
         try
         {
-            // Convert parts to BinItems
-            var binItems = new List<BinItem>();
-            foreach (var part in parts)
-            {
-                double length = ParseLength(part.Length);
-                if (length <= 0)
-                {
-                    return new CutListResult
-                    {
-                        Success = false,
-                        Error = $"Invalid part length: {part.Length} for part '{part.Name}'"
-                    };
-                }
+            var (binItems, partsError) = ConvertParts(parts);
+            if (partsError != null)
+                return new CutListResult { Success = false, Error = partsError };
 
-                for (int i = 0; i < part.Quantity; i++)
-                {
-                    binItems.Add(new BinItem(part.Name, length));
-                }
-            }
+            var (multiBins, binsError) = ConvertStockBins(stockBins);
+            if (binsError != null)
+                return new CutListResult { Success = false, Error = binsError };
 
-            // Convert stock bins to MultiBins
-            var multiBins = new List<MultiBin>();
-            foreach (var bin in stockBins)
-            {
-                double length = ParseLength(bin.Length);
-                if (length <= 0)
-                {
-                    return new CutListResult
-                    {
-                        Success = false,
-                        Error = $"Invalid bin length: {bin.Length}"
-                    };
-                }
-
-                multiBins.Add(new MultiBin(length, bin.Quantity, bin.Priority));
-            }
-
-            // Run the packing algorithm
-            var engine = new MultiBinEngine();
-            engine.SetBins(multiBins);
-            engine.Spacing = kerf;
-
-            var packResult = engine.Pack(binItems);
+            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf);
 
             // Convert results
             var resultBins = new List<ResultBin>();
@@ -119,7 +85,7 @@ public static class CutListTools
                 Summary = new CutListSummary
                 {
                     TotalBinsUsed = packResult.Bins.Count,
-                    TotalPartsPlaced = binItems.Count - packResult.ItemsNotUsed.Count,
+                    TotalPartsPlaced = binItems!.Count - packResult.ItemsNotUsed.Count,
                     TotalPartsNotPlaced = packResult.ItemsNotUsed.Count,
                     TotalStockLength = FormatLength(totalStockUsed),
                     TotalStockLengthInches = totalStockUsed,
@@ -214,49 +180,15 @@ public static class CutListTools
     {
         try
         {
-            // Convert parts to BinItems
-            var binItems = new List<BinItem>();
-            foreach (var part in parts)
-            {
-                double length = ParseLength(part.Length);
-                if (length <= 0)
-                {
-                    return new CutListReportResult
-                    {
-                        Success = false,
-                        Error = $"Invalid part length: {part.Length} for part '{part.Name}'"
-                    };
-                }
+            var (binItems, partsError) = ConvertParts(parts);
+            if (partsError != null)
+                return new CutListReportResult { Success = false, Error = partsError };
 
-                for (int i = 0; i < part.Quantity; i++)
-                {
-                    binItems.Add(new BinItem(part.Name, length));
-                }
-            }
+            var (multiBins, binsError) = ConvertStockBins(stockBins);
+            if (binsError != null)
+                return new CutListReportResult { Success = false, Error = binsError };
 
-            // Convert stock bins to MultiBins
-            var multiBins = new List<MultiBin>();
-            foreach (var bin in stockBins)
-            {
-                double length = ParseLength(bin.Length);
-                if (length <= 0)
-                {
-                    return new CutListReportResult
-                    {
-                        Success = false,
-                        Error = $"Invalid bin length: {bin.Length}"
-                    };
-                }
-
-                multiBins.Add(new MultiBin(length, bin.Quantity, bin.Priority));
-            }
-
-            // Run the packing algorithm
-            var engine = new MultiBinEngine();
-            engine.SetBins(multiBins);
-            engine.Spacing = kerf;
-
-            var packResult = engine.Pack(binItems);
+            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf);
 
             // Determine file path
             var outputPath = string.IsNullOrWhiteSpace(filePath)
@@ -272,7 +204,7 @@ public static class CutListTools
                 Success = true,
                 FilePath = Path.GetFullPath(outputPath),
                 TotalBins = packResult.Bins.Count,
-                TotalParts = binItems.Count - packResult.ItemsNotUsed.Count,
+                TotalParts = binItems!.Count - packResult.ItemsNotUsed.Count,
                 PartsNotPlaced = packResult.ItemsNotUsed.Count
             };
         }
@@ -284,6 +216,43 @@ public static class CutListTools
                 Error = ex.Message
             };
         }
+    }
+
+    private static (List<BinItem>? Items, string? Error) ConvertParts(PartInput[] parts)
+    {
+        var binItems = new List<BinItem>();
+        foreach (var part in parts)
+        {
+            double length = ParseLength(part.Length);
+            if (length <= 0)
+                return (null, $"Invalid part length: {part.Length} for part '{part.Name}'");
+
+            for (int i = 0; i < part.Quantity; i++)
+                binItems.Add(new BinItem(part.Name, length));
+        }
+        return (binItems, null);
+    }
+
+    private static (List<MultiBin>? Bins, string? Error) ConvertStockBins(StockBinInput[] stockBins)
+    {
+        var multiBins = new List<MultiBin>();
+        foreach (var bin in stockBins)
+        {
+            double length = ParseLength(bin.Length);
+            if (length <= 0)
+                return (null, $"Invalid bin length: {bin.Length}");
+
+            multiBins.Add(new MultiBin(length, bin.Quantity, bin.Priority));
+        }
+        return (multiBins, null);
+    }
+
+    private static Core.Nesting.Result RunPackingAlgorithm(List<BinItem> items, List<MultiBin> bins, double kerf)
+    {
+        var engine = new MultiBinEngine();
+        engine.SetBins(bins);
+        engine.Spacing = kerf;
+        return engine.Pack(items);
     }
 
     private static double ParseLength(string input)
@@ -303,86 +272,4 @@ public static class CutListTools
     {
         return ArchUnits.FormatFromInches(inches);
     }
-}
-
-// Input models
-public class PartInput
-{
-    public string Name { get; set; } = string.Empty;
-    public string Length { get; set; } = string.Empty;
-    public int Quantity { get; set; } = 1;
-}
-
-public class StockBinInput
-{
-    public string Length { get; set; } = string.Empty;
-    public int Quantity { get; set; } = -1;  // -1 = unlimited
-    public int Priority { get; set; } = 25;   // Lower = used first
-}
-
-// Output models
-public class CutListResult
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public List<ResultBin> Bins { get; set; } = new();
-    public List<ResultItem> UnusedItems { get; set; } = new();
-    public CutListSummary? Summary { get; set; }
-}
-
-public class ResultBin
-{
-    public string Length { get; set; } = string.Empty;
-    public double LengthInches { get; set; }
-    public string UsedLength { get; set; } = string.Empty;
-    public double UsedLengthInches { get; set; }
-    public string RemainingLength { get; set; } = string.Empty;
-    public double RemainingLengthInches { get; set; }
-    public double Utilization { get; set; }
-    public List<ResultItem> Items { get; set; } = new();
-}
-
-public class ResultItem
-{
-    public string Name { get; set; } = string.Empty;
-    public string Length { get; set; } = string.Empty;
-    public double LengthInches { get; set; }
-}
-
-public class CutListSummary
-{
-    public int TotalBinsUsed { get; set; }
-    public int TotalPartsPlaced { get; set; }
-    public int TotalPartsNotPlaced { get; set; }
-    public string TotalStockLength { get; set; } = string.Empty;
-    public double TotalStockLengthInches { get; set; }
-    public string TotalWaste { get; set; } = string.Empty;
-    public double TotalWasteInches { get; set; }
-    public double OverallUtilization { get; set; }
-}
-
-public class ParseLengthResult
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public double Inches { get; set; }
-    public string? Formatted { get; set; }
-}
-
-public class FormatLengthResult
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public string? Formatted { get; set; }
-    public double Inches { get; set; }
-}
-
-public class CutListReportResult
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public string? FilePath { get; set; }
-    public int TotalBins { get; set; }
-    public int TotalParts { get; set; }
-    public int PartsNotPlaced { get; set; }
 }

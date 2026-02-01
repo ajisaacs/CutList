@@ -137,11 +137,7 @@ namespace CutList.Forms
 
         public void ClearData()
         {
-            parts = new BindingList<PartInputItem>();
-            bins = new BindingList<BinInputItem>();
-
-            itemBindingSource.DataSource = parts;
-            binInputItemBindingSource.DataSource = bins;
+            LoadDocumentData(new List<PartInputItem>(), new List<BinInputItem>());
         }
 
         // Event handler delegates to presenter
@@ -156,21 +152,21 @@ namespace CutList.Forms
             dataGridView2.AutoResizeColumns();
         }
 
-        private void Save()
+        private void FlushPendingEdits()
         {
-            // Flush any in-cell edits that haven't committed yet
             dataGridView1.EndEdit();
             dataGridView2.EndEdit();
+        }
 
+        private void Save()
+        {
+            FlushPendingEdits();
             presenter.SaveDocument();
         }
 
         private void Run()
         {
-            // Flush any in-cell edits that haven't committed yet
-            dataGridView1.EndEdit();
-            dataGridView2.EndEdit();
-
+            FlushPendingEdits();
             presenter.Run();
         }
 
