@@ -1,0 +1,388 @@
+using System.ComponentModel;
+using CutList.Core;
+using CutList.Core.Formatting;
+using CutList.Core.Nesting;
+using ModelContextProtocol.Server;
+
+namespace CutList.Mcp;
+
+/// <summary>
+/// MCP tools for cut list optimization.
+/// </summary>
+[McpServerToolType]
+public static class CutListTools
+{
+    /// <summary>
+    /// Creates an optimized cut list by packing parts into stock bins using a first-fit decreasing algorithm.
+    /// Returns the optimal arrangement of cuts to minimize waste.
+    /// </summary>
+    /// <param name="parts">List of parts to cut. Each part has a name, length (in inches or architectural format like 12' 6"), and quantity.</param>
+    /// <param name="stockBins">List of available stock material. Each has a length, quantity (-1 for unlimited), and priority (lower = used first).</param>
+    /// <param name="kerf">Blade/cutting width in inches. Default is 0.125 (1/8"). This accounts for material lost to the cut itself.</param>
+    /// <returns>Optimized cut list showing which parts go in which bins, utilization percentages, and any parts that couldn't fit.</returns>
+    [McpServerTool(Name = "create_cutlist"), Description("Creates an optimized cut list by packing parts into stock bins to minimize waste.")]
+    public static CutListResult CreateCutList(
+        [Description("Parts to cut. Each object needs: name (string), length (string like \"12'\" or \"36\\\"\" or \"12.5\"), quantity (int)")]
+        PartInput[] parts,
+        [Description("Stock bins available. Each needs: length (string), quantity (int, use -1 for unlimited), priority (int, lower = used first, default 25)")]
+        StockBinInput[] stockBins,
+        [Description("Blade kerf/width in inches (default 0.125)")]
+        double kerf = 0.125)
+    {
+        try
+        {
+            // Convert parts to BinItems
+            var binItems = new List<BinItem>();
+            foreach (var part in parts)
+            {
+                double length = ParseLength(part.Length);
+                if (length <= 0)
+                {
+                    return new CutListResult
+                    {
+                        Success = false,
+                        Error = $"Invalid part length: {part.Length} for part '{part.Name}'"
+                    };
+                }
+
+                for (int i = 0; i < part.Quantity; i++)
+                {
+                    binItems.Add(new BinItem(part.Name, length));
+                }
+            }
+
+            // Convert stock bins to MultiBins
+            var multiBins = new List<MultiBin>();
+            foreach (var bin in stockBins)
+            {
+                double length = ParseLength(bin.Length);
+                if (length <= 0)
+                {
+                    return new CutListResult
+                    {
+                        Success = false,
+                        Error = $"Invalid bin length: {bin.Length}"
+                    };
+                }
+
+                multiBins.Add(new MultiBin(length, bin.Quantity, bin.Priority));
+            }
+
+            // Run the packing algorithm
+            var engine = new MultiBinEngine();
+            engine.SetBins(multiBins);
+            engine.Spacing = kerf;
+
+            var packResult = engine.Pack(binItems);
+
+            // Convert results
+            var resultBins = new List<ResultBin>();
+            foreach (var bin in packResult.Bins)
+            {
+                var resultBin = new ResultBin
+                {
+                    Length = FormatLength(bin.Length),
+                    LengthInches = bin.Length,
+                    UsedLength = FormatLength(bin.UsedLength),
+                    UsedLengthInches = bin.UsedLength,
+                    RemainingLength = FormatLength(bin.RemainingLength),
+                    RemainingLengthInches = bin.RemainingLength,
+                    Utilization = Math.Round(bin.Utilization * 100, 2),
+                    Items = bin.Items.Select(item => new ResultItem
+                    {
+                        Name = item.Name,
+                        Length = FormatLength(item.Length),
+                        LengthInches = item.Length
+                    }).ToList()
+                };
+                resultBins.Add(resultBin);
+            }
+
+            var unusedItems = packResult.ItemsNotUsed.Select(item => new ResultItem
+            {
+                Name = item.Name,
+                Length = FormatLength(item.Length),
+                LengthInches = item.Length
+            }).ToList();
+
+            // Calculate summary statistics
+            double totalStockUsed = packResult.Bins.Sum(b => b.Length);
+            double totalMaterialUsed = packResult.Bins.Sum(b => b.UsedLength);
+            double totalWaste = packResult.Bins.Sum(b => b.RemainingLength);
+            double overallUtilization = totalStockUsed > 0 ? (totalMaterialUsed / totalStockUsed) * 100 : 0;
+
+            return new CutListResult
+            {
+                Success = true,
+                Bins = resultBins,
+                UnusedItems = unusedItems,
+                Summary = new CutListSummary
+                {
+                    TotalBinsUsed = packResult.Bins.Count,
+                    TotalPartsPlaced = binItems.Count - packResult.ItemsNotUsed.Count,
+                    TotalPartsNotPlaced = packResult.ItemsNotUsed.Count,
+                    TotalStockLength = FormatLength(totalStockUsed),
+                    TotalStockLengthInches = totalStockUsed,
+                    TotalWaste = FormatLength(totalWaste),
+                    TotalWasteInches = totalWaste,
+                    OverallUtilization = Math.Round(overallUtilization, 2)
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            return new CutListResult
+            {
+                Success = false,
+                Error = ex.Message
+            };
+        }
+    }
+
+    /// <summary>
+    /// Parses a length string in architectural format (feet/inches/fractions) to inches.
+    /// </summary>
+    /// <param name="input">Length string like "12'", "6\"", "12' 6\"", "12.5", "6 1/2\"", etc.</param>
+    /// <returns>The length in inches, or an error message if parsing fails.</returns>
+    [McpServerTool(Name = "parse_length"), Description("Parses an architectural length string (feet/inches/fractions) to decimal inches.")]
+    public static ParseLengthResult ParseLengthString(
+        [Description("Length string like \"12'\", \"6\\\"\", \"12' 6\\\"\", \"12.5\", \"6 1/2\\\"\"")]
+        string input)
+    {
+        try
+        {
+            double inches = ParseLength(input);
+            return new ParseLengthResult
+            {
+                Success = true,
+                Inches = inches,
+                Formatted = FormatLength(inches)
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ParseLengthResult
+            {
+                Success = false,
+                Error = ex.Message
+            };
+        }
+    }
+
+    /// <summary>
+    /// Formats a length in inches to a human-readable string with feet and fractional inches.
+    /// </summary>
+    /// <param name="inches">Length in inches.</param>
+    /// <returns>Formatted string like "12' 6 1/2\"".</returns>
+    [McpServerTool(Name = "format_length"), Description("Formats a length in inches to feet and fractional inches.")]
+    public static FormatLengthResult FormatLengthString(
+        [Description("Length in inches")]
+        double inches)
+    {
+        try
+        {
+            return new FormatLengthResult
+            {
+                Success = true,
+                Formatted = FormatLength(inches),
+                Inches = inches
+            };
+        }
+        catch (Exception ex)
+        {
+            return new FormatLengthResult
+            {
+                Success = false,
+                Error = ex.Message
+            };
+        }
+    }
+
+    /// <summary>
+    /// Creates an optimized cut list and saves a formatted text report to a file.
+    /// </summary>
+    [McpServerTool(Name = "create_cutlist_report"), Description("Creates an optimized cut list and saves a formatted printable text report to a file. Returns the file path.")]
+    public static CutListReportResult CreateCutListReport(
+        [Description("Parts to cut. Each object needs: name (string), length (string like \"12'\" or \"36\\\"\" or \"12.5\"), quantity (int)")]
+        PartInput[] parts,
+        [Description("Stock bins available. Each needs: length (string), quantity (int, use -1 for unlimited), priority (int, lower = used first, default 25)")]
+        StockBinInput[] stockBins,
+        [Description("Blade kerf/width in inches (default 0.125)")]
+        double kerf = 0.125,
+        [Description("File path to save the report. If not provided, saves to a temp file.")]
+        string? filePath = null)
+    {
+        try
+        {
+            // Convert parts to BinItems
+            var binItems = new List<BinItem>();
+            foreach (var part in parts)
+            {
+                double length = ParseLength(part.Length);
+                if (length <= 0)
+                {
+                    return new CutListReportResult
+                    {
+                        Success = false,
+                        Error = $"Invalid part length: {part.Length} for part '{part.Name}'"
+                    };
+                }
+
+                for (int i = 0; i < part.Quantity; i++)
+                {
+                    binItems.Add(new BinItem(part.Name, length));
+                }
+            }
+
+            // Convert stock bins to MultiBins
+            var multiBins = new List<MultiBin>();
+            foreach (var bin in stockBins)
+            {
+                double length = ParseLength(bin.Length);
+                if (length <= 0)
+                {
+                    return new CutListReportResult
+                    {
+                        Success = false,
+                        Error = $"Invalid bin length: {bin.Length}"
+                    };
+                }
+
+                multiBins.Add(new MultiBin(length, bin.Quantity, bin.Priority));
+            }
+
+            // Run the packing algorithm
+            var engine = new MultiBinEngine();
+            engine.SetBins(multiBins);
+            engine.Spacing = kerf;
+
+            var packResult = engine.Pack(binItems);
+
+            // Determine file path
+            var outputPath = string.IsNullOrWhiteSpace(filePath)
+                ? Path.Combine(Path.GetTempPath(), $"cutlist_{DateTime.Now:yyyyMMdd_HHmmss}.txt")
+                : filePath;
+
+            // Save using BinFileSaver
+            var saver = new BinFileSaver(packResult.Bins);
+            saver.SaveBinsToFile(outputPath);
+
+            return new CutListReportResult
+            {
+                Success = true,
+                FilePath = Path.GetFullPath(outputPath),
+                TotalBins = packResult.Bins.Count,
+                TotalParts = binItems.Count - packResult.ItemsNotUsed.Count,
+                PartsNotPlaced = packResult.ItemsNotUsed.Count
+            };
+        }
+        catch (Exception ex)
+        {
+            return new CutListReportResult
+            {
+                Success = false,
+                Error = ex.Message
+            };
+        }
+    }
+
+    private static double ParseLength(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return 0;
+
+        // Try parsing as a plain number first
+        if (double.TryParse(input.Trim(), out double plainNumber))
+            return plainNumber;
+
+        // Try architectural format
+        return ArchUnits.ParseToInches(input);
+    }
+
+    private static string FormatLength(double inches)
+    {
+        return ArchUnits.FormatFromInches(inches);
+    }
+}
+
+// Input models
+public class PartInput
+{
+    public string Name { get; set; } = string.Empty;
+    public string Length { get; set; } = string.Empty;
+    public int Quantity { get; set; } = 1;
+}
+
+public class StockBinInput
+{
+    public string Length { get; set; } = string.Empty;
+    public int Quantity { get; set; } = -1;  // -1 = unlimited
+    public int Priority { get; set; } = 25;   // Lower = used first
+}
+
+// Output models
+public class CutListResult
+{
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+    public List<ResultBin> Bins { get; set; } = new();
+    public List<ResultItem> UnusedItems { get; set; } = new();
+    public CutListSummary? Summary { get; set; }
+}
+
+public class ResultBin
+{
+    public string Length { get; set; } = string.Empty;
+    public double LengthInches { get; set; }
+    public string UsedLength { get; set; } = string.Empty;
+    public double UsedLengthInches { get; set; }
+    public string RemainingLength { get; set; } = string.Empty;
+    public double RemainingLengthInches { get; set; }
+    public double Utilization { get; set; }
+    public List<ResultItem> Items { get; set; } = new();
+}
+
+public class ResultItem
+{
+    public string Name { get; set; } = string.Empty;
+    public string Length { get; set; } = string.Empty;
+    public double LengthInches { get; set; }
+}
+
+public class CutListSummary
+{
+    public int TotalBinsUsed { get; set; }
+    public int TotalPartsPlaced { get; set; }
+    public int TotalPartsNotPlaced { get; set; }
+    public string TotalStockLength { get; set; } = string.Empty;
+    public double TotalStockLengthInches { get; set; }
+    public string TotalWaste { get; set; } = string.Empty;
+    public double TotalWasteInches { get; set; }
+    public double OverallUtilization { get; set; }
+}
+
+public class ParseLengthResult
+{
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+    public double Inches { get; set; }
+    public string? Formatted { get; set; }
+}
+
+public class FormatLengthResult
+{
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+    public string? Formatted { get; set; }
+    public double Inches { get; set; }
+}
+
+public class CutListReportResult
+{
+    public bool Success { get; set; }
+    public string? Error { get; set; }
+    public string? FilePath { get; set; }
+    public int TotalBins { get; set; }
+    public int TotalParts { get; set; }
+    public int PartsNotPlaced { get; set; }
+}
