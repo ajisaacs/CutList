@@ -9,6 +9,7 @@ namespace CutList.Forms
     public partial class MainForm : Form, IMainView
     {
         private static readonly Random random = new Random();
+        private const string BaseTitle = "Cut List";
 
         private BindingList<PartInputItem> parts;
         private BindingList<BinInputItem> bins;
@@ -32,8 +33,12 @@ namespace CutList.Forms
             binInputItemBindingSource.DataSource = bins;
             binInputItemBindingSource.ListChanged += BinInputItemBindingSource_ListChanged;
 
+
             toolbox = new Toolbox();
             cutMethodComboBox.DataSource = toolbox.Tools;
+
+            // Enable keyboard shortcuts
+            KeyPreview = true;
 
 #if DEBUG
             loadExampleDataButton.Visible = true;
@@ -140,6 +145,13 @@ namespace CutList.Forms
             LoadDocumentData(new List<PartInputItem>(), new List<BinInputItem>());
         }
 
+        public void UpdateWindowTitle(string? fileName)
+        {
+            Text = string.IsNullOrEmpty(fileName)
+                ? BaseTitle
+                : $"{fileName} - {BaseTitle}";
+        }
+
         // Event handler delegates to presenter
         private void Open()
         {
@@ -162,6 +174,61 @@ namespace CutList.Forms
         {
             FlushPendingEdits();
             presenter.SaveDocument();
+        }
+
+        private void SaveAs()
+        {
+            FlushPendingEdits();
+            presenter.SaveDocumentAs();
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+
+            if (e.Control && e.Shift && e.KeyCode == Keys.S)
+            {
+                SaveAs();
+                e.Handled = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.S)
+            {
+                Save();
+                e.Handled = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.O)
+            {
+                Open();
+                e.Handled = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.N)
+            {
+                presenter.NewDocument();
+                e.Handled = true;
+            }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Handle Enter key in items DataGridView to move to Length column
+            if (keyData == Keys.Enter && dataGridView1.CurrentCell != null &&
+                (dataGridView1.ContainsFocus || dataGridView1.IsCurrentCellInEditMode))
+            {
+                dataGridView1.EndEdit();
+
+                int currentRow = dataGridView1.CurrentCell.RowIndex;
+                int nextRow = currentRow + 1;
+                int lengthColumnIndex = lengthDataGridViewTextBoxColumn.Index;
+
+                if (nextRow < dataGridView1.RowCount)
+                {
+                    dataGridView1.CurrentCell = dataGridView1[lengthColumnIndex, nextRow];
+                    dataGridView1.BeginEdit(true);
+                    return true; // Handled
+                }
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private void Run()
@@ -280,6 +347,7 @@ namespace CutList.Forms
             if (e.ColumnIndex == lengthDataGridViewTextBoxColumn.Index)
                 dataGridView1.Refresh();
         }
+
 
         private void dataGridView1_DataError(object sender, DataGridViewDataErrorEventArgs e)
         {

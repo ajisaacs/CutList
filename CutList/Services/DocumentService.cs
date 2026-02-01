@@ -41,6 +41,7 @@ namespace CutList.Services
             {
                 var json = File.ReadAllText(filePath);
                 var document = JsonConvert.DeserializeObject<Document>(json);
+                document.LastFilePath = filePath;
                 return Result<Document>.Success(document);
             }
             catch (Exception ex)

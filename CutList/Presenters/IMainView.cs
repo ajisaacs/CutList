@@ -88,5 +88,11 @@ namespace CutList.Presenters
         /// Clears all data in the view.
         /// </summary>
         void ClearData();
+
+        /// <summary>
+        /// Updates the window title to reflect the current document state.
+        /// </summary>
+        /// <param name="fileName">The file name to display, or null for a new document</param>
+        void UpdateWindowTitle(string? fileName);
     }
 }

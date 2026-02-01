@@ -13,6 +13,7 @@ namespace CutList.Presenters
         private readonly CutListService _cutListService;
         private readonly DocumentService _documentService;
         private Document _currentDocument;
+        private int _documentCounter = 0;
 
         public MainFormPresenter(IMainView view, CutListService cutListService, DocumentService documentService)
         {
@@ -40,11 +41,13 @@ namespace CutList.Presenters
 
             _currentDocument = loadResult.Value;
             _view.LoadDocumentData(_currentDocument.PartsToNest, _currentDocument.StockBins);
+            _view.UpdateWindowTitle(Path.GetFileName(filePath));
             UpdateRunButtonState();
         }
 
         /// <summary>
-        /// Handles the "Save" operation to save the current document to file.
+        /// Handles the "Save" operation. If the document has a known path, saves directly.
+        /// Otherwise, prompts for a file location (same as Save As).
         /// </summary>
         public void SaveDocument()
         {
@@ -57,19 +60,59 @@ namespace CutList.Presenters
                 return;
             }
 
-            var defaultFileName = _currentDocument.LastFilePath == null
-                ? "NewDocument.json"
+            // If we have a known path, save directly without prompting
+            if (!string.IsNullOrEmpty(_currentDocument.LastFilePath))
+            {
+                SaveToPath(_currentDocument.LastFilePath);
+                return;
+            }
+
+            // No known path - prompt for location (same as Save As)
+            SaveDocumentAs();
+        }
+
+        /// <summary>
+        /// Handles the "Save As" operation. Always prompts for a file location.
+        /// </summary>
+        public void SaveDocumentAs()
+        {
+            SyncDocumentFromView();
+
+            var validationResult = _documentService.Validate(_currentDocument);
+            if (validationResult.IsFailure)
+            {
+                _view.ShowWarning(validationResult.Error);
+                return;
+            }
+
+            var defaultFileName = string.IsNullOrEmpty(_currentDocument.LastFilePath)
+                ? GenerateDefaultFileName()
                 : Path.GetFileName(_currentDocument.LastFilePath);
 
             if (!_view.PromptSaveFile("Json File|*.json", defaultFileName, out string filePath))
                 return;
 
+            SaveToPath(filePath);
+        }
+
+        private void SaveToPath(string filePath)
+        {
             var saveResult = _documentService.Save(_currentDocument, filePath);
 
             if (saveResult.IsFailure)
             {
                 _view.ShowError(saveResult.Error);
+                return;
             }
+
+            _currentDocument.LastFilePath = filePath;
+            _view.UpdateWindowTitle(Path.GetFileName(filePath));
+        }
+
+        private string GenerateDefaultFileName()
+        {
+            _documentCounter++;
+            return $"CutList_{_documentCounter}.json";
         }
 
         /// <summary>
@@ -100,6 +143,7 @@ namespace CutList.Presenters
         {
             _currentDocument = new Document();
             _view.ClearData();
+            _view.UpdateWindowTitle(null);
             UpdateRunButtonState();
         }
 
