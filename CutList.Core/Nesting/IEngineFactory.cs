@@ -7,12 +7,10 @@ namespace CutList.Core.Nesting
     public interface IEngineFactory
     {
         /// <summary>
-        /// Creates a configured engine instance for bin packing.
+        /// Creates an engine instance for the specified packing strategy.
         /// </summary>
-        /// <param name="stockLength">The length of stock bins</param>
-        /// <param name="spacing">The spacing/kerf between items</param>
-        /// <param name="maxBinCount">Maximum number of bins to create</param>
-        /// <returns>A configured IEngine instance</returns>
-        IEngine CreateEngine(double stockLength, double spacing, int maxBinCount);
+        /// <param name="strategy">The packing strategy to use.</param>
+        /// <returns>A configured IEngine instance.</returns>
+        IEngine CreateEngine(PackingStrategy strategy = PackingStrategy.AdvancedFit);
     }
 }

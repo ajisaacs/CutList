@@ -1,92 +1,70 @@
-﻿using System.Data;
-
 namespace CutList.Core.Nesting
 {
+    /// <summary>
+    /// Best-Fit Decreasing bin packing engine.
+    /// Places each item in the bin with the least remaining space that can still fit it.
+    /// This is a stateless engine - all state is passed via PackingRequest.
+    /// </summary>
     public class BestFitEngine : IEngine
     {
-        public double StockLength { get; set; }
-
-        public double Spacing { get; set; }
-
-        public int MaxBinCount { get; set; } = int.MaxValue;
-
-        private List<BinItem> Items { get; set; }
-
-        public Result Pack(List<BinItem> items)
+        /// <summary>
+        /// Packs items into bins using the Best-Fit Decreasing algorithm.
+        /// </summary>
+        public PackResult Pack(PackingRequest request)
         {
-            if (StockLength <= 0)
-                throw new Exception("Stock length must be greater than 0");
+            var result = new PackResult();
+            var items = request.Items.OrderByDescending(i => i.Length).ToList();
+            var bins = new List<Bin>();
 
-            Items = items.OrderByDescending(i => i.Length).ToList();
-
-            var result = new Result();
-            var itemsTooLarge = Items.Where(i => i.Length > StockLength).ToList();
-            result.AddItemsNotUsed(itemsTooLarge);
-
-            foreach (var item in itemsTooLarge)
+            // Filter oversized items
+            var oversizedItems = items.Where(i => i.Length > request.StockLength).ToList();
+            foreach (var item in oversizedItems)
             {
-                Items.Remove(item);
+                items.Remove(item);
+                result.AddItemNotUsed(item);
             }
 
-            var bins = GetBins();
-            result.AddBins(bins);
-
-            foreach (var bin in bins)
+            // Pack remaining items using best-fit
+            foreach (var item in items)
             {
-                foreach (var item in bin.Items)
+                if (!TryFindBestBin(bins, item.Length, out var bestBin))
                 {
-                    Items.Remove(item);
+                    if (bins.Count < request.MaxBinCount)
+                    {
+                        bestBin = CreateBin(request);
+                        bins.Add(bestBin);
+                    }
+                }
+
+                if (bestBin != null)
+                {
+                    bestBin.AddItem(item);
+                }
+                else
+                {
+                    result.AddItemNotUsed(item);
                 }
             }
 
-            result.AddItemsNotUsed(Items);
+            // Sort bins by utilization
+            var sortedBins = bins
+                .OrderByDescending(b => b.Utilization)
+                .ThenBy(b => b.Items.Count);
+
+            result.AddBins(sortedBins);
 
             return result;
         }
 
-        private List<Bin> GetBins()
+        private static Bin CreateBin(PackingRequest request)
         {
-            var bins = new List<Bin>();
-
-            foreach (var item in Items)
+            return new Bin(request.StockLength)
             {
-                Bin best_bin;
-
-                if (!FindBin(bins.ToArray(), item.Length, out best_bin))
-                {
-                    if (item.Length > StockLength)
-                        continue;
-
-                    if (bins.Count < MaxBinCount)
-                    {
-                        best_bin = CreateBin();
-                        bins.Add(best_bin);
-                    }
-                }
-
-                if (best_bin != null)
-                    best_bin.AddItem(item);
-
-
-            }
-
-            return bins
-                .OrderByDescending(b => b.Utilization)
-                .ThenBy(b => b.Items.Count)
-                .ToList();
-        }
-
-        private Bin CreateBin()
-        {
-            var length = StockLength;
-
-            return new Bin(length)
-            {
-                Spacing = Spacing
+                Spacing = request.Spacing
             };
         }
 
-        private static bool FindBin(IEnumerable<Bin> bins, double length, out Bin found)
+        private static bool TryFindBestBin(IEnumerable<Bin> bins, double length, out Bin? found)
         {
             found = null;
 
@@ -95,14 +73,13 @@ namespace CutList.Core.Nesting
                 if (bin.RemainingLength < length)
                     continue;
 
-                if (found == null)
+                if (found == null || bin.RemainingLength < found.RemainingLength)
+                {
                     found = bin;
-
-                if (bin.RemainingLength < found.RemainingLength)
-                    found = bin;
+                }
             }
 
-            return (found != null);
+            return found != null;
         }
     }
 }

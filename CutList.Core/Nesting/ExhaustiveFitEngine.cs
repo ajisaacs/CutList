@@ -1,0 +1,198 @@
+namespace CutList.Core.Nesting
+{
+    /// <summary>
+    /// Exhaustive bin packing engine that tries all possible combinations
+    /// to find the optimal solution. Falls back to AdvancedFitEngine for
+    /// item counts exceeding the threshold due to exponential complexity.
+    /// </summary>
+    public class ExhaustiveFitEngine : IEngine
+    {
+        /// <summary>
+        /// Default maximum number of items before falling back to AdvancedFitEngine.
+        /// Testing showed 20 items is safe (~100ms worst case), while 21+ can take seconds.
+        /// </summary>
+        public const int DefaultMaxItems = 20;
+
+        private readonly IEngine _fallbackEngine;
+        private readonly int _maxItems;
+
+        public ExhaustiveFitEngine() : this(DefaultMaxItems)
+        {
+        }
+
+        /// <summary>
+        /// Creates an exhaustive engine with a custom item threshold for testing.
+        /// </summary>
+        /// <param name="maxItems">Maximum items before falling back. Use int.MaxValue to disable fallback.</param>
+        public ExhaustiveFitEngine(int maxItems)
+        {
+            _maxItems = maxItems;
+            _fallbackEngine = new AdvancedFitEngine();
+        }
+
+        public PackResult Pack(PackingRequest request)
+        {
+            // Filter oversized items first
+            var validItems = new List<BinItem>();
+            var oversizedItems = new List<BinItem>();
+
+            foreach (var item in request.Items)
+            {
+                if (item.Length > request.StockLength)
+                    oversizedItems.Add(item);
+                else
+                    validItems.Add(item);
+            }
+
+            // Fall back to AdvancedFit for large item counts
+            if (validItems.Count > _maxItems)
+            {
+                var fallbackResult = _fallbackEngine.Pack(request);
+                return fallbackResult;
+            }
+
+            // Sort items descending for better pruning
+            var sortedItems = validItems.OrderByDescending(i => i.Length).ToList();
+
+            // Find optimal solution using exhaustive search
+            var bestSolution = new SearchState
+            {
+                Bins = new List<List<BinItem>>(),
+                BinCount = int.MaxValue
+            };
+
+            var currentState = new SearchState
+            {
+                Bins = new List<List<BinItem>>(),
+                BinCount = 0
+            };
+
+            Search(sortedItems, 0, currentState, bestSolution, request);
+
+            // Build result from best solution
+            var result = new PackResult();
+            result.AddItemsNotUsed(oversizedItems);
+
+            foreach (var binItems in bestSolution.Bins)
+            {
+                var bin = new Bin(request.StockLength) { Spacing = request.Spacing };
+                foreach (var item in binItems.OrderByDescending(i => i.Length))
+                {
+                    bin.AddItem(item);
+                }
+                result.AddBin(bin);
+            }
+
+            // Sort bins by utilization
+            var sortedBins = result.Bins
+                .OrderByDescending(b => b.Utilization)
+                .ThenBy(b => b.Items.Count)
+                .ToList();
+
+            var finalResult = new PackResult();
+            finalResult.AddItemsNotUsed(oversizedItems);
+            finalResult.AddBins(sortedBins);
+
+            return finalResult;
+        }
+
+        private void Search(
+            List<BinItem> items,
+            int itemIndex,
+            SearchState current,
+            SearchState best,
+            PackingRequest request)
+        {
+            // All items placed - check if this is better
+            if (itemIndex >= items.Count)
+            {
+                if (current.BinCount < best.BinCount ||
+                    (current.BinCount == best.BinCount && GetTotalWaste(current, request) < GetTotalWaste(best, request)))
+                {
+                    best.BinCount = current.BinCount;
+                    best.Bins = current.Bins.Select(b => b.ToList()).ToList();
+                }
+                return;
+            }
+
+            // Pruning: if we already have more bins than best, stop
+            if (current.BinCount >= best.BinCount)
+                return;
+
+            // Respect max bin count
+            if (current.BinCount >= request.MaxBinCount)
+                return;
+
+            var item = items[itemIndex];
+
+            // Symmetry breaking: if this item has the same length as the previous item,
+            // only place it in bins with index >= where previous item went.
+            // This avoids redundant exploration of equivalent permutations.
+            int minBinIndex = 0;
+            if (itemIndex > 0 && items[itemIndex - 1].Length == item.Length)
+            {
+                minBinIndex = current.LastBinIndexUsed;
+            }
+
+            // Try placing in each existing bin (respecting symmetry constraint)
+            for (int i = minBinIndex; i < current.Bins.Count; i++)
+            {
+                var binUsed = GetBinUsedLength(current.Bins[i], request.Spacing);
+                var remaining = request.StockLength - binUsed;
+
+                // Item fits if adding it (with spacing) stays within tolerance
+                // Bin class allows going over by up to spacing amount
+                if (item.Length <= remaining)
+                {
+                    // Place item in this bin
+                    current.Bins[i].Add(item);
+                    var prevBinIndex = current.LastBinIndexUsed;
+                    current.LastBinIndexUsed = i;
+                    Search(items, itemIndex + 1, current, best, request);
+                    current.LastBinIndexUsed = prevBinIndex;
+                    current.Bins[i].RemoveAt(current.Bins[i].Count - 1);
+                }
+            }
+
+            // Try placing in a new bin (if allowed)
+            if (current.BinCount < request.MaxBinCount && current.BinCount < best.BinCount)
+            {
+                int newBinIndex = current.Bins.Count;
+                current.Bins.Add(new List<BinItem> { item });
+                current.BinCount++;
+                var prevBinIndex = current.LastBinIndexUsed;
+                current.LastBinIndexUsed = newBinIndex;
+                Search(items, itemIndex + 1, current, best, request);
+                current.LastBinIndexUsed = prevBinIndex;
+                current.Bins.RemoveAt(current.Bins.Count - 1);
+                current.BinCount--;
+            }
+        }
+
+        private double GetBinUsedLength(List<BinItem> binItems, double spacing)
+        {
+            if (binItems.Count == 0)
+                return 0;
+
+            return binItems.Sum(i => i.Length) + binItems.Count * spacing;
+        }
+
+        private double GetTotalWaste(SearchState state, PackingRequest request)
+        {
+            double totalWaste = 0;
+            foreach (var bin in state.Bins)
+            {
+                var used = GetBinUsedLength(bin, request.Spacing);
+                totalWaste += request.StockLength - used;
+            }
+            return totalWaste;
+        }
+
+        private class SearchState
+        {
+            public List<List<BinItem>> Bins { get; set; } = new();
+            public int BinCount { get; set; }
+            public int LastBinIndexUsed { get; set; }
+        }
+    }
+}

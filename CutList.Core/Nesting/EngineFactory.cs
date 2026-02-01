@@ -1,18 +1,19 @@
 namespace CutList.Core.Nesting
 {
     /// <summary>
-    /// Default implementation of IEngineFactory that creates AdvancedFitEngine instances.
-    /// Can be extended to support different engine types based on configuration.
+    /// Default implementation of IEngineFactory that creates packing engines
+    /// based on the specified strategy.
     /// </summary>
     public class EngineFactory : IEngineFactory
     {
-        public IEngine CreateEngine(double stockLength, double spacing, int maxBinCount)
+        public IEngine CreateEngine(PackingStrategy strategy = PackingStrategy.AdvancedFit)
         {
-            return new AdvancedFitEngine
+            return strategy switch
             {
-                StockLength = stockLength,
-                Spacing = spacing,
-                MaxBinCount = maxBinCount
+                PackingStrategy.AdvancedFit => new AdvancedFitEngine(),
+                PackingStrategy.BestFit => new BestFitEngine(),
+                PackingStrategy.Exhaustive => new ExhaustiveFitEngine(),
+                _ => throw new ArgumentOutOfRangeException(nameof(strategy), strategy, "Unknown packing strategy")
             };
         }
     }

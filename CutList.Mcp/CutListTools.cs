@@ -27,7 +27,9 @@ public static class CutListTools
         [Description("Stock bins available. Each needs: length (string), quantity (int, use -1 for unlimited), priority (int, lower = used first, default 25)")]
         StockBinInput[] stockBins,
         [Description("Blade kerf/width in inches (default 0.125)")]
-        double kerf = 0.125)
+        double kerf = 0.125,
+        [Description("Packing strategy: 'advanced' (default), 'bestfit', or 'exhaustive' (optimal but slow, max 15 items)")]
+        string strategy = "advanced")
     {
         try
         {
@@ -39,7 +41,7 @@ public static class CutListTools
             if (binsError != null)
                 return new CutListResult { Success = false, Error = binsError };
 
-            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf);
+            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, ParseStrategy(strategy));
 
             // Convert results
             var resultBins = new List<ResultBin>();
@@ -176,7 +178,9 @@ public static class CutListTools
         [Description("Blade kerf/width in inches (default 0.125)")]
         double kerf = 0.125,
         [Description("File path to save the report. If not provided, saves to a temp file.")]
-        string? filePath = null)
+        string? filePath = null,
+        [Description("Packing strategy: 'advanced' (default), 'bestfit', or 'exhaustive' (optimal but slow, max 15 items)")]
+        string strategy = "advanced")
     {
         try
         {
@@ -188,7 +192,7 @@ public static class CutListTools
             if (binsError != null)
                 return new CutListReportResult { Success = false, Error = binsError };
 
-            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf);
+            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, ParseStrategy(strategy));
 
             // Determine file path
             var outputPath = string.IsNullOrWhiteSpace(filePath)
@@ -247,12 +251,23 @@ public static class CutListTools
         return (multiBins, null);
     }
 
-    private static Core.Nesting.Result RunPackingAlgorithm(List<BinItem> items, List<MultiBin> bins, double kerf)
+    private static PackResult RunPackingAlgorithm(List<BinItem> items, List<MultiBin> bins, double kerf, PackingStrategy packingStrategy = PackingStrategy.AdvancedFit)
     {
         var engine = new MultiBinEngine();
         engine.SetBins(bins);
         engine.Spacing = kerf;
+        engine.Strategy = packingStrategy;
         return engine.Pack(items);
+    }
+
+    private static PackingStrategy ParseStrategy(string strategy)
+    {
+        return strategy?.ToLowerInvariant() switch
+        {
+            "bestfit" or "best" => PackingStrategy.BestFit,
+            "exhaustive" or "optimal" => PackingStrategy.Exhaustive,
+            _ => PackingStrategy.AdvancedFit
+        };
     }
 
     private static double ParseLength(string input)
