@@ -36,23 +36,25 @@ namespace CutList.Core
 
             unchecked
             {
+                // Prime multiplier reduces collisions in hash-based collections
+                const int HashMultiplier = 23;
                 int hash = 17;
-                hash = hash * 23 + bin.Length.GetHashCode();
-                hash = hash * 23 + bin.Spacing.GetHashCode();
-                hash = hash * 23 + bin.Items.Count.GetHashCode();
+                hash = hash * HashMultiplier + bin.Length.GetHashCode();
+                hash = hash * HashMultiplier + bin.Spacing.GetHashCode();
+                hash = hash * HashMultiplier + bin.Items.Count.GetHashCode();
 
                 // Include first and last item in hash for better distribution
                 if (bin.Items.Count > 0)
                 {
                     var firstItem = bin.Items[0];
-                    hash = hash * 23 + (firstItem.Name?.GetHashCode() ?? 0);
-                    hash = hash * 23 + firstItem.Length.GetHashCode();
+                    hash = hash * HashMultiplier + (firstItem.Name?.GetHashCode() ?? 0);
+                    hash = hash * HashMultiplier + firstItem.Length.GetHashCode();
 
                     if (bin.Items.Count > 1)
                     {
                         var lastItem = bin.Items[bin.Items.Count - 1];
-                        hash = hash * 23 + (lastItem.Name?.GetHashCode() ?? 0);
-                        hash = hash * 23 + lastItem.Length.GetHashCode();
+                        hash = hash * HashMultiplier + (lastItem.Name?.GetHashCode() ?? 0);
+                        hash = hash * HashMultiplier + lastItem.Length.GetHashCode();
                     }
                 }
 

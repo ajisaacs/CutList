@@ -96,10 +96,12 @@
         {
             unchecked
             {
+                // Prime multiplier reduces collisions in hash-based collections
+                const int HashMultiplier = 23;
                 int hash = 17;
-                hash = hash * 23 + (Name?.GetHashCode() ?? 0);
-                hash = hash * 23 + Kerf.GetHashCode();
-                hash = hash * 23 + AllowUserToChange.GetHashCode();
+                hash = hash * HashMultiplier + (Name?.GetHashCode() ?? 0);
+                hash = hash * HashMultiplier + Kerf.GetHashCode();
+                hash = hash * HashMultiplier + AllowUserToChange.GetHashCode();
                 return hash;
             }
         }
