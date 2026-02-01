@@ -1,8 +1,7 @@
-using CutList.Core;
 using CutList.Core.Formatting;
 using System.Diagnostics;
 
-namespace CutList.Services
+namespace CutList.Core
 {
     public class BinFileSaver
     {
@@ -22,28 +21,39 @@ namespace CutList.Services
             using (var writer = new StreamWriter(file))
             {
                 writer.AutoFlush = true;
-
-                PaddingWidthOfItemLength = _bins
-                    .SelectMany(b => b.Items)
-                    .Select(i => FormatHelper.ConvertToMixedFraction(i.Length).Length)
-                    .DefaultIfEmpty(0)
-                    .Max();
-
-                WriteHeader(writer);
-
-                var id = 1;
-                foreach (var bin in _bins)
-                {
-                    WriteBinSummary(writer, bin, id++);
-                }
-
-                WriteFinalSummary(writer);
+                WriteToWriter(writer);
             }
 
             if (OpenFileAfterSave)
             {
                 OpenFile(file);
             }
+        }
+
+        public string GenerateReport()
+        {
+            using var writer = new StringWriter();
+            WriteToWriter(writer);
+            return writer.ToString();
+        }
+
+        private void WriteToWriter(TextWriter writer)
+        {
+            PaddingWidthOfItemLength = _bins
+                .SelectMany(b => b.Items)
+                .Select(i => FormatHelper.ConvertToMixedFraction(i.Length).Length)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            WriteHeader(writer);
+
+            var id = 1;
+            foreach (var bin in _bins)
+            {
+                WriteBinSummary(writer, bin, id++);
+            }
+
+            WriteFinalSummary(writer);
         }
 
         private void OpenFile(string file)
@@ -58,7 +68,7 @@ namespace CutList.Services
             }
         }
 
-        private void WriteHeader(StreamWriter writer)
+        private void WriteHeader(TextWriter writer)
         {
             var totalBars = _bins.Count();
             var totalItems = _bins.Sum(b => b.Items.Count);
@@ -70,7 +80,7 @@ namespace CutList.Services
             writer.WriteLine();
         }
 
-        private void WriteBinSummary(StreamWriter writer, Bin bin, int id)
+        private void WriteBinSummary(TextWriter writer, Bin bin, int id)
         {
             var stockLength = FormatHelper.ConvertToMixedFraction(bin.Length);
             var dropLength = FormatHelper.ConvertToMixedFraction(bin.RemainingLength);
@@ -87,7 +97,7 @@ namespace CutList.Services
             writer.WriteLine();
         }
 
-        private void WriteBinItems(StreamWriter writer, Bin bin)
+        private void WriteBinItems(TextWriter writer, Bin bin)
         {
             var groups = bin.Items
                 .GroupBy(i => new { i.Name, i.Length })
@@ -109,7 +119,7 @@ namespace CutList.Services
             }
         }
 
-        private void WriteFinalSummary(StreamWriter writer)
+        private void WriteFinalSummary(TextWriter writer)
         {
             var totalBars = _bins.Count();
             var totalItems = _bins.Sum(b => b.Items.Count);

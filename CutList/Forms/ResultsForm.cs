@@ -1,5 +1,4 @@
 ﻿using CutList.Core;
-using CutList.Services;
 
 namespace CutList.Forms
 {
