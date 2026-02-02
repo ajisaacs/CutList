@@ -9,9 +9,9 @@
         <div class="meta-info">
             <div class="meta-row"><span>Date:</span> @DateTime.Now.ToString("g")</div>
             <div class="meta-row"><span>Project:</span> @Project.Name</div>
-            @if (Project.Material != null)
+            @if (!string.IsNullOrWhiteSpace(Project.Customer))
             {
-                <div class="meta-row"><span>Material:</span> @Project.Material.Shape - @Project.Material.Size</div>
+                <div class="meta-row"><span>Customer:</span> @Project.Customer</div>
             }
             @if (Project.CuttingTool != null)
             {
