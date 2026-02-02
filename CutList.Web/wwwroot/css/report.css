@@ -136,11 +136,12 @@
     white-space: pre-wrap;
 }
 
-/* Print styles */
+/* Print styles - Compact layout to save paper */
 @media print {
     body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        font-size: 10pt;
     }
 
     .sidebar,
@@ -170,16 +171,91 @@
         max-width: 100%;
         padding: 0;
         margin: 0;
+        font-size: 9pt;
+    }
+
+    .report-header {
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.25rem;
+        border-bottom-width: 1px;
+    }
+
+    .report-header h1 {
+        font-size: 14pt;
+        margin-bottom: 0.25rem;
+    }
+
+    .meta-info {
+        gap: 0.1rem;
+        font-size: 8pt;
+    }
+
+    .meta-row span:first-child {
+        min-width: 80px;
     }
 
     .bin-section {
+        margin: 0.3rem 0;
+        padding: 0.3rem 0.5rem;
+        border-radius: 0;
         break-inside: avoid;
         page-break-inside: avoid;
     }
 
+    .bin-section h2 {
+        font-size: 10pt;
+        margin: 0 0 0.2rem 0;
+        padding-bottom: 0.15rem;
+    }
+
+    .cuts-table {
+        margin-bottom: 0.2rem;
+    }
+
+    .cuts-table th,
+    .cuts-table td {
+        padding: 0.15rem 0.3rem;
+        font-size: 9pt;
+    }
+
+    .cuts-table th {
+        font-size: 8pt;
+    }
+
+    .drop {
+        font-size: 8pt;
+        margin-top: 0.1rem;
+    }
+
     .summary {
+        padding: 0.5rem;
+        margin-top: 0.5rem;
         break-inside: avoid;
         page-break-inside: avoid;
+    }
+
+    .summary h2 {
+        font-size: 11pt;
+        margin: 0 0 0.3rem 0;
+    }
+
+    .summary-grid {
+        gap: 0.1rem 1rem;
+        font-size: 9pt;
+    }
+
+    .notes-section {
+        margin-top: 0.5rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    .notes-section h3 {
+        font-size: 9pt;
+        margin-bottom: 0.2rem;
+    }
+
+    .notes-section p {
+        font-size: 8pt;
     }
 
     .alert {

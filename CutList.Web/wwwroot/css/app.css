@@ -20,6 +20,10 @@ a, .btn-link {
     box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
+.nav-link {
+    padding-left: 10px;
+}
+
 .content {
     padding-top: 1.1rem;
 }
@@ -76,7 +80,7 @@ main {
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    background-image: linear-gradient(180deg, rgb(83 83 83) 0%, #2f2f2f 70%);
 }
 
 .top-row {
