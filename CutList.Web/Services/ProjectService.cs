@@ -16,8 +16,9 @@ public class ProjectService
     public async Task<List<Project>> GetAllAsync()
     {
         return await _context.Projects
-            .Include(p => p.Material)
             .Include(p => p.CuttingTool)
+            .Include(p => p.Parts)
+                .ThenInclude(pt => pt.Material)
             .OrderByDescending(p => p.UpdatedAt ?? p.CreatedAt)
             .ToListAsync();
     }
@@ -25,10 +26,9 @@ public class ProjectService
     public async Task<Project?> GetByIdAsync(int id)
     {
         return await _context.Projects
-            .Include(p => p.Material)
             .Include(p => p.CuttingTool)
             .Include(p => p.Parts.OrderBy(pt => pt.SortOrder))
-            .Include(p => p.StockBins.OrderBy(sb => sb.SortOrder))
+                .ThenInclude(pt => pt.Material)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 
@@ -68,7 +68,7 @@ public class ProjectService
         var duplicate = new Project
         {
             Name = $"{original.Name} (Copy)",
-            MaterialId = original.MaterialId,
+            Customer = original.Customer,
             CuttingToolId = original.CuttingToolId,
             Notes = original.Notes,
             CreatedAt = DateTime.UtcNow
@@ -83,23 +83,11 @@ public class ProjectService
             _context.ProjectParts.Add(new ProjectPart
             {
                 ProjectId = duplicate.Id,
+                MaterialId = part.MaterialId,
                 Name = part.Name,
                 LengthInches = part.LengthInches,
                 Quantity = part.Quantity,
                 SortOrder = part.SortOrder
-            });
-        }
-
-        // Copy stock bins
-        foreach (var bin in original.StockBins)
-        {
-            _context.ProjectStockBins.Add(new ProjectStockBin
-            {
-                ProjectId = duplicate.Id,
-                LengthInches = bin.LengthInches,
-                Quantity = bin.Quantity,
-                Priority = bin.Priority,
-                SortOrder = bin.SortOrder
             });
         }
 
@@ -157,102 +145,6 @@ public class ProjectService
                 project.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }
-        }
-    }
-
-    // Stock bins management
-    public async Task<ProjectStockBin> AddStockBinAsync(ProjectStockBin bin)
-    {
-        var maxOrder = await _context.ProjectStockBins
-            .Where(b => b.ProjectId == bin.ProjectId)
-            .MaxAsync(b => (int?)b.SortOrder) ?? -1;
-        bin.SortOrder = maxOrder + 1;
-
-        _context.ProjectStockBins.Add(bin);
-        await _context.SaveChangesAsync();
-
-        var project = await _context.Projects.FindAsync(bin.ProjectId);
-        if (project != null)
-        {
-            project.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-        }
-
-        return bin;
-    }
-
-    public async Task UpdateStockBinAsync(ProjectStockBin bin)
-    {
-        _context.ProjectStockBins.Update(bin);
-        await _context.SaveChangesAsync();
-
-        var project = await _context.Projects.FindAsync(bin.ProjectId);
-        if (project != null)
-        {
-            project.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-        }
-    }
-
-    public async Task DeleteStockBinAsync(int id)
-    {
-        var bin = await _context.ProjectStockBins.FindAsync(id);
-        if (bin != null)
-        {
-            var projectId = bin.ProjectId;
-            _context.ProjectStockBins.Remove(bin);
-            await _context.SaveChangesAsync();
-
-            var project = await _context.Projects.FindAsync(projectId);
-            if (project != null)
-            {
-                project.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-            }
-        }
-    }
-
-    public async Task ImportStockFromSupplierAsync(int projectId, int supplierId, int? materialId = null)
-    {
-        var query = _context.SupplierStocks
-            .Where(s => s.SupplierId == supplierId && s.IsActive);
-
-        if (materialId.HasValue)
-        {
-            query = query.Where(s => s.MaterialId == materialId.Value);
-        }
-
-        var stocks = await query.ToListAsync();
-        var maxOrder = await _context.ProjectStockBins
-            .Where(b => b.ProjectId == projectId)
-            .MaxAsync(b => (int?)b.SortOrder) ?? -1;
-
-        foreach (var stock in stocks)
-        {
-            // Check if already exists
-            var exists = await _context.ProjectStockBins
-                .AnyAsync(b => b.ProjectId == projectId && b.LengthInches == stock.LengthInches);
-
-            if (!exists)
-            {
-                _context.ProjectStockBins.Add(new ProjectStockBin
-                {
-                    ProjectId = projectId,
-                    LengthInches = stock.LengthInches,
-                    Quantity = -1,
-                    Priority = 25,
-                    SortOrder = ++maxOrder
-                });
-            }
-        }
-
-        await _context.SaveChangesAsync();
-
-        var project = await _context.Projects.FindAsync(projectId);
-        if (project != null)
-        {
-            project.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
         }
     }
 
