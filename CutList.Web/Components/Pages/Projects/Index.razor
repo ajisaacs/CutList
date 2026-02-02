@@ -25,7 +25,7 @@ else
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Material</th>
+                <th>Customer</th>
                 <th>Cutting Tool</th>
                 <th>Last Modified</th>
                 <th style="width: 200px;">Actions</th>
@@ -36,7 +36,7 @@ else
             {
                 <tr>
                     <td><a href="projects/@project.Id">@project.Name</a></td>
-                    <td>@(project.Material?.DisplayName ?? "-")</td>
+                    <td>@(project.Customer ?? "-")</td>
                     <td>@(project.CuttingTool?.Name ?? "-")</td>
                     <td>@((project.UpdatedAt ?? project.CreatedAt).ToLocalTime().ToString("g"))</td>
                     <td>
