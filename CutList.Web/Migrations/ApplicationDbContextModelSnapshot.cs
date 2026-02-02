@@ -122,6 +122,39 @@ namespace CutList.Web.Migrations
                     b.ToTable("Materials");
                 });
 
+            modelBuilder.Entity("CutList.Web.Data.Entities.MaterialStockLength", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("LengthInches")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<int>("MaterialId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialId", "LengthInches")
+                        .IsUnique();
+
+                    b.ToTable("MaterialStockLengths");
+                });
+
             modelBuilder.Entity("CutList.Web.Data.Entities.Project", b =>
                 {
                     b.Property<int>("Id")
@@ -135,10 +168,11 @@ namespace CutList.Web.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETUTCDATE()");
 
-                    b.Property<int?>("CuttingToolId")
-                        .HasColumnType("int");
+                    b.Property<string>("Customer")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("MaterialId")
+                    b.Property<int?>("CuttingToolId")
                         .HasColumnType("int");
 
                     b.Property<string>("Name")
@@ -156,8 +190,6 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("CuttingToolId");
 
-                    b.HasIndex("MaterialId");
-
                     b.ToTable("Projects");
                 });
 
@@ -172,6 +204,9 @@ namespace CutList.Web.Migrations
                     b.Property<decimal>("LengthInches")
                         .HasPrecision(10, 4)
                         .HasColumnType("decimal(10,4)");
+
+                    b.Property<int>("MaterialId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -189,40 +224,11 @@ namespace CutList.Web.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("MaterialId");
+
                     b.HasIndex("ProjectId");
 
                     b.ToTable("ProjectParts");
-                });
-
-            modelBuilder.Entity("CutList.Web.Data.Entities.ProjectStockBin", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("LengthInches")
-                        .HasPrecision(10, 4)
-                        .HasColumnType("decimal(10,4)");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProjectId");
-
-                    b.ToTable("ProjectStockBins");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.Supplier", b =>
@@ -297,6 +303,17 @@ namespace CutList.Web.Migrations
                     b.ToTable("SupplierStocks");
                 });
 
+            modelBuilder.Entity("CutList.Web.Data.Entities.MaterialStockLength", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.Material", "Material")
+                        .WithMany("StockLengths")
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Material");
+                });
+
             modelBuilder.Entity("CutList.Web.Data.Entities.Project", b =>
                 {
                     b.HasOne("CutList.Web.Data.Entities.CuttingTool", "CuttingTool")
@@ -304,34 +321,24 @@ namespace CutList.Web.Migrations
                         .HasForeignKey("CuttingToolId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("CutList.Web.Data.Entities.Material", "Material")
-                        .WithMany("Projects")
-                        .HasForeignKey("MaterialId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("CuttingTool");
-
-                    b.Navigation("Material");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.ProjectPart", b =>
                 {
+                    b.HasOne("CutList.Web.Data.Entities.Material", "Material")
+                        .WithMany("ProjectParts")
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("CutList.Web.Data.Entities.Project", "Project")
                         .WithMany("Parts")
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Project");
-                });
-
-            modelBuilder.Entity("CutList.Web.Data.Entities.ProjectStockBin", b =>
-                {
-                    b.HasOne("CutList.Web.Data.Entities.Project", "Project")
-                        .WithMany("StockBins")
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("Material");
 
                     b.Navigation("Project");
                 });
@@ -362,7 +369,9 @@ namespace CutList.Web.Migrations
 
             modelBuilder.Entity("CutList.Web.Data.Entities.Material", b =>
                 {
-                    b.Navigation("Projects");
+                    b.Navigation("ProjectParts");
+
+                    b.Navigation("StockLengths");
 
                     b.Navigation("SupplierStocks");
                 });
@@ -370,8 +379,6 @@ namespace CutList.Web.Migrations
             modelBuilder.Entity("CutList.Web.Data.Entities.Project", b =>
                 {
                     b.Navigation("Parts");
-
-                    b.Navigation("StockBins");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.Supplier", b =>

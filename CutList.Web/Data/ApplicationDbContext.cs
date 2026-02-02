@@ -11,12 +11,12 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<Material> Materials => Set<Material>();
+    public DbSet<MaterialStockLength> MaterialStockLengths => Set<MaterialStockLength>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<SupplierStock> SupplierStocks => Set<SupplierStock>();
     public DbSet<CuttingTool> CuttingTools => Set<CuttingTool>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectPart> ProjectParts => Set<ProjectPart>();
-    public DbSet<ProjectStockBin> ProjectStockBins => Set<ProjectStockBin>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +30,21 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Size).HasMaxLength(100).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        });
+
+        // MaterialStockLength
+        modelBuilder.Entity<MaterialStockLength>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.LengthInches).HasPrecision(10, 4);
+            entity.Property(e => e.Notes).HasMaxLength(255);
+
+            entity.HasOne(e => e.Material)
+                .WithMany(m => m.StockLengths)
+                .HasForeignKey(e => e.MaterialId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.MaterialId, e.LengthInches }).IsUnique();
         });
 
         // Supplier
@@ -75,12 +90,8 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Customer).HasMaxLength(100);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-
-            entity.HasOne(e => e.Material)
-                .WithMany(m => m.Projects)
-                .HasForeignKey(e => e.MaterialId)
-                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(e => e.CuttingTool)
                 .WithMany(t => t.Projects)
@@ -92,25 +103,18 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<ProjectPart>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.LengthInches).HasPrecision(10, 4);
 
             entity.HasOne(e => e.Project)
                 .WithMany(p => p.Parts)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
-        });
 
-        // ProjectStockBin
-        modelBuilder.Entity<ProjectStockBin>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.LengthInches).HasPrecision(10, 4);
-
-            entity.HasOne(e => e.Project)
-                .WithMany(p => p.StockBins)
-                .HasForeignKey(e => e.ProjectId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Material)
+                .WithMany(m => m.ProjectParts)
+                .HasForeignKey(e => e.MaterialId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Seed default cutting tools
