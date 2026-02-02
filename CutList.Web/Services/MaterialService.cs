@@ -76,4 +76,47 @@ public class MaterialService
         }
         return await query.AnyAsync();
     }
+
+    // Stock Length methods
+    public async Task<List<MaterialStockLength>> GetStockLengthsAsync(int materialId)
+    {
+        return await _context.MaterialStockLengths
+            .Where(s => s.MaterialId == materialId && s.IsActive)
+            .OrderBy(s => s.LengthInches)
+            .ToListAsync();
+    }
+
+    public async Task<MaterialStockLength> AddStockLengthAsync(MaterialStockLength stockLength)
+    {
+        _context.MaterialStockLengths.Add(stockLength);
+        await _context.SaveChangesAsync();
+        return stockLength;
+    }
+
+    public async Task UpdateStockLengthAsync(MaterialStockLength stockLength)
+    {
+        _context.MaterialStockLengths.Update(stockLength);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteStockLengthAsync(int id)
+    {
+        var stockLength = await _context.MaterialStockLengths.FindAsync(id);
+        if (stockLength != null)
+        {
+            _context.MaterialStockLengths.Remove(stockLength);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<bool> StockLengthExistsAsync(int materialId, decimal lengthInches, int? excludeId = null)
+    {
+        var query = _context.MaterialStockLengths
+            .Where(s => s.MaterialId == materialId && s.LengthInches == lengthInches && s.IsActive);
+        if (excludeId.HasValue)
+        {
+            query = query.Where(s => s.Id != excludeId.Value);
+        }
+        return await query.AnyAsync();
+    }
 }
