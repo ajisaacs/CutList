@@ -1,0 +1,91 @@
+@page "/suppliers"
+@inject SupplierService SupplierService
+@inject NavigationManager Navigation
+
+<PageTitle>Suppliers</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Suppliers</h1>
+    <a href="suppliers/new" class="btn btn-primary">Add Supplier</a>
+</div>
+
+@if (loading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (suppliers.Count == 0)
+{
+    <div class="alert alert-info">
+        No suppliers found. <a href="suppliers/new">Add your first supplier</a>.
+    </div>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Contact Info</th>
+                <th>Notes</th>
+                <th style="width: 120px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var supplier in suppliers)
+            {
+                <tr>
+                    <td><a href="suppliers/@supplier.Id">@supplier.Name</a></td>
+                    <td>@supplier.ContactInfo</td>
+                    <td>@TruncateText(supplier.Notes, 50)</td>
+                    <td>
+                        <a href="suppliers/@supplier.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(supplier)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<ConfirmDialog @ref="deleteDialog"
+               Title="Delete Supplier"
+               Message="@deleteMessage"
+               ConfirmText="Delete"
+               OnConfirm="DeleteConfirmed" />
+
+@code {
+    private List<Supplier> suppliers = new();
+    private bool loading = true;
+    private ConfirmDialog deleteDialog = null!;
+    private Supplier? supplierToDelete;
+    private string deleteMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        suppliers = await SupplierService.GetAllAsync();
+        loading = false;
+    }
+
+    private void ConfirmDelete(Supplier supplier)
+    {
+        supplierToDelete = supplier;
+        deleteMessage = $"Are you sure you want to delete \"{supplier.Name}\"? This will also remove all stock lengths associated with this supplier.";
+        deleteDialog.Show();
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (supplierToDelete != null)
+        {
+            await SupplierService.DeleteAsync(supplierToDelete.Id);
+            suppliers = await SupplierService.GetAllAsync();
+        }
+    }
+
+    private string? TruncateText(string? text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+            return text;
+        return text.Substring(0, maxLength) + "...";
+    }
+}

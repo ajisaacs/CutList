@@ -1,0 +1,142 @@
+@page "/projects/{Id:int}/results"
+@inject ProjectService ProjectService
+@inject CutListPackingService PackingService
+@inject ReportService ReportService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@using CutList.Core.Nesting
+@using CutList.Core.Formatting
+
+<PageTitle>Results - @(project?.Name ?? "Project")</PageTitle>
+
+@if (loading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (project == null)
+{
+    <div class="alert alert-danger">Project not found.</div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1>@project.Name</h1>
+            <p class="text-muted mb-0">Optimization Results</p>
+        </div>
+        <div>
+            <a href="projects/@Id" class="btn btn-outline-secondary me-2">Edit Project</a>
+            <button class="btn btn-primary" @onclick="PrintReport">Print Report</button>
+        </div>
+    </div>
+
+    @if (!CanOptimize)
+    {
+        <div class="alert alert-warning">
+            <h4>Cannot Optimize</h4>
+            <ul class="mb-0">
+                @if (project.Parts.Count == 0)
+                {
+                    <li>No parts defined. <a href="projects/@Id">Add parts to the project</a>.</li>
+                }
+                @if (project.StockBins.Count == 0)
+                {
+                    <li>No stock bins defined. <a href="projects/@Id">Add stock bins to the project</a>.</li>
+                }
+                @if (project.CuttingToolId == null)
+                {
+                    <li>No cutting tool selected. <a href="projects/@Id">Select a cutting tool</a>.</li>
+                }
+            </ul>
+        </div>
+    }
+    else if (packResult != null)
+    {
+        @if (packResult.ItemsNotUsed.Count > 0)
+        {
+            <div class="alert alert-warning">
+                <h5>Items Not Placed</h5>
+                <p>The following @packResult.ItemsNotUsed.Count item(s) could not be placed (probably too long for available stock):</p>
+                <ul class="mb-0">
+                    @foreach (var item in packResult.ItemsNotUsed.GroupBy(i => new { i.Name, i.Length }))
+                    {
+                        <li>@item.Count() x @item.Key.Name (@ArchUnits.FormatFromInches(item.Key.Length))</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h2 class="card-title mb-0">@summary!.TotalBins</h2>
+                        <p class="card-text text-muted">Stock Bars</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h2 class="card-title mb-0">@summary.TotalPieces</h2>
+                        <p class="card-text text-muted">Total Pieces</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h2 class="card-title mb-0">@ArchUnits.FormatFromInches(summary.TotalWaste)</h2>
+                        <p class="card-text text-muted">Total Waste</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h2 class="card-title mb-0">@summary.Efficiency.ToString("F1")%</h2>
+                        <p class="card-text text-muted">Efficiency</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report -->
+        <CutListReport Project="project" PackResult="packResult" />
+    }
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Project? project;
+    private PackResult? packResult;
+    private PackingSummary? summary;
+    private bool loading = true;
+
+    private bool CanOptimize => project != null &&
+                                project.Parts.Count > 0 &&
+                                project.StockBins.Count > 0 &&
+                                project.CuttingToolId != null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        project = await ProjectService.GetByIdAsync(Id);
+
+        if (project != null && CanOptimize)
+        {
+            var kerf = project.CuttingTool?.KerfInches ?? 0.125m;
+            packResult = PackingService.Pack(project.Parts, project.StockBins, kerf);
+            summary = PackingService.GetSummary(packResult);
+        }
+
+        loading = false;
+    }
+
+    private async Task PrintReport()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+}

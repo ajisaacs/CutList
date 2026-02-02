@@ -1,0 +1,84 @@
+@page "/materials"
+@inject MaterialService MaterialService
+@inject NavigationManager Navigation
+
+<PageTitle>Materials</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Materials</h1>
+    <a href="materials/new" class="btn btn-primary">Add Material</a>
+</div>
+
+@if (loading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (materials.Count == 0)
+{
+    <div class="alert alert-info">
+        No materials found. <a href="materials/new">Add your first material</a>.
+    </div>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Shape</th>
+                <th>Size</th>
+                <th>Description</th>
+                <th style="width: 120px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var material in materials)
+            {
+                <tr>
+                    <td>@material.Shape</td>
+                    <td>@material.Size</td>
+                    <td>@material.Description</td>
+                    <td>
+                        <a href="materials/@material.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(material)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<ConfirmDialog @ref="deleteDialog"
+               Title="Delete Material"
+               Message="@deleteMessage"
+               ConfirmText="Delete"
+               OnConfirm="DeleteConfirmed" />
+
+@code {
+    private List<Material> materials = new();
+    private bool loading = true;
+    private ConfirmDialog deleteDialog = null!;
+    private Material? materialToDelete;
+    private string deleteMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        materials = await MaterialService.GetAllAsync();
+        loading = false;
+    }
+
+    private void ConfirmDelete(Material material)
+    {
+        materialToDelete = material;
+        deleteMessage = $"Are you sure you want to delete \"{material.Shape} - {material.Size}\"?";
+        deleteDialog.Show();
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (materialToDelete != null)
+        {
+            await MaterialService.DeleteAsync(materialToDelete.Id);
+            materials = await MaterialService.GetAllAsync();
+        }
+    }
+}

@@ -1,0 +1,200 @@
+/* CutList Report Styles - Print Friendly */
+
+.cut-list-report {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.report-header {
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #333;
+    padding-bottom: 1rem;
+}
+
+.report-header h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.meta-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.meta-row {
+    font-size: 0.95rem;
+}
+
+.meta-row span:first-child {
+    font-weight: 600;
+    min-width: 120px;
+    display: inline-block;
+    color: #555;
+}
+
+.bin-section {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin: 1rem 0;
+    padding: 1rem;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.bin-section h2 {
+    font-size: 1.1rem;
+    margin: 0 0 0.75rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+    color: #333;
+}
+
+.cuts-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.75rem;
+}
+
+.cuts-table th,
+.cuts-table td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.cuts-table th {
+    background: #f5f5f5;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: #666;
+}
+
+.cuts-table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+.drop {
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
+}
+
+.summary {
+    background: #f0f0f0;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    border-radius: 4px;
+    page-break-inside: avoid;
+}
+
+.summary h2 {
+    font-size: 1.2rem;
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 2rem;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.summary-row span {
+    color: #555;
+}
+
+.summary-row strong {
+    color: #333;
+}
+
+.notes-section {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.notes-section h3 {
+    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+    color: #555;
+}
+
+.notes-section p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+/* Print styles */
+@media print {
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .sidebar,
+    .top-row,
+    .page > main > .top-row,
+    .btn,
+    button,
+    nav,
+    .navbar {
+        display: none !important;
+    }
+
+    .page {
+        display: block !important;
+    }
+
+    .page > main {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+
+    .content {
+        padding: 0 !important;
+    }
+
+    .cut-list-report {
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+
+    .bin-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .summary {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .alert {
+        display: none !important;
+    }
+
+    .card {
+        display: none !important;
+    }
+
+    h1:not(.report-header h1) {
+        display: none !important;
+    }
+
+    .text-muted:not(.cut-list-report .text-muted) {
+        display: none !important;
+    }
+}

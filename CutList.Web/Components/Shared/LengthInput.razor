@@ -1,0 +1,75 @@
+@using CutList.Core.Formatting
+
+<div class="length-input">
+    <input type="text"
+           class="form-control @(HasError ? "is-invalid" : "")"
+           value="@DisplayValue"
+           @onchange="OnInputChange"
+           placeholder="e.g., 12' 6&quot; or 144" />
+    @if (HasError)
+    {
+        <div class="invalid-feedback">@ErrorMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public decimal Value { get; set; }
+
+    [Parameter]
+    public EventCallback<decimal> ValueChanged { get; set; }
+
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    private string DisplayValue { get; set; } = string.Empty;
+    private bool HasError { get; set; }
+    private string ErrorMessage { get; set; } = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        if (Value > 0 && string.IsNullOrEmpty(DisplayValue))
+        {
+            DisplayValue = ArchUnits.FormatFromInches((double)Value);
+        }
+    }
+
+    private async Task OnInputChange(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? string.Empty;
+        DisplayValue = input;
+        HasError = false;
+        ErrorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            await ValueChanged.InvokeAsync(0);
+            return;
+        }
+
+        try
+        {
+            // Try to parse as architectural units
+            var inches = ArchUnits.ParseToInches(input);
+            await ValueChanged.InvokeAsync((decimal)inches);
+        }
+        catch
+        {
+            // Try to parse as plain decimal (inches)
+            if (decimal.TryParse(input, out var decimalValue))
+            {
+                await ValueChanged.InvokeAsync(decimalValue);
+            }
+            else
+            {
+                HasError = true;
+                ErrorMessage = "Invalid format. Use feet (12'), inches (6\"), or decimal (144)";
+            }
+        }
+    }
+
+    public static string FormatLength(decimal inches)
+    {
+        return ArchUnits.FormatFromInches((double)inches);
+    }
+}

@@ -1,0 +1,503 @@
+@page "/projects/new"
+@page "/projects/{Id:int}"
+@inject ProjectService ProjectService
+@inject MaterialService MaterialService
+@inject SupplierService SupplierService
+@inject NavigationManager Navigation
+@using CutList.Core.Formatting
+
+<PageTitle>@(IsNew ? "New Project" : project.Name)</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>@(IsNew ? "New Project" : project.Name)</h1>
+    @if (!IsNew)
+    {
+        <a href="projects/@Id/results" class="btn btn-success">Run Optimization</a>
+    }
+</div>
+
+@if (loading)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <!-- Project Details -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Project Details</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="project" OnValidSubmit="SaveProjectAsync">
+                        <div class="mb-3">
+                            <label class="form-label">Project Name</label>
+                            <InputText class="form-control" @bind-Value="project.Name" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Material</label>
+                            <InputSelect class="form-select" @bind-Value="project.MaterialId">
+                                <option value="">-- Select Material --</option>
+                                @foreach (var material in materials)
+                                {
+                                    <option value="@material.Id">@material.DisplayName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Cutting Tool</label>
+                            <InputSelect class="form-select" @bind-Value="project.CuttingToolId">
+                                <option value="">-- Select Tool --</option>
+                                @foreach (var tool in cuttingTools)
+                                {
+                                    <option value="@tool.Id">@tool.Name (@tool.KerfInches" kerf)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <InputTextArea class="form-control" @bind-Value="project.Notes" rows="3" />
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(projectErrorMessage))
+                        {
+                            <div class="alert alert-danger">@projectErrorMessage</div>
+                        }
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@savingProject">
+                                @if (savingProject)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                @(IsNew ? "Create Project" : "Save")
+                            </button>
+                            <a href="projects" class="btn btn-outline-secondary">Back</a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        @if (!IsNew)
+        {
+            <!-- Parts -->
+            <div class="col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Parts</h5>
+                        <button class="btn btn-sm btn-primary" @onclick="ShowAddPartForm">Add Part</button>
+                    </div>
+                    <div class="card-body">
+                        @if (showPartForm)
+                        {
+                            <div class="border rounded p-3 mb-3 bg-light">
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <label class="form-label">Name</label>
+                                        <input type="text" class="form-control" @bind="newPart.Name" placeholder="Part name" />
+                                    </div>
+                                    <div class="col-8">
+                                        <label class="form-label">Length</label>
+                                        <LengthInput @bind-Value="newPart.LengthInches" />
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label">Qty</label>
+                                        <input type="number" class="form-control" @bind="newPart.Quantity" min="1" />
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(partErrorMessage))
+                                {
+                                    <div class="alert alert-danger mt-2 mb-0 py-1">@partErrorMessage</div>
+                                }
+                                <div class="mt-2 d-flex gap-2">
+                                    <button class="btn btn-primary btn-sm" @onclick="SavePartAsync">@(editingPart == null ? "Add" : "Save")</button>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="CancelPartForm">Cancel</button>
+                                </div>
+                            </div>
+                        }
+
+                        @if (project.Parts.Count == 0)
+                        {
+                            <p class="text-muted mb-0">No parts added yet.</p>
+                        }
+                        else
+                        {
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Length</th>
+                                        <th>Qty</th>
+                                        <th style="width: 80px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var part in project.Parts)
+                                    {
+                                        <tr>
+                                            <td>@part.Name</td>
+                                            <td>@ArchUnits.FormatFromInches((double)part.LengthInches)</td>
+                                            <td>@part.Quantity</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-link p-0 me-2" @onclick="() => EditPart(part)">Edit</button>
+                                                <button class="btn btn-sm btn-link p-0 text-danger" @onclick="() => DeletePart(part)">Del</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            <div class="mt-2 text-muted small">
+                                Total: @project.Parts.Sum(p => p.Quantity) pieces
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Bins -->
+            <div class="col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Stock Bins</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="ShowImportDialog">Import</button>
+                            <button class="btn btn-sm btn-primary" @onclick="ShowAddBinForm">Add</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (showImportDialog)
+                        {
+                            <div class="border rounded p-3 mb-3 bg-light">
+                                <h6>Import from Supplier</h6>
+                                <select class="form-select mb-2" @bind="selectedSupplierId">
+                                    <option value="0">-- Select Supplier --</option>
+                                    @foreach (var supplier in suppliers)
+                                    {
+                                        <option value="@supplier.Id">@supplier.Name</option>
+                                    }
+                                </select>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-primary btn-sm" @onclick="ImportFromSupplier" disabled="@(selectedSupplierId == 0)">Import</button>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="() => showImportDialog = false">Cancel</button>
+                                </div>
+                            </div>
+                        }
+
+                        @if (showBinForm)
+                        {
+                            <div class="border rounded p-3 mb-3 bg-light">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label">Length</label>
+                                        <LengthInput @bind-Value="newBin.LengthInches" />
+                                    </div>
+                                    <div class="col-3">
+                                        <label class="form-label">Qty</label>
+                                        <input type="number" class="form-control" @bind="newBin.Quantity" min="-1" />
+                                        <div class="form-text">-1 = unlimited</div>
+                                    </div>
+                                    <div class="col-3">
+                                        <label class="form-label">Priority</label>
+                                        <input type="number" class="form-control" @bind="newBin.Priority" min="0" />
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(binErrorMessage))
+                                {
+                                    <div class="alert alert-danger mt-2 mb-0 py-1">@binErrorMessage</div>
+                                }
+                                <div class="mt-2 d-flex gap-2">
+                                    <button class="btn btn-primary btn-sm" @onclick="SaveBinAsync">@(editingBin == null ? "Add" : "Save")</button>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="CancelBinForm">Cancel</button>
+                                </div>
+                            </div>
+                        }
+
+                        @if (project.StockBins.Count == 0)
+                        {
+                            <p class="text-muted mb-0">No stock bins added yet.</p>
+                        }
+                        else
+                        {
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Length</th>
+                                        <th>Qty</th>
+                                        <th>Priority</th>
+                                        <th style="width: 80px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var bin in project.StockBins.OrderBy(b => b.Priority).ThenBy(b => b.LengthInches))
+                                    {
+                                        <tr>
+                                            <td>@ArchUnits.FormatFromInches((double)bin.LengthInches)</td>
+                                            <td>@(bin.Quantity == -1 ? "Unlimited" : bin.Quantity.ToString())</td>
+                                            <td>@bin.Priority</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-link p-0 me-2" @onclick="() => EditBin(bin)">Edit</button>
+                                                <button class="btn btn-sm btn-link p-0 text-danger" @onclick="() => DeleteBin(bin)">Del</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private Project project = new();
+    private List<Material> materials = new();
+    private List<CuttingTool> cuttingTools = new();
+    private List<Supplier> suppliers = new();
+
+    private bool loading = true;
+    private bool savingProject;
+    private string? projectErrorMessage;
+
+    // Parts form
+    private bool showPartForm;
+    private ProjectPart newPart = new();
+    private ProjectPart? editingPart;
+    private string? partErrorMessage;
+
+    // Bins form
+    private bool showBinForm;
+    private ProjectStockBin newBin = new();
+    private ProjectStockBin? editingBin;
+    private string? binErrorMessage;
+
+    // Import dialog
+    private bool showImportDialog;
+    private int selectedSupplierId;
+
+    private bool IsNew => !Id.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        materials = await MaterialService.GetAllAsync();
+        cuttingTools = await ProjectService.GetCuttingToolsAsync();
+        suppliers = await SupplierService.GetAllAsync();
+
+        if (Id.HasValue)
+        {
+            var existing = await ProjectService.GetByIdAsync(Id.Value);
+            if (existing == null)
+            {
+                Navigation.NavigateTo("projects");
+                return;
+            }
+            project = existing;
+        }
+        else
+        {
+            // Set default cutting tool for new projects
+            var defaultTool = await ProjectService.GetDefaultCuttingToolAsync();
+            if (defaultTool != null)
+            {
+                project.CuttingToolId = defaultTool.Id;
+            }
+        }
+
+        loading = false;
+    }
+
+    private async Task SaveProjectAsync()
+    {
+        projectErrorMessage = null;
+        savingProject = true;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(project.Name))
+            {
+                projectErrorMessage = "Project name is required";
+                return;
+            }
+
+            if (IsNew)
+            {
+                var created = await ProjectService.CreateAsync(project);
+                Navigation.NavigateTo($"projects/{created.Id}");
+            }
+            else
+            {
+                await ProjectService.UpdateAsync(project);
+            }
+        }
+        finally
+        {
+            savingProject = false;
+        }
+    }
+
+    // Parts methods
+    private void ShowAddPartForm()
+    {
+        editingPart = null;
+        newPart = new ProjectPart { ProjectId = Id!.Value, Quantity = 1 };
+        showPartForm = true;
+        partErrorMessage = null;
+    }
+
+    private void EditPart(ProjectPart part)
+    {
+        editingPart = part;
+        newPart = new ProjectPart
+        {
+            Id = part.Id,
+            ProjectId = part.ProjectId,
+            Name = part.Name,
+            LengthInches = part.LengthInches,
+            Quantity = part.Quantity,
+            SortOrder = part.SortOrder
+        };
+        showPartForm = true;
+        partErrorMessage = null;
+    }
+
+    private void CancelPartForm()
+    {
+        showPartForm = false;
+        editingPart = null;
+    }
+
+    private async Task SavePartAsync()
+    {
+        partErrorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(newPart.Name))
+        {
+            partErrorMessage = "Name is required";
+            return;
+        }
+
+        if (newPart.LengthInches <= 0)
+        {
+            partErrorMessage = "Length must be greater than zero";
+            return;
+        }
+
+        if (newPart.Quantity < 1)
+        {
+            partErrorMessage = "Quantity must be at least 1";
+            return;
+        }
+
+        if (editingPart == null)
+        {
+            await ProjectService.AddPartAsync(newPart);
+        }
+        else
+        {
+            await ProjectService.UpdatePartAsync(newPart);
+        }
+
+        project = (await ProjectService.GetByIdAsync(Id!.Value))!;
+        showPartForm = false;
+        editingPart = null;
+    }
+
+    private async Task DeletePart(ProjectPart part)
+    {
+        await ProjectService.DeletePartAsync(part.Id);
+        project = (await ProjectService.GetByIdAsync(Id!.Value))!;
+    }
+
+    // Bins methods
+    private void ShowAddBinForm()
+    {
+        editingBin = null;
+        newBin = new ProjectStockBin { ProjectId = Id!.Value, Quantity = -1, Priority = 25 };
+        showBinForm = true;
+        binErrorMessage = null;
+    }
+
+    private void EditBin(ProjectStockBin bin)
+    {
+        editingBin = bin;
+        newBin = new ProjectStockBin
+        {
+            Id = bin.Id,
+            ProjectId = bin.ProjectId,
+            LengthInches = bin.LengthInches,
+            Quantity = bin.Quantity,
+            Priority = bin.Priority,
+            SortOrder = bin.SortOrder
+        };
+        showBinForm = true;
+        binErrorMessage = null;
+    }
+
+    private void CancelBinForm()
+    {
+        showBinForm = false;
+        editingBin = null;
+    }
+
+    private async Task SaveBinAsync()
+    {
+        binErrorMessage = null;
+
+        if (newBin.LengthInches <= 0)
+        {
+            binErrorMessage = "Length must be greater than zero";
+            return;
+        }
+
+        if (newBin.Quantity < -1 || newBin.Quantity == 0)
+        {
+            binErrorMessage = "Quantity must be positive or -1 for unlimited";
+            return;
+        }
+
+        if (editingBin == null)
+        {
+            await ProjectService.AddStockBinAsync(newBin);
+        }
+        else
+        {
+            await ProjectService.UpdateStockBinAsync(newBin);
+        }
+
+        project = (await ProjectService.GetByIdAsync(Id!.Value))!;
+        showBinForm = false;
+        editingBin = null;
+    }
+
+    private async Task DeleteBin(ProjectStockBin bin)
+    {
+        await ProjectService.DeleteStockBinAsync(bin.Id);
+        project = (await ProjectService.GetByIdAsync(Id!.Value))!;
+    }
+
+    // Import methods
+    private void ShowImportDialog()
+    {
+        selectedSupplierId = 0;
+        showImportDialog = true;
+    }
+
+    private async Task ImportFromSupplier()
+    {
+        if (selectedSupplierId > 0)
+        {
+            await ProjectService.ImportStockFromSupplierAsync(Id!.Value, selectedSupplierId, project.MaterialId);
+            project = (await ProjectService.GetByIdAsync(Id!.Value))!;
+            showImportDialog = false;
+        }
+    }
+}

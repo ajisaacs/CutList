@@ -1,0 +1,88 @@
+@using CutList.Core
+@using CutList.Core.Nesting
+@using CutList.Core.Formatting
+@inject ReportService ReportService
+
+<div class="cut-list-report">
+    <header class="report-header">
+        <h1>CUT LIST</h1>
+        <div class="meta-info">
+            <div class="meta-row"><span>Date:</span> @DateTime.Now.ToString("g")</div>
+            <div class="meta-row"><span>Project:</span> @Project.Name</div>
+            @if (Project.Material != null)
+            {
+                <div class="meta-row"><span>Material:</span> @Project.Material.Shape - @Project.Material.Size</div>
+            }
+            @if (Project.CuttingTool != null)
+            {
+                <div class="meta-row"><span>Cut Method:</span> @Project.CuttingTool.Name (kerf: @Project.CuttingTool.KerfInches")</div>
+            }
+            <div class="meta-row"><span>Stock Bars:</span> @PackResult.Bins.Count</div>
+            <div class="meta-row"><span>Total Pieces:</span> @TotalPieces</div>
+        </div>
+    </header>
+
+    @foreach (var (bin, index) in PackResult.Bins.Select((b, i) => (b, i + 1)))
+    {
+        <section class="bin-section">
+            <h2>BAR #@index - Length: @ReportService.FormatLength(bin.Length)</h2>
+            <table class="cuts-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Qty</th>
+                        <th style="width: 120px;">Length</th>
+                        <th>Label</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var group in ReportService.GroupItems(bin.Items))
+                    {
+                        <tr>
+                            <td>@group.Count</td>
+                            <td>@ReportService.FormatLength(group.Length)</td>
+                            <td>@group.Name</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="drop">
+                Remaining drop: @ReportService.FormatLength(bin.RemainingLength)
+                (@((bin.Utilization * 100).ToString("F1"))% utilization)
+            </div>
+        </section>
+    }
+
+    <footer class="summary">
+        <h2>SUMMARY</h2>
+        <div class="summary-grid">
+            <div class="summary-row"><span>Stock Bars Needed:</span> <strong>@PackResult.Bins.Count</strong></div>
+            <div class="summary-row"><span>Total Pieces:</span> <strong>@TotalPieces</strong></div>
+            <div class="summary-row"><span>Total Material:</span> <strong>@ReportService.FormatLength(TotalMaterial)</strong></div>
+            <div class="summary-row"><span>Total Used:</span> <strong>@ReportService.FormatLength(TotalUsed)</strong></div>
+            <div class="summary-row"><span>Total Waste:</span> <strong>@ReportService.FormatLength(TotalWaste)</strong></div>
+            <div class="summary-row"><span>Efficiency:</span> <strong>@Efficiency.ToString("F1")%</strong></div>
+        </div>
+    </footer>
+
+    @if (!string.IsNullOrEmpty(Project.Notes))
+    {
+        <div class="notes-section">
+            <h3>Notes</h3>
+            <p>@Project.Notes</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Project Project { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public PackResult PackResult { get; set; } = null!;
+
+    private int TotalPieces => PackResult.Bins.Sum(b => b.Items.Count);
+    private double TotalMaterial => PackResult.Bins.Sum(b => b.Length);
+    private double TotalUsed => PackResult.Bins.Sum(b => b.UsedLength);
+    private double TotalWaste => PackResult.Bins.Sum(b => b.RemainingLength);
+    private double Efficiency => TotalMaterial > 0 ? TotalUsed / TotalMaterial * 100 : 0;
+}

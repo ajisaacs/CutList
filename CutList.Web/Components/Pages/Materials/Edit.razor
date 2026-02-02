@@ -1,0 +1,133 @@
+@page "/materials/new"
+@page "/materials/{Id:int}"
+@inject MaterialService MaterialService
+@inject NavigationManager Navigation
+
+<PageTitle>@(IsNew ? "Add Material" : "Edit Material")</PageTitle>
+
+<h1>@(IsNew ? "Add Material" : "Edit Material")</h1>
+
+@if (loading)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-6">
+            <EditForm Model="material" OnValidSubmit="SaveAsync">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label class="form-label">Shape</label>
+                    <InputSelect class="form-select" @bind-Value="material.Shape">
+                        <option value="">-- Select Shape --</option>
+                        @foreach (var shape in MaterialService.CommonShapes)
+                        {
+                            <option value="@shape">@shape</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => material.Shape)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Size</label>
+                    <InputText class="form-control" @bind-Value="material.Size" placeholder="e.g., 1&quot; OD x 0.065 wall" />
+                    <ValidationMessage For="@(() => material.Size)" />
+                    <div class="form-text">Examples: "1&quot; OD x 0.065 wall", "2x2", "1.5 x 1.5 x 0.125"</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description (optional)</label>
+                    <InputText class="form-control" @bind-Value="material.Description" placeholder="Optional description" />
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@saving">
+                        @if (saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        @(IsNew ? "Create" : "Save")
+                    </button>
+                    <a href="materials" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private Material material = new();
+    private bool loading = true;
+    private bool saving;
+    private string? errorMessage;
+
+    private bool IsNew => !Id.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue)
+        {
+            var existing = await MaterialService.GetByIdAsync(Id.Value);
+            if (existing == null)
+            {
+                Navigation.NavigateTo("materials");
+                return;
+            }
+            material = existing;
+        }
+        loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        errorMessage = null;
+        saving = true;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(material.Shape))
+            {
+                errorMessage = "Shape is required";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(material.Size))
+            {
+                errorMessage = "Size is required";
+                return;
+            }
+
+            // Check for duplicates
+            if (await MaterialService.ExistsAsync(material.Shape, material.Size, Id))
+            {
+                errorMessage = "A material with this shape and size already exists";
+                return;
+            }
+
+            if (IsNew)
+            {
+                await MaterialService.CreateAsync(material);
+            }
+            else
+            {
+                await MaterialService.UpdateAsync(material);
+            }
+
+            Navigation.NavigateTo("materials");
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+}
