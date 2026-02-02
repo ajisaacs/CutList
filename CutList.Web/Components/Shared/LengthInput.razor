@@ -5,7 +5,7 @@
            class="form-control @(HasError ? "is-invalid" : "")"
            value="@DisplayValue"
            @onchange="OnInputChange"
-           placeholder="e.g., 12' 6&quot; or 144" />
+           placeholder="@Placeholder" />
     @if (HasError)
     {
         <div class="invalid-feedback">@ErrorMessage</div>
@@ -20,7 +20,7 @@
     public EventCallback<decimal> ValueChanged { get; set; }
 
     [Parameter]
-    public string? Placeholder { get; set; }
+    public string Placeholder { get; set; } = "e.g., 12' 6\" or 144";
 
     private string DisplayValue { get; set; } = string.Empty;
     private bool HasError { get; set; }
