@@ -11,7 +11,8 @@ public class Material
     public DateTime? UpdatedAt { get; set; }
 
     public ICollection<SupplierStock> SupplierStocks { get; set; } = new List<SupplierStock>();
-    public ICollection<Project> Projects { get; set; } = new List<Project>();
+    public ICollection<MaterialStockLength> StockLengths { get; set; } = new List<MaterialStockLength>();
+    public ICollection<ProjectPart> ProjectParts { get; set; } = new List<ProjectPart>();
 
     public string DisplayName => $"{Shape} - {Size}";
 }
