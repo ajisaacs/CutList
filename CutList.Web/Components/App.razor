@@ -16,6 +16,20 @@
 <body>
     <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
+    <script>
+        function printWithTitle(title) {
+            const originalTitle = document.title;
+            document.title = title;
+
+            const restoreTitle = () => {
+                document.title = originalTitle;
+                window.removeEventListener('afterprint', restoreTitle);
+            };
+
+            window.addEventListener('afterprint', restoreTitle);
+            window.print();
+        }
+    </script>
 </body>
 
 </html>
