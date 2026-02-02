@@ -37,6 +37,23 @@ namespace CutList.Forms
             toolbox = new Toolbox();
             cutMethodComboBox.DataSource = toolbox.Tools;
 
+            // Populate material shapes
+            materialShapeComboBox.Items.AddRange(new object[]
+            {
+                "Round Tube",
+                "Square Tube",
+                "Rectangular Tube",
+                "Angle",
+                "Channel",
+                "Flat Bar",
+                "Round Bar",
+                "Square Bar",
+                "I-Beam",
+                "Pipe",
+                "Other"
+            });
+            materialShapeComboBox.SelectedIndex = 0;
+
             // Enable keyboard shortcuts
             KeyPreview = true;
 
@@ -53,6 +70,7 @@ namespace CutList.Forms
         public List<PartInputItem> Parts => parts.ToList();
         public List<BinInputItem> StockBins => bins.ToList();
         public Tool SelectedTool => cutMethodComboBox.SelectedItem as Tool;
+        public string? SelectedMaterialShape => materialShapeComboBox.SelectedItem?.ToString();
 
         public void ShowError(string message)
         {
@@ -127,9 +145,9 @@ namespace CutList.Forms
             binInputItemBindingSource.DataSource = bins;
         }
 
-        public void ShowResults(List<Bin> binResults, string fileName)
+        public void ShowResults(List<Bin> binResults, string fileName, string cutMethod, string? materialShape = null)
         {
-            var form = new ResultsForm(fileName);
+            var form = new ResultsForm(fileName, cutMethod, materialShape);
             form.Bins = binResults;
             form.ShowDialog();
         }
@@ -289,6 +307,11 @@ namespace CutList.Forms
         private void saveButton_Click(object sender, EventArgs e)
         {
             Save();
+        }
+
+        private void saveAsButton_Click(object sender, EventArgs e)
+        {
+            SaveAs();
         }
 
         private void runButton_Click(object sender, EventArgs e)

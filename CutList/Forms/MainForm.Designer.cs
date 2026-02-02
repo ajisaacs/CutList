@@ -43,6 +43,7 @@
             newDocumentButton = new ToolStripButton();
             openFileButton = new ToolStripButton();
             saveButton = new ToolStripButton();
+            saveAsButton = new ToolStripButton();
             toolStripSeparator1 = new ToolStripSeparator();
             runButton = new ToolStripButton();
             loadExampleDataButton = new ToolStripButton();
@@ -50,6 +51,8 @@
             cutWidthTextBox = new TextBox();
             cutMethodLabel = new Label();
             cutWidthLabel = new Label();
+            materialShapeComboBox = new ComboBox();
+            materialShapeLabel = new Label();
             tabControl1 = new TabControl();
             tabPage2 = new TabPage();
             tabPage1 = new TabPage();
@@ -59,6 +62,8 @@
             TotalLengthString = new DataGridViewTextBoxColumn();
             priorityDataGridViewTextBoxColumn = new DataGridViewTextBoxColumn();
             binInputItemBindingSource = new BindingSource(components);
+            toolStripSeparator2 = new ToolStripSeparator();
+            toolStripSeparator3 = new ToolStripSeparator();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)itemBindingSource).BeginInit();
             toolStrip1.SuspendLayout();
@@ -137,63 +142,55 @@
             // 
             // toolStrip1
             // 
-            toolStrip1.Items.AddRange(new ToolStripItem[] { newDocumentButton, openFileButton, saveButton, toolStripSeparator1, runButton, loadExampleDataButton });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { newDocumentButton, toolStripSeparator3, openFileButton, toolStripSeparator2, saveButton, saveAsButton, toolStripSeparator1, runButton, loadExampleDataButton });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
-            toolStrip1.Size = new Size(844, 39);
+            toolStrip1.Size = new Size(844, 25);
             toolStrip1.TabIndex = 0;
             toolStrip1.Text = "toolStrip1";
             // 
             // newDocumentButton
             // 
-            newDocumentButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
             newDocumentButton.Image = Properties.Resources.gnome_document_new;
-            newDocumentButton.ImageScaling = ToolStripItemImageScaling.None;
-            newDocumentButton.ImageTransparentColor = Color.Magenta;
             newDocumentButton.Name = "newDocumentButton";
-            newDocumentButton.Padding = new Padding(5, 0, 5, 0);
-            newDocumentButton.Size = new Size(46, 36);
+            newDocumentButton.Size = new Size(51, 22);
             newDocumentButton.Text = "New";
             newDocumentButton.Click += newDocumentButton_Click;
             // 
             // openFileButton
             // 
-            openFileButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
             openFileButton.Image = Properties.Resources.Open_Folder_32;
-            openFileButton.ImageScaling = ToolStripItemImageScaling.None;
-            openFileButton.ImageTransparentColor = Color.Magenta;
             openFileButton.Name = "openFileButton";
-            openFileButton.Padding = new Padding(5, 0, 5, 0);
-            openFileButton.Size = new Size(46, 36);
+            openFileButton.Size = new Size(56, 22);
             openFileButton.Text = "Open";
             openFileButton.Click += openFileButton_Click;
             // 
             // saveButton
             // 
-            saveButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
             saveButton.Image = Properties.Resources.Save_32;
-            saveButton.ImageScaling = ToolStripItemImageScaling.None;
-            saveButton.ImageTransparentColor = Color.Magenta;
             saveButton.Name = "saveButton";
-            saveButton.Padding = new Padding(5, 0, 5, 0);
-            saveButton.Size = new Size(46, 36);
+            saveButton.Size = new Size(51, 22);
             saveButton.Text = "Save";
             saveButton.Click += saveButton_Click;
+            // 
+            // saveAsButton
+            // 
+            saveAsButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            saveAsButton.Name = "saveAsButton";
+            saveAsButton.Size = new Size(51, 22);
+            saveAsButton.Text = "Save As";
+            saveAsButton.Click += saveAsButton_Click;
             // 
             // toolStripSeparator1
             // 
             toolStripSeparator1.Name = "toolStripSeparator1";
-            toolStripSeparator1.Size = new Size(6, 39);
+            toolStripSeparator1.Size = new Size(6, 25);
             // 
             // runButton
             // 
-            runButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
             runButton.Image = Properties.Resources.Circled_Play_32;
-            runButton.ImageScaling = ToolStripItemImageScaling.None;
-            runButton.ImageTransparentColor = Color.Magenta;
             runButton.Name = "runButton";
-            runButton.Padding = new Padding(5, 0, 5, 0);
-            runButton.Size = new Size(46, 36);
+            runButton.Size = new Size(48, 22);
             runButton.Text = "Run";
             runButton.Click += runButton_Click;
             // 
@@ -202,12 +199,8 @@
             loadExampleDataButton.Alignment = ToolStripItemAlignment.Right;
             loadExampleDataButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
             loadExampleDataButton.ForeColor = Color.DimGray;
-            loadExampleDataButton.Image = Properties.Resources.Circled_Play_32;
-            loadExampleDataButton.ImageScaling = ToolStripItemImageScaling.None;
-            loadExampleDataButton.ImageTransparentColor = Color.Magenta;
             loadExampleDataButton.Name = "loadExampleDataButton";
-            loadExampleDataButton.Padding = new Padding(5, 0, 5, 0);
-            loadExampleDataButton.Size = new Size(122, 36);
+            loadExampleDataButton.Size = new Size(111, 22);
             loadExampleDataButton.Text = "Load Example Data";
             loadExampleDataButton.Click += loadExampleDataButton_Click;
             // 
@@ -250,9 +243,29 @@
             cutWidthLabel.Size = new Size(67, 17);
             cutWidthLabel.TabIndex = 8;
             cutWidthLabel.Text = "Cut width";
-            // 
+            //
+            // materialShapeLabel
+            //
+            materialShapeLabel.AutoSize = true;
+            materialShapeLabel.Font = new Font("Segoe UI Semibold", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            materialShapeLabel.ForeColor = Color.Blue;
+            materialShapeLabel.Location = new Point(310, 25);
+            materialShapeLabel.Name = "materialShapeLabel";
+            materialShapeLabel.Size = new Size(56, 17);
+            materialShapeLabel.TabIndex = 13;
+            materialShapeLabel.Text = "Material";
+            //
+            // materialShapeComboBox
+            //
+            materialShapeComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            materialShapeComboBox.FormattingEnabled = true;
+            materialShapeComboBox.Location = new Point(372, 22);
+            materialShapeComboBox.Name = "materialShapeComboBox";
+            materialShapeComboBox.Size = new Size(184, 25);
+            materialShapeComboBox.TabIndex = 14;
+            //
             // tabControl1
-            // 
+            //
             tabControl1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tabControl1.Controls.Add(tabPage2);
             tabControl1.Controls.Add(tabPage1);
@@ -273,18 +286,20 @@
             tabPage2.TabIndex = 1;
             tabPage2.Text = "ITEMS TO NEST";
             tabPage2.UseVisualStyleBackColor = true;
-            // 
+            //
             // tabPage1
-            // 
+            //
             tabPage1.Controls.Add(dataGridView2);
+            tabPage1.Controls.Add(materialShapeComboBox);
+            tabPage1.Controls.Add(materialShapeLabel);
             tabPage1.Controls.Add(cutWidthTextBox);
             tabPage1.Controls.Add(cutMethodComboBox);
             tabPage1.Controls.Add(cutWidthLabel);
             tabPage1.Controls.Add(cutMethodLabel);
-            tabPage1.Location = new Point(4, 26);
+            tabPage1.Location = new Point(4, 24);
             tabPage1.Name = "tabPage1";
             tabPage1.Padding = new Padding(3);
-            tabPage1.Size = new Size(812, 579);
+            tabPage1.Size = new Size(812, 581);
             tabPage1.TabIndex = 0;
             tabPage1.Text = "STOCK LENGTHS";
             tabPage1.UseVisualStyleBackColor = true;
@@ -341,6 +356,16 @@
             // 
             binInputItemBindingSource.DataSource = typeof(Models.BinInputItem);
             // 
+            // toolStripSeparator2
+            // 
+            toolStripSeparator2.Name = "toolStripSeparator2";
+            toolStripSeparator2.Size = new Size(6, 25);
+            // 
+            // toolStripSeparator3
+            // 
+            toolStripSeparator3.Name = "toolStripSeparator3";
+            toolStripSeparator3.Size = new Size(6, 25);
+            // 
             // MainForm
             // 
             AutoScaleMode = AutoScaleMode.None;
@@ -374,12 +399,15 @@
         private System.Windows.Forms.ToolStrip toolStrip1;
         private System.Windows.Forms.ToolStripButton openFileButton;
         private System.Windows.Forms.ToolStripButton saveButton;
+        private System.Windows.Forms.ToolStripButton saveAsButton;
         private System.Windows.Forms.ToolStripButton runButton;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ComboBox cutMethodComboBox;
         private System.Windows.Forms.TextBox cutWidthTextBox;
         private System.Windows.Forms.Label cutMethodLabel;
         private System.Windows.Forms.Label cutWidthLabel;
+        private System.Windows.Forms.ComboBox materialShapeComboBox;
+        private System.Windows.Forms.Label materialShapeLabel;
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage tabPage1;
         private System.Windows.Forms.TabPage tabPage2;
@@ -395,6 +423,8 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn TotalLength;
         private System.Windows.Forms.ToolStripButton newDocumentButton;
         private System.Windows.Forms.ToolStripButton loadExampleDataButton;
+        private ToolStripSeparator toolStripSeparator3;
+        private ToolStripSeparator toolStripSeparator2;
     }
 }
 
