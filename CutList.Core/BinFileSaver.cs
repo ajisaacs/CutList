@@ -11,6 +11,16 @@ namespace CutList.Core
 
         public bool OpenFileAfterSave { get; set; }
 
+        /// <summary>
+        /// The cutting method/tool used (e.g., "Miter Saw", "Table Saw").
+        /// </summary>
+        public string? CutMethod { get; set; }
+
+        /// <summary>
+        /// The material shape (e.g., "Round Tube", "Square Tube", "Flat Bar").
+        /// </summary>
+        public string? MaterialShape { get; set; }
+
         public BinFileSaver(IEnumerable<Bin> bins)
         {
             _bins = bins ?? throw new ArgumentNullException(nameof(bins));
@@ -74,10 +84,24 @@ namespace CutList.Core
             var totalItems = _bins.Sum(b => b.Items.Count);
 
             writer.WriteLine("CUT LIST");
-            writer.WriteLine($"Date: {DateTime.Now:g}");
-            writer.WriteLine($"Total stock bars needed: {totalBars}");
-            writer.WriteLine($"Total pieces to cut: {totalItems}");
+            WriteSeparator(writer, '=');
             writer.WriteLine();
+            WriteAlignedLine(writer, "Date", DateTime.Now.ToString("g"));
+
+            if (!string.IsNullOrEmpty(CutMethod))
+                WriteAlignedLine(writer, "Cut Method", CutMethod);
+
+            if (!string.IsNullOrEmpty(MaterialShape))
+                WriteAlignedLine(writer, "Material", MaterialShape);
+
+            WriteAlignedLine(writer, "Stock Bars Needed", totalBars.ToString());
+            WriteAlignedLine(writer, "Total Pieces", totalItems.ToString());
+            writer.WriteLine();
+        }
+
+        private static void WriteAlignedLine(TextWriter writer, string label, string value, int labelWidth = 20)
+        {
+            writer.WriteLine($"  {label.PadRight(labelWidth)} {value}");
         }
 
         private void WriteBinSummary(TextWriter writer, Bin bin, int id)
@@ -85,8 +109,9 @@ namespace CutList.Core
             var stockLength = FormatHelper.ConvertToMixedFraction(bin.Length);
             var dropLength = FormatHelper.ConvertToMixedFraction(bin.RemainingLength);
 
-            writer.WriteLine(new string('─', 50));
-            writer.WriteLine($"BAR #{id}  -  Start with {stockLength}\" stock");
+            WriteSeparator(writer);
+
+            writer.WriteLine($"BAR #{id}  -  Length: {stockLength}\"");
             writer.WriteLine();
             writer.WriteLine("  Cut these pieces:");
 
@@ -95,6 +120,11 @@ namespace CutList.Core
             writer.WriteLine();
             writer.WriteLine($"  Remaining drop: {dropLength}\"");
             writer.WriteLine();
+        }
+
+        private static void WriteSeparator(TextWriter writer, char c = '─', int length = 50)
+        {
+            writer.WriteLine(new string(c, length));
         }
 
         private void WriteBinItems(TextWriter writer, Bin bin)
@@ -128,14 +158,14 @@ namespace CutList.Core
 
             string fmt(double v) => FormatHelper.ConvertToMixedFraction(v);
 
-            writer.WriteLine(new string('═', 50));
+            WriteSeparator(writer, '=');
             writer.WriteLine("SUMMARY");
-            writer.WriteLine($"  Stock bars needed: {totalBars}");
-            writer.WriteLine($"  Total pieces to cut: {totalItems}");
-            writer.WriteLine($"  Total material used: {fmt(totalStock)}\"");
-            writer.WriteLine($"  Total drop/waste: {fmt(totalDrop)}\"");
-            writer.WriteLine(new string('═', 50));
+            writer.WriteLine();
+            WriteAlignedLine(writer, "Stock Bars Needed", totalBars.ToString());
+            WriteAlignedLine(writer, "Total Pieces", totalItems.ToString());
+            WriteAlignedLine(writer, "Total Material Used", $"{fmt(totalStock)}\"");
+            WriteAlignedLine(writer, "Total Drop/Waste", $"{fmt(totalDrop)}\"");
+            WriteSeparator(writer, '=');
         }
-
     }
 }

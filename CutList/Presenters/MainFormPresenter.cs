@@ -133,7 +133,9 @@ namespace CutList.Presenters
             }
 
             var fileName = GetResultsSaveName();
-            _view.ShowResults(packResult.Value.Bins.ToList(), fileName);
+            var cutMethod = cutTool?.Name ?? "Unknown";
+            var materialShape = _view.SelectedMaterialShape;
+            _view.ShowResults(packResult.Value.Bins.ToList(), fileName, cutMethod, materialShape);
         }
 
         /// <summary>
@@ -244,11 +246,14 @@ namespace CutList.Presenters
 
         private string GetResultsSaveName()
         {
-            var today = DateTime.Today;
-            var year = today.Year.ToString();
-            var month = today.Month.ToString().PadLeft(2, '0');
-            var day = today.Day.ToString().PadLeft(2, '0');
-            return $"Cut List {year}-{month}-{day}";
+            // Use document name if available, otherwise generate one
+            if (!string.IsNullOrEmpty(_currentDocument.LastFilePath))
+            {
+                var docName = Path.GetFileNameWithoutExtension(_currentDocument.LastFilePath);
+                return docName;
+            }
+
+            return $"CutList_{_documentCounter}";
         }
     }
 }

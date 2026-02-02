@@ -5,15 +5,19 @@ namespace CutList.Forms
     public partial class ResultsForm : Form
     {
         private string filename;
+        private string cutMethod;
+        private string? materialShape;
         private List<Bin> _originalBins = new List<Bin>();
 
-        public ResultsForm(string filename)
+        public ResultsForm(string filename, string cutMethod, string? materialShape = null)
         {
             InitializeComponent();
             dataGridView1.DrawRowNumbers();
             dataGridView2.DrawRowNumbers();
 
             this.filename = filename;
+            this.cutMethod = cutMethod;
+            this.materialShape = materialShape;
         }
 
         private void dataGridView1_RowEnter(object sender, DataGridViewCellEventArgs e)
@@ -48,7 +52,11 @@ namespace CutList.Forms
 
         public void Save(string filepath)
         {
-            var writer = new BinFileSaver(_originalBins);
+            var writer = new BinFileSaver(_originalBins)
+            {
+                CutMethod = cutMethod,
+                MaterialShape = materialShape
+            };
             writer.SaveBinsToFile(filepath);
         }
 

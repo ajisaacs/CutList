@@ -26,6 +26,11 @@ namespace CutList.Presenters
         Tool SelectedTool { get; }
 
         /// <summary>
+        /// Gets the currently selected material shape from the view.
+        /// </summary>
+        string? SelectedMaterialShape { get; }
+
+        /// <summary>
         /// Displays an error message to the user.
         /// </summary>
         void ShowError(string message);
@@ -77,7 +82,11 @@ namespace CutList.Presenters
         /// <summary>
         /// Shows the results form with the packing results.
         /// </summary>
-        void ShowResults(List<Bin> bins, string fileName);
+        /// <param name="bins">The packed bins to display</param>
+        /// <param name="fileName">Default filename for saving</param>
+        /// <param name="cutMethod">The cutting method/tool name</param>
+        /// <param name="materialShape">The material shape (optional)</param>
+        void ShowResults(List<Bin> bins, string fileName, string cutMethod, string? materialShape = null);
 
         /// <summary>
         /// Updates the enabled state of the run button.
