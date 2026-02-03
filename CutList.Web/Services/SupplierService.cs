@@ -26,8 +26,9 @@ public class SupplierService
     public async Task<Supplier?> GetByIdAsync(int id)
     {
         return await _context.Suppliers
-            .Include(s => s.Stocks)
-            .ThenInclude(st => st.Material)
+            .Include(s => s.Offerings)
+            .ThenInclude(o => o.StockItem)
+            .ThenInclude(si => si.Material)
             .FirstOrDefaultAsync(s => s.Id == id);
     }
 
@@ -55,70 +56,70 @@ public class SupplierService
         }
     }
 
-    // Stock management
-    public async Task<List<SupplierStock>> GetStocksForSupplierAsync(int supplierId)
+    // Offering management
+    public async Task<List<SupplierOffering>> GetOfferingsForSupplierAsync(int supplierId)
     {
-        return await _context.SupplierStocks
-            .Include(s => s.Material)
-            .Where(s => s.SupplierId == supplierId && s.IsActive)
-            .OrderBy(s => s.Material.Shape)
-            .ThenBy(s => s.Material.Size)
-            .ThenBy(s => s.LengthInches)
+        return await _context.SupplierOfferings
+            .Include(o => o.StockItem)
+            .ThenInclude(si => si.Material)
+            .Where(o => o.SupplierId == supplierId && o.IsActive)
+            .OrderBy(o => o.StockItem.Material.Shape)
+            .ThenBy(o => o.StockItem.Material.Size)
+            .ThenBy(o => o.StockItem.LengthInches)
             .ToListAsync();
     }
 
-    public async Task<List<SupplierStock>> GetStocksForMaterialAsync(int materialId)
+    public async Task<List<SupplierOffering>> GetOfferingsForStockItemAsync(int stockItemId)
     {
-        return await _context.SupplierStocks
-            .Include(s => s.Supplier)
-            .Where(s => s.MaterialId == materialId && s.IsActive && s.Supplier.IsActive)
-            .OrderBy(s => s.Supplier.Name)
-            .ThenBy(s => s.LengthInches)
+        return await _context.SupplierOfferings
+            .Include(o => o.Supplier)
+            .Where(o => o.StockItemId == stockItemId && o.IsActive && o.Supplier.IsActive)
+            .OrderBy(o => o.Supplier.Name)
             .ToListAsync();
     }
 
-    public async Task<SupplierStock?> GetStockByIdAsync(int id)
+    public async Task<SupplierOffering?> GetOfferingByIdAsync(int id)
     {
-        return await _context.SupplierStocks
-            .Include(s => s.Material)
-            .Include(s => s.Supplier)
-            .FirstOrDefaultAsync(s => s.Id == id);
+        return await _context.SupplierOfferings
+            .Include(o => o.StockItem)
+            .ThenInclude(si => si.Material)
+            .Include(o => o.Supplier)
+            .FirstOrDefaultAsync(o => o.Id == id);
     }
 
-    public async Task<SupplierStock> AddStockAsync(SupplierStock stock)
+    public async Task<SupplierOffering> AddOfferingAsync(SupplierOffering offering)
     {
-        _context.SupplierStocks.Add(stock);
+        _context.SupplierOfferings.Add(offering);
         await _context.SaveChangesAsync();
-        return stock;
+        return offering;
     }
 
-    public async Task UpdateStockAsync(SupplierStock stock)
+    public async Task UpdateOfferingAsync(SupplierOffering offering)
     {
-        _context.SupplierStocks.Update(stock);
+        _context.SupplierOfferings.Update(offering);
         await _context.SaveChangesAsync();
     }
 
-    public async Task DeleteStockAsync(int id)
+    public async Task DeleteOfferingAsync(int id)
     {
-        var stock = await _context.SupplierStocks.FindAsync(id);
-        if (stock != null)
+        var offering = await _context.SupplierOfferings.FindAsync(id);
+        if (offering != null)
         {
-            stock.IsActive = false;
+            offering.IsActive = false;
             await _context.SaveChangesAsync();
         }
     }
 
-    public async Task<bool> StockExistsAsync(int supplierId, int materialId, decimal lengthInches, int? excludeId = null)
+    public async Task<bool> OfferingExistsAsync(int supplierId, int stockItemId, int? excludeId = null)
     {
-        var query = _context.SupplierStocks.Where(s =>
-            s.SupplierId == supplierId &&
-            s.MaterialId == materialId &&
-            s.LengthInches == lengthInches &&
-            s.IsActive);
+        var query = _context.SupplierOfferings.Where(o =>
+            o.SupplierId == supplierId &&
+            o.StockItemId == stockItemId &&
+            o.IsActive);
 
         if (excludeId.HasValue)
         {
-            query = query.Where(s => s.Id != excludeId.Value);
+            query = query.Where(o => o.Id != excludeId.Value);
         }
 
         return await query.AnyAsync();

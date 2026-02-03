@@ -38,8 +38,8 @@ public class CutListPackingService
                 .Where(s => s.MaterialId == materialId && s.IsActive && s.Quantity > 0)
                 .ToListAsync();
 
-            // Get supplier stock lengths for this material (for purchase)
-            var supplierLengths = await _context.SupplierStocks
+            // Get stock item lengths for this material (for purchase)
+            var stockItemLengths = await _context.StockItems
                 .Where(s => s.MaterialId == materialId && s.IsActive)
                 .Select(s => s.LengthInches)
                 .Distinct()
@@ -60,8 +60,8 @@ public class CutListPackingService
                 });
             }
 
-            // Supplier stock bins with unlimited quantity
-            foreach (var length in supplierLengths)
+            // Stock item bins with unlimited quantity
+            foreach (var length in stockItemLengths)
             {
                 // Only add if not already covered by in-stock
                 if (!stockBins.Any(b => b.LengthInches == length && b.IsInStock))
