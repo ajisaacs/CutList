@@ -1,0 +1,85 @@
+@page "/stock"
+@inject StockItemService StockItemService
+@inject NavigationManager Navigation
+@using CutList.Core.Formatting
+
+<PageTitle>Stock Items</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Stock Items</h1>
+    <a href="stock/new" class="btn btn-primary">Add Stock Item</a>
+</div>
+
+@if (loading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (stockItems.Count == 0)
+{
+    <div class="alert alert-info">
+        No stock items found. <a href="stock/new">Add your first stock item</a>.
+    </div>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Material</th>
+                <th>Length</th>
+                <th>Name</th>
+                <th style="width: 120px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in stockItems)
+            {
+                <tr>
+                    <td>@item.Material.DisplayName</td>
+                    <td>@ArchUnits.FormatFromInches((double)item.LengthInches)</td>
+                    <td>@(item.Name ?? "-")</td>
+                    <td>
+                        <a href="stock/@item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(item)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<ConfirmDialog @ref="deleteDialog"
+               Title="Delete Stock Item"
+               Message="@deleteMessage"
+               ConfirmText="Delete"
+               OnConfirm="DeleteConfirmed" />
+
+@code {
+    private List<StockItem> stockItems = new();
+    private bool loading = true;
+    private ConfirmDialog deleteDialog = null!;
+    private StockItem? itemToDelete;
+    private string deleteMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        stockItems = await StockItemService.GetAllAsync();
+        loading = false;
+    }
+
+    private void ConfirmDelete(StockItem item)
+    {
+        itemToDelete = item;
+        deleteMessage = $"Are you sure you want to delete \"{item.Material.DisplayName} - {ArchUnits.FormatFromInches((double)item.LengthInches)}\"?";
+        deleteDialog.Show();
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (itemToDelete != null)
+        {
+            await StockItemService.DeleteAsync(itemToDelete.Id);
+            stockItems = await StockItemService.GetAllAsync();
+        }
+    }
+}

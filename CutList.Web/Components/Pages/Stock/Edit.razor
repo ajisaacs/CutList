@@ -1,14 +1,14 @@
-@page "/suppliers/new"
-@page "/suppliers/{Id:int}"
+@page "/stock/new"
+@page "/stock/{Id:int}"
+@inject StockItemService StockItemService
+@inject MaterialService MaterialService
 @inject SupplierService SupplierService
 @inject NavigationManager Navigation
-@inject CutList.Web.Data.ApplicationDbContext DbContext
 @using CutList.Core.Formatting
-@using Microsoft.EntityFrameworkCore
 
-<PageTitle>@(IsNew ? "Add Supplier" : "Edit Supplier")</PageTitle>
+<PageTitle>@(IsNew ? "Add Stock Item" : "Edit Stock Item")</PageTitle>
 
-<h1>@(IsNew ? "Add Supplier" : supplier.Name)</h1>
+<h1>@(IsNew ? "Add Stock Item" : $"{stockItem.Material?.DisplayName} - {ArchUnits.FormatFromInches((double)stockItem.LengthInches)}")</h1>
 
 @if (loading)
 {
@@ -20,42 +20,54 @@ else
         <div class="col-lg-6 mb-4">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Supplier Details</h5>
+                    <h5 class="mb-0">Stock Item Details</h5>
                 </div>
                 <div class="card-body">
-                    <EditForm Model="supplier" OnValidSubmit="SaveSupplierAsync">
+                    <EditForm Model="stockItem" OnValidSubmit="SaveStockItemAsync">
                         <DataAnnotationsValidator />
 
                         <div class="mb-3">
-                            <label class="form-label">Name</label>
-                            <InputText class="form-control" @bind-Value="supplier.Name" />
-                            <ValidationMessage For="@(() => supplier.Name)" />
+                            <label class="form-label">Material</label>
+                            <select class="form-select" @bind="stockItem.MaterialId" disabled="@(!IsNew)">
+                                <option value="0">-- Select Material --</option>
+                                @foreach (var material in materials)
+                                {
+                                    <option value="@material.Id">@material.DisplayName</option>
+                                }
+                            </select>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Contact Info</label>
-                            <InputTextArea class="form-control" @bind-Value="supplier.ContactInfo" rows="2" placeholder="Phone, email, address..." />
+                            <label class="form-label">Length</label>
+                            @if (IsNew)
+                            {
+                                <LengthInput @bind-Value="stockItem.LengthInches" />
+                            }
+                            else
+                            {
+                                <input type="text" class="form-control" value="@ArchUnits.FormatFromInches((double)stockItem.LengthInches)" readonly />
+                            }
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Notes</label>
-                            <InputTextArea class="form-control" @bind-Value="supplier.Notes" rows="3" />
+                            <label class="form-label">Name (optional)</label>
+                            <InputText class="form-control" @bind-Value="stockItem.Name" placeholder="Custom display name" />
                         </div>
 
-                        @if (!string.IsNullOrEmpty(supplierErrorMessage))
+                        @if (!string.IsNullOrEmpty(errorMessage))
                         {
-                            <div class="alert alert-danger">@supplierErrorMessage</div>
+                            <div class="alert alert-danger">@errorMessage</div>
                         }
 
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary" disabled="@savingSupplier">
-                                @if (savingSupplier)
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
                                 {
                                     <span class="spinner-border spinner-border-sm me-1"></span>
                                 }
-                                @(IsNew ? "Create Supplier" : "Save Changes")
+                                @(IsNew ? "Create Stock Item" : "Save Changes")
                             </button>
-                            <a href="suppliers" class="btn btn-outline-secondary">@(IsNew ? "Cancel" : "Back to List")</a>
+                            <a href="stock" class="btn btn-outline-secondary">@(IsNew ? "Cancel" : "Back to List")</a>
                         </div>
                     </EditForm>
                 </div>
@@ -77,12 +89,12 @@ else
                                 <h6>@(editingOffering == null ? "Add Offering" : "Edit Offering")</h6>
                                 <div class="row g-2">
                                     <div class="col-12">
-                                        <label class="form-label">Stock Item</label>
-                                        <select class="form-select" @bind="newOffering.StockItemId">
-                                            <option value="0">-- Select Stock Item --</option>
-                                            @foreach (var stockItem in stockItems)
+                                        <label class="form-label">Supplier</label>
+                                        <select class="form-select" @bind="newOffering.SupplierId">
+                                            <option value="0">-- Select Supplier --</option>
+                                            @foreach (var supplier in suppliers)
                                             {
-                                                <option value="@stockItem.Id">@stockItem.Material.DisplayName - @ArchUnits.FormatFromInches((double)stockItem.LengthInches)</option>
+                                                <option value="@supplier.Id">@supplier.Name</option>
                                             }
                                         </select>
                                     </div>
@@ -122,14 +134,14 @@ else
 
                         @if (offerings.Count == 0)
                         {
-                            <p class="text-muted">No offerings configured yet.</p>
+                            <p class="text-muted">No supplier offerings configured yet.</p>
                         }
                         else
                         {
                             <table class="table table-sm">
                                 <thead>
                                     <tr>
-                                        <th>Stock Item</th>
+                                        <th>Supplier</th>
                                         <th>Part #</th>
                                         <th>Price</th>
                                         <th style="width: 100px;">Actions</th>
@@ -139,7 +151,7 @@ else
                                     @foreach (var offering in offerings)
                                     {
                                         <tr>
-                                            <td>@offering.StockItem.Material.DisplayName - @ArchUnits.FormatFromInches((double)offering.StockItem.LengthInches)</td>
+                                            <td>@offering.Supplier.Name</td>
                                             <td>@(offering.PartNumber ?? "-")</td>
                                             <td>@(offering.Price.HasValue ? offering.Price.Value.ToString("C") : "-")</td>
                                             <td>
@@ -168,13 +180,14 @@ else
     [Parameter]
     public int? Id { get; set; }
 
-    private Supplier supplier = new();
+    private StockItem stockItem = new();
+    private List<Material> materials = new();
+    private List<Supplier> suppliers = new();
     private List<SupplierOffering> offerings = new();
-    private List<StockItem> stockItems = new();
     private bool loading = true;
-    private bool savingSupplier;
+    private bool saving;
     private bool savingOffering;
-    private string? supplierErrorMessage;
+    private string? errorMessage;
     private string? offeringErrorMessage;
 
     private bool showOfferingForm;
@@ -189,61 +202,73 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        stockItems = await DbContext.StockItems
-            .Include(si => si.Material)
-            .Where(si => si.IsActive)
-            .OrderBy(si => si.Material.Shape)
-            .ThenBy(si => si.Material.Size)
-            .ThenBy(si => si.LengthInches)
-            .ToListAsync();
+        materials = await MaterialService.GetAllAsync();
+        suppliers = await SupplierService.GetAllAsync();
 
         if (Id.HasValue)
         {
-            var existing = await SupplierService.GetByIdAsync(Id.Value);
+            var existing = await StockItemService.GetByIdAsync(Id.Value);
             if (existing == null)
             {
-                Navigation.NavigateTo("suppliers");
+                Navigation.NavigateTo("stock");
                 return;
             }
-            supplier = existing;
-            offerings = await SupplierService.GetOfferingsForSupplierAsync(Id.Value);
+            stockItem = existing;
+            offerings = existing.SupplierOfferings.Where(o => o.IsActive).ToList();
         }
         loading = false;
     }
 
-    private async Task SaveSupplierAsync()
+    private async Task SaveStockItemAsync()
     {
-        supplierErrorMessage = null;
-        savingSupplier = true;
+        errorMessage = null;
+        saving = true;
 
         try
         {
-            if (string.IsNullOrWhiteSpace(supplier.Name))
+            if (stockItem.MaterialId == 0)
             {
-                supplierErrorMessage = "Name is required";
+                errorMessage = "Please select a material";
+                return;
+            }
+
+            if (stockItem.LengthInches <= 0)
+            {
+                errorMessage = "Length must be greater than zero";
+                return;
+            }
+
+            var exists = await StockItemService.ExistsAsync(
+                stockItem.MaterialId,
+                stockItem.LengthInches,
+                IsNew ? null : stockItem.Id);
+
+            if (exists)
+            {
+                errorMessage = "A stock item with this material and length already exists";
                 return;
             }
 
             if (IsNew)
             {
-                var created = await SupplierService.CreateAsync(supplier);
-                Navigation.NavigateTo($"suppliers/{created.Id}");
+                var created = await StockItemService.CreateAsync(stockItem);
+                Navigation.NavigateTo($"stock/{created.Id}");
             }
             else
             {
-                await SupplierService.UpdateAsync(supplier);
+                await StockItemService.UpdateAsync(stockItem);
             }
         }
         finally
         {
-            savingSupplier = false;
+            saving = false;
         }
     }
 
     private void ShowAddOfferingForm()
     {
         editingOffering = null;
-        newOffering = new SupplierOffering { SupplierId = Id!.Value };
+        newOffering = new SupplierOffering { StockItemId = Id!.Value };
         showOfferingForm = true;
         offeringErrorMessage = null;
     }
@@ -254,8 +279,8 @@ else
         newOffering = new SupplierOffering
         {
             Id = offering.Id,
-            SupplierId = offering.SupplierId,
             StockItemId = offering.StockItemId,
+            SupplierId = offering.SupplierId,
             PartNumber = offering.PartNumber,
             SupplierDescription = offering.SupplierDescription,
             Price = offering.Price,
@@ -279,9 +304,9 @@ else
 
         try
         {
-            if (newOffering.StockItemId == 0)
+            if (newOffering.SupplierId == 0)
             {
-                offeringErrorMessage = "Please select a stock item";
+                offeringErrorMessage = "Please select a supplier";
                 return;
             }
 
@@ -305,7 +330,13 @@ else
                 await SupplierService.UpdateOfferingAsync(newOffering);
             }
 
-            offerings = await SupplierService.GetOfferingsForSupplierAsync(Id!.Value);
+            // Refresh the stock item to get updated offerings
+            var updated = await StockItemService.GetByIdAsync(Id!.Value);
+            if (updated != null)
+            {
+                stockItem = updated;
+                offerings = updated.SupplierOfferings.Where(o => o.IsActive).ToList();
+            }
             showOfferingForm = false;
             editingOffering = null;
         }
@@ -318,7 +349,7 @@ else
     private void ConfirmDeleteOffering(SupplierOffering offering)
     {
         offeringToDelete = offering;
-        deleteOfferingMessage = $"Are you sure you want to delete the offering for {offering.StockItem.Material.DisplayName} - {ArchUnits.FormatFromInches((double)offering.StockItem.LengthInches)}?";
+        deleteOfferingMessage = $"Are you sure you want to delete the offering from {offering.Supplier.Name}?";
         deleteOfferingDialog.Show();
     }
 
@@ -327,7 +358,14 @@ else
         if (offeringToDelete != null)
         {
             await SupplierService.DeleteOfferingAsync(offeringToDelete.Id);
-            offerings = await SupplierService.GetOfferingsForSupplierAsync(Id!.Value);
+
+            // Refresh the stock item to get updated offerings
+            var updated = await StockItemService.GetByIdAsync(Id!.Value);
+            if (updated != null)
+            {
+                stockItem = updated;
+                offerings = updated.SupplierOfferings.Where(o => o.IsActive).ToList();
+            }
         }
     }
 }
