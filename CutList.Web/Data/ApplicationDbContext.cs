@@ -13,7 +13,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Material> Materials => Set<Material>();
     public DbSet<MaterialStockLength> MaterialStockLengths => Set<MaterialStockLength>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
-    public DbSet<SupplierStock> SupplierStocks => Set<SupplierStock>();
+    public DbSet<StockItem> StockItems => Set<StockItem>();
+    public DbSet<SupplierOffering> SupplierOfferings => Set<SupplierOffering>();
     public DbSet<CuttingTool> CuttingTools => Set<CuttingTool>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectPart> ProjectParts => Set<ProjectPart>();
@@ -56,25 +57,42 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         });
 
-        // SupplierStock
-        modelBuilder.Entity<SupplierStock>(entity =>
+        // StockItem
+        modelBuilder.Entity<StockItem>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.LengthInches).HasPrecision(10, 4);
-            entity.Property(e => e.Price).HasPrecision(10, 2);
-            entity.Property(e => e.Notes).HasMaxLength(255);
-
-            entity.HasOne(e => e.Supplier)
-                .WithMany(s => s.Stocks)
-                .HasForeignKey(e => e.SupplierId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             entity.HasOne(e => e.Material)
-                .WithMany(m => m.SupplierStocks)
+                .WithMany(m => m.StockItems)
                 .HasForeignKey(e => e.MaterialId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(e => new { e.SupplierId, e.MaterialId, e.LengthInches }).IsUnique();
+            entity.HasIndex(e => new { e.MaterialId, e.LengthInches }).IsUnique();
+        });
+
+        // SupplierOffering
+        modelBuilder.Entity<SupplierOffering>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PartNumber).HasMaxLength(100);
+            entity.Property(e => e.SupplierDescription).HasMaxLength(255);
+            entity.Property(e => e.Price).HasPrecision(10, 2);
+            entity.Property(e => e.Notes).HasMaxLength(255);
+
+            entity.HasOne(e => e.StockItem)
+                .WithMany(s => s.SupplierOfferings)
+                .HasForeignKey(e => e.StockItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Supplier)
+                .WithMany(s => s.Offerings)
+                .HasForeignKey(e => e.SupplierId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.SupplierId, e.StockItemId }).IsUnique();
         });
 
         // CuttingTool

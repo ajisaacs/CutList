@@ -9,5 +9,5 @@ public class Supplier
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public ICollection<SupplierStock> Stocks { get; set; } = new List<SupplierStock>();
+    public ICollection<SupplierOffering> Offerings { get; set; } = new List<SupplierOffering>();
 }
