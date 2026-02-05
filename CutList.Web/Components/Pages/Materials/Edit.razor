@@ -28,13 +28,17 @@ else
 
                         <div class="mb-3">
                             <label class="form-label">Shape</label>
-                            <InputSelect class="form-select" @bind-Value="selectedShape" @bind-Value:after="OnShapeChanged">
+                            <InputSelect class="form-select" @bind-Value="selectedShape" @bind-Value:after="OnShapeChanged" disabled="@(!IsNew)">
                                 <option value="">-- Select Shape --</option>
                                 @foreach (var shape in Enum.GetValues<MaterialShape>())
                                 {
                                     <option value="@shape">@shape.GetDisplayName()</option>
                                 }
                             </InputSelect>
+                            @if (!IsNew)
+                            {
+                                <div class="form-text text-muted">Shape cannot be changed after creation.</div>
+                            }
                             <ValidationMessage For="@(() => material.Shape)" />
                         </div>
 
