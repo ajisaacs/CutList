@@ -1,23 +1,21 @@
 using System.ComponentModel;
 using CutList.Core.Formatting;
-using CutList.Web.Data;
-using CutList.Web.Data.Entities;
-using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Server;
 
 namespace CutList.Mcp;
 
 /// <summary>
 /// MCP tools for inventory management - suppliers, materials, stock items, and offerings.
+/// All calls go through the CutList.Web REST API via ApiClient.
 /// </summary>
 [McpServerToolType]
 public class InventoryTools
 {
-    private readonly ApplicationDbContext _context;
+    private readonly ApiClient _api;
 
-    public InventoryTools(ApplicationDbContext context)
+    public InventoryTools(ApiClient api)
     {
-        _context = context;
+        _api = api;
     }
 
     #region Suppliers
@@ -27,11 +25,7 @@ public class InventoryTools
         [Description("Include inactive suppliers (default false)")]
         bool includeInactive = false)
     {
-        var query = _context.Suppliers.AsQueryable();
-        if (!includeInactive)
-            query = query.Where(s => s.IsActive);
-
-        var suppliers = await query.OrderBy(s => s.Name).ToListAsync();
+        var suppliers = await _api.GetSuppliersAsync(includeInactive);
 
         return new SupplierListResult
         {
@@ -56,29 +50,19 @@ public class InventoryTools
         [Description("Notes about the supplier")]
         string? notes = null)
     {
-        var supplier = new Supplier
-        {
-            Name = name,
-            ContactInfo = contactInfo,
-            Notes = notes,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.Suppliers.Add(supplier);
-        await _context.SaveChangesAsync();
+        var supplier = await _api.CreateSupplierAsync(name, contactInfo, notes);
 
         return new SupplierResult
         {
             Success = true,
-            Supplier = new SupplierDto
+            Supplier = supplier != null ? new SupplierDto
             {
                 Id = supplier.Id,
                 Name = supplier.Name,
                 ContactInfo = supplier.ContactInfo,
                 Notes = supplier.Notes,
                 IsActive = supplier.IsActive
-            }
+            } : null
         };
     }
 
@@ -93,47 +77,12 @@ public class InventoryTools
         [Description("Include inactive materials (default false)")]
         bool includeInactive = false)
     {
-        var query = _context.Materials
-            .Include(m => m.Dimensions)
-            .AsQueryable();
-
-        if (!includeInactive)
-            query = query.Where(m => m.IsActive);
-
-        if (!string.IsNullOrEmpty(shape))
-        {
-            var parsedShape = MaterialShapeExtensions.ParseShape(shape);
-            if (parsedShape.HasValue)
-            {
-                query = query.Where(m => m.Shape == parsedShape.Value);
-            }
-            else
-            {
-                // Fallback to string-based display name search
-                var shapeLower = shape.ToLower();
-                query = query.Where(m => m.Shape.ToString().ToLower().Contains(shapeLower));
-            }
-        }
-
-        var materials = await query
-            .OrderBy(m => m.Shape)
-            .ThenBy(m => m.SortOrder)
-            .ThenBy(m => m.Size)
-            .ToListAsync();
+        var materials = await _api.GetMaterialsAsync(shape, includeInactive);
 
         return new MaterialListResult
         {
             Success = true,
-            Materials = materials.Select(m => new MaterialDto
-            {
-                Id = m.Id,
-                Shape = m.Shape.GetDisplayName(),
-                Size = m.Size,
-                Description = m.Description,
-                DisplayName = m.DisplayName,
-                IsActive = m.IsActive,
-                Dimensions = m.Dimensions != null ? MapDimensions(m.Dimensions) : null
-            }).ToList()
+            Materials = materials.Select(MapMaterial).ToList()
         };
     }
 
@@ -174,332 +123,63 @@ public class InventoryTools
         [Description("Schedule (for Pipe, e.g., '40', '80', 'STD')")]
         string? schedule = null)
     {
-        var parsedShape = MaterialShapeExtensions.ParseShape(shape);
-        if (!parsedShape.HasValue)
+        // Build dimensions dictionary from individual parameters
+        var dimensions = new Dictionary<string, decimal>();
+        if (diameter.HasValue) dimensions["Diameter"] = (decimal)diameter.Value;
+        if (outerDiameter.HasValue) dimensions["OuterDiameter"] = (decimal)outerDiameter.Value;
+        if (width.HasValue) dimensions["Width"] = (decimal)width.Value;
+        if (height.HasValue) dimensions["Height"] = (decimal)height.Value;
+        if (squareSize.HasValue) dimensions["Size"] = (decimal)squareSize.Value;
+        if (thickness.HasValue) dimensions["Thickness"] = (decimal)thickness.Value;
+        if (wall.HasValue) dimensions["Wall"] = (decimal)wall.Value;
+        if (leg1.HasValue) dimensions["Leg1"] = (decimal)leg1.Value;
+        if (leg2.HasValue) dimensions["Leg2"] = (decimal)leg2.Value;
+        if (flange.HasValue) dimensions["Flange"] = (decimal)flange.Value;
+        if (web.HasValue) dimensions["Web"] = (decimal)web.Value;
+        if (weightPerFoot.HasValue) dimensions["WeightPerFoot"] = (decimal)weightPerFoot.Value;
+        if (nominalSize.HasValue) dimensions["NominalSize"] = (decimal)nominalSize.Value;
+
+        try
         {
+            var material = await _api.CreateMaterialAsync(
+                shape, size, description, null, null,
+                dimensions.Count > 0 ? dimensions : null);
+
+            if (material == null)
+                return new MaterialResult { Success = false, Error = "Failed to create material" };
+
             return new MaterialResult
             {
-                Success = false,
-                Error = $"Unknown shape: {shape}. Valid shapes are: RoundBar, RoundTube, FlatBar, SquareBar, SquareTube, RectangularTube, Angle, Channel, IBeam, Pipe"
+                Success = true,
+                Material = MapMaterial(material)
             };
         }
-
-        // Create typed dimensions object based on shape
-        MaterialDimensions? dimensions = CreateDimensionsForShape(
-            parsedShape.Value, diameter, outerDiameter, width, height, squareSize,
-            thickness, wall, leg1, leg2, flange, web, weightPerFoot, nominalSize, schedule);
-
-        // Auto-generate size string if not provided
-        var finalSize = size ?? dimensions?.GenerateSizeString();
-        if (string.IsNullOrWhiteSpace(finalSize))
+        catch (ApiConflictException ex)
         {
-            return new MaterialResult
-            {
-                Success = false,
-                Error = "Size string is required. Either provide a size parameter or dimension values for auto-generation."
-            };
+            return new MaterialResult { Success = false, Error = ex.Message };
         }
-
-        // Check if material already exists
-        var existing = await _context.Materials
-            .FirstOrDefaultAsync(m => m.Shape == parsedShape.Value && m.Size.ToLower() == finalSize.ToLower());
-
-        if (existing != null)
+        catch (HttpRequestException ex)
         {
-            return new MaterialResult
-            {
-                Success = false,
-                Error = $"Material '{parsedShape.Value.GetDisplayName()} - {finalSize}' already exists with ID {existing.Id}"
-            };
+            return new MaterialResult { Success = false, Error = ex.Message };
         }
-
-        var material = new Material
-        {
-            Shape = parsedShape.Value,
-            Size = finalSize,
-            Description = description,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.Materials.Add(material);
-        await _context.SaveChangesAsync();
-
-        // Add dimensions
-        dimensions.MaterialId = material.Id;
-        _context.MaterialDimensions.Add(dimensions);
-        await _context.SaveChangesAsync();
-
-        return new MaterialResult
-        {
-            Success = true,
-            Material = new MaterialDto
-            {
-                Id = material.Id,
-                Shape = material.Shape.GetDisplayName(),
-                Size = material.Size,
-                Description = material.Description,
-                DisplayName = material.DisplayName,
-                IsActive = material.IsActive,
-                Dimensions = MapDimensions(dimensions)
-            }
-        };
     }
 
-    [McpServerTool(Name = "search_materials"), Description("Search for materials by dimension value with tolerance. Returns materials where the specified dimension is within +/- tolerance of the target value.")]
+    [McpServerTool(Name = "search_materials"), Description("Search for materials by shape with a target dimension value and tolerance. The primary dimension for each shape is searched (e.g., diameter for RoundBar, leg size for Angle).")]
     public async Task<MaterialListResult> SearchMaterials(
-        [Description("Which dimension to search: diameter, outerDiameter, width, height, size, thickness, wall, leg1, leg2, flange, web, weightPerFoot, nominalSize")]
-        string dimensionType,
+        [Description("Shape to search (e.g., 'RoundBar', 'Angle', 'FlatBar')")]
+        string shape,
         [Description("Target dimension value in inches (or lbs for weightPerFoot)")]
         double targetValue,
-        [Description("Tolerance value - returns results within +/- this amount (default 0.01)")]
-        double tolerance = 0.01,
-        [Description("Optional shape filter (e.g., 'RoundBar', 'Angle')")]
-        string? shape = null)
+        [Description("Tolerance value - returns results within +/- this amount (default 0.1)")]
+        double tolerance = 0.1)
     {
-        var minValue = (decimal)(targetValue - tolerance);
-        var maxValue = (decimal)(targetValue + tolerance);
-
-        // Search the appropriate typed dimension table based on dimension type
-        List<Material> materials = dimensionType.ToLowerInvariant() switch
-        {
-            "diameter" => await SearchByDimension<RoundBarDimensions>(d => d.Diameter >= minValue && d.Diameter <= maxValue, shape),
-            "outerdiameter" or "outer_diameter" or "od" => await SearchByDimension<RoundTubeDimensions>(d => d.OuterDiameter >= minValue && d.OuterDiameter <= maxValue, shape),
-            "width" => await SearchWidthDimensions(minValue, maxValue, shape),
-            "height" => await SearchHeightDimensions(minValue, maxValue, shape),
-            "size" or "squaresize" => await SearchSizeDimensions(minValue, maxValue, shape),
-            "thickness" => await SearchThicknessDimensions(minValue, maxValue, shape),
-            "wall" => await SearchWallDimensions(minValue, maxValue, shape),
-            "leg1" => await SearchByDimension<AngleDimensions>(d => d.Leg1 >= minValue && d.Leg1 <= maxValue, shape),
-            "leg2" => await SearchByDimension<AngleDimensions>(d => d.Leg2 >= minValue && d.Leg2 <= maxValue, shape),
-            "flange" => await SearchByDimension<ChannelDimensions>(d => d.Flange >= minValue && d.Flange <= maxValue, shape),
-            "web" => await SearchByDimension<ChannelDimensions>(d => d.Web >= minValue && d.Web <= maxValue, shape),
-            "weightperfoot" or "weight" => await SearchByDimension<IBeamDimensions>(d => d.WeightPerFoot >= minValue && d.WeightPerFoot <= maxValue, shape),
-            "nominalsize" or "nominal_size" or "nps" => await SearchByDimension<PipeDimensions>(d => d.NominalSize >= minValue && d.NominalSize <= maxValue, shape),
-            _ => throw new ArgumentException($"Unknown dimension type: {dimensionType}")
-        };
+        var materials = await _api.SearchMaterialsAsync(shape, (decimal)targetValue, (decimal)tolerance);
 
         return new MaterialListResult
         {
             Success = true,
-            Materials = materials.Select(m => new MaterialDto
-            {
-                Id = m.Id,
-                Shape = m.Shape.GetDisplayName(),
-                Size = m.Size,
-                Description = m.Description,
-                DisplayName = m.DisplayName,
-                IsActive = m.IsActive,
-                Dimensions = m.Dimensions != null ? MapDimensions(m.Dimensions) : null
-            }).ToList()
+            Materials = materials.Select(MapMaterial).ToList()
         };
-    }
-
-    private async Task<List<Material>> SearchByDimension<T>(System.Linq.Expressions.Expression<Func<T, bool>> predicate, string? shape) where T : MaterialDimensions
-    {
-        var query = _context.Set<T>()
-            .Include(d => d.Material)
-            .Where(d => d.Material.IsActive)
-            .Where(predicate);
-
-        if (!string.IsNullOrEmpty(shape))
-        {
-            var parsedShape = MaterialShapeExtensions.ParseShape(shape);
-            if (parsedShape.HasValue)
-            {
-                query = query.Where(d => d.Material.Shape == parsedShape.Value);
-            }
-        }
-
-        return await query
-            .Select(d => d.Material)
-            .OrderBy(m => m.Shape)
-            .ThenBy(m => m.SortOrder)
-            .ThenBy(m => m.Size)
-            .ToListAsync();
-    }
-
-    // Width is used by FlatBar, RectangularTube
-    private async Task<List<Material>> SearchWidthDimensions(decimal minValue, decimal maxValue, string? shape)
-    {
-        var flatBars = await SearchByDimension<FlatBarDimensions>(d => d.Width >= minValue && d.Width <= maxValue, shape);
-        var rectTubes = await SearchByDimension<RectangularTubeDimensions>(d => d.Width >= minValue && d.Width <= maxValue, shape);
-        return flatBars.Concat(rectTubes).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
-    }
-
-    // Height is used by RectangularTube, Channel, IBeam
-    private async Task<List<Material>> SearchHeightDimensions(decimal minValue, decimal maxValue, string? shape)
-    {
-        var rectTubes = await SearchByDimension<RectangularTubeDimensions>(d => d.Height >= minValue && d.Height <= maxValue, shape);
-        var channels = await SearchByDimension<ChannelDimensions>(d => d.Height >= minValue && d.Height <= maxValue, shape);
-        var ibeams = await SearchByDimension<IBeamDimensions>(d => d.Height >= minValue && d.Height <= maxValue, shape);
-        return rectTubes.Concat(channels).Concat(ibeams).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
-    }
-
-    // Size is used by SquareBar, SquareTube
-    private async Task<List<Material>> SearchSizeDimensions(decimal minValue, decimal maxValue, string? shape)
-    {
-        var squareBars = await SearchByDimension<SquareBarDimensions>(d => d.Size >= minValue && d.Size <= maxValue, shape);
-        var squareTubes = await SearchByDimension<SquareTubeDimensions>(d => d.Size >= minValue && d.Size <= maxValue, shape);
-        return squareBars.Concat(squareTubes).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
-    }
-
-    // Thickness is used by FlatBar, Angle
-    private async Task<List<Material>> SearchThicknessDimensions(decimal minValue, decimal maxValue, string? shape)
-    {
-        var flatBars = await SearchByDimension<FlatBarDimensions>(d => d.Thickness >= minValue && d.Thickness <= maxValue, shape);
-        var angles = await SearchByDimension<AngleDimensions>(d => d.Thickness >= minValue && d.Thickness <= maxValue, shape);
-        return flatBars.Concat(angles).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
-    }
-
-    // Wall is used by RoundTube, SquareTube, RectangularTube, Pipe
-    private async Task<List<Material>> SearchWallDimensions(decimal minValue, decimal maxValue, string? shape)
-    {
-        var roundTubes = await SearchByDimension<RoundTubeDimensions>(d => d.Wall >= minValue && d.Wall <= maxValue, shape);
-        var squareTubes = await SearchByDimension<SquareTubeDimensions>(d => d.Wall >= minValue && d.Wall <= maxValue, shape);
-        var rectTubes = await SearchByDimension<RectangularTubeDimensions>(d => d.Wall >= minValue && d.Wall <= maxValue, shape);
-        var pipes = await SearchByDimension<PipeDimensions>(d => d.Wall != null && d.Wall >= minValue && d.Wall <= maxValue, shape);
-        return roundTubes.Concat(squareTubes).Concat(rectTubes).Concat(pipes).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
-    }
-
-    private static MaterialDimensions? CreateDimensionsForShape(
-        MaterialShape shape, double? diameter, double? outerDiameter, double? width, double? height,
-        double? squareSize, double? thickness, double? wall, double? leg1, double? leg2,
-        double? flange, double? web, double? weightPerFoot, double? nominalSize, string? schedule)
-    {
-        return shape switch
-        {
-            MaterialShape.RoundBar when diameter.HasValue => new RoundBarDimensions { Diameter = (decimal)diameter.Value },
-            MaterialShape.RoundTube when outerDiameter.HasValue && wall.HasValue => new RoundTubeDimensions { OuterDiameter = (decimal)outerDiameter.Value, Wall = (decimal)wall.Value },
-            MaterialShape.FlatBar when width.HasValue && thickness.HasValue => new FlatBarDimensions { Width = (decimal)width.Value, Thickness = (decimal)thickness.Value },
-            MaterialShape.SquareBar when squareSize.HasValue => new SquareBarDimensions { Size = (decimal)squareSize.Value },
-            MaterialShape.SquareTube when squareSize.HasValue && wall.HasValue => new SquareTubeDimensions { Size = (decimal)squareSize.Value, Wall = (decimal)wall.Value },
-            MaterialShape.RectangularTube when width.HasValue && height.HasValue && wall.HasValue => new RectangularTubeDimensions { Width = (decimal)width.Value, Height = (decimal)height.Value, Wall = (decimal)wall.Value },
-            MaterialShape.Angle when leg1.HasValue && leg2.HasValue && thickness.HasValue => new AngleDimensions { Leg1 = (decimal)leg1.Value, Leg2 = (decimal)leg2.Value, Thickness = (decimal)thickness.Value },
-            MaterialShape.Channel when height.HasValue && flange.HasValue && web.HasValue => new ChannelDimensions { Height = (decimal)height.Value, Flange = (decimal)flange.Value, Web = (decimal)web.Value },
-            MaterialShape.IBeam when height.HasValue && weightPerFoot.HasValue => new IBeamDimensions { Height = (decimal)height.Value, WeightPerFoot = (decimal)weightPerFoot.Value },
-            MaterialShape.Pipe when nominalSize.HasValue => new PipeDimensions { NominalSize = (decimal)nominalSize.Value, Wall = wall.HasValue ? (decimal)wall.Value : null, Schedule = schedule },
-            _ => null
-        };
-    }
-
-    /// <summary>
-    /// Parses a size string into MaterialDimensions based on shape.
-    /// Format: values separated by 'x' (e.g., "1 1/2 x 1/8", "2 x 2 x 1/4")
-    /// </summary>
-    private static (MaterialDimensions? dimensions, int sortOrder) ParseSizeStringToDimensions(MaterialShape shape, string sizeString)
-    {
-        var p = sizeString.Split('x', StringSplitOptions.TrimEntries)
-            .Select(ParseDimension)
-            .ToArray();
-
-        decimal D(int i) => (decimal)p[i]!.Value;
-        int Sort(double v) => (int)(v * 1000);
-
-        return shape switch
-        {
-            MaterialShape.RoundBar when p.Length >= 1 && p[0].HasValue
-                => (new RoundBarDimensions { Diameter = D(0) }, Sort(p[0]!.Value)),
-
-            MaterialShape.RoundTube when p.Length >= 2 && p[0].HasValue && p[1].HasValue
-                => (new RoundTubeDimensions { OuterDiameter = D(0), Wall = D(1) }, Sort(p[0]!.Value)),
-
-            MaterialShape.FlatBar when p.Length >= 2 && p[0].HasValue && p[1].HasValue
-                => (new FlatBarDimensions { Width = D(0), Thickness = D(1) }, Sort(p[0]!.Value)),
-
-            MaterialShape.SquareBar when p.Length >= 1 && p[0].HasValue
-                => (new SquareBarDimensions { Size = D(0) }, Sort(p[0]!.Value)),
-
-            MaterialShape.SquareTube when p.Length >= 2 && p[0].HasValue && p[1].HasValue
-                => (new SquareTubeDimensions { Size = D(0), Wall = D(1) }, Sort(p[0]!.Value)),
-
-            MaterialShape.RectangularTube when p.Length >= 3 && p[0].HasValue && p[1].HasValue && p[2].HasValue
-                => (new RectangularTubeDimensions { Width = D(0), Height = D(1), Wall = D(2) }, Sort(Math.Max(p[0]!.Value, p[1]!.Value))),
-
-            MaterialShape.Angle when p.Length >= 3 && p[0].HasValue && p[1].HasValue && p[2].HasValue
-                => (new AngleDimensions { Leg1 = D(0), Leg2 = D(1), Thickness = D(2) }, Sort(Math.Max(p[0]!.Value, p[1]!.Value))),
-
-            MaterialShape.Channel when p.Length >= 3 && p[0].HasValue && p[1].HasValue && p[2].HasValue
-                => (new ChannelDimensions { Height = D(0), Flange = D(1), Web = D(2) }, Sort(p[0]!.Value)),
-
-            MaterialShape.IBeam when p.Length >= 2 && p[0].HasValue && p[1].HasValue
-                => (new IBeamDimensions { Height = D(0), WeightPerFoot = D(1) }, Sort(p[0]!.Value)),
-
-            MaterialShape.Pipe when p.Length >= 1 && p[0].HasValue
-                => (new PipeDimensions { NominalSize = D(0), Schedule = ParsePipeSchedule(sizeString) }, Sort(p[0]!.Value)),
-
-            _ => (null, 0)
-        };
-
-        static double? ParseDimension(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value)) return null;
-            var processed = Fraction.ReplaceFractionsWithDecimals(value.Trim());
-            return processed.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Sum(part => double.TryParse(part, out var d) ? d : 0) is > 0 and var total ? total : null;
-        }
-
-        static string? ParsePipeSchedule(string s)
-        {
-            var idx = s.IndexOf("SCH", StringComparison.OrdinalIgnoreCase);
-            if (idx < 0) return null;
-            var rest = s[(idx + 3)..].Trim();
-            var end = rest.IndexOfAny([' ', 'x', 'X']);
-            return end > 0 ? rest[..end] : rest;
-        }
-    }
-
-    private static MaterialDimensionsDto MapDimensions(MaterialDimensions d)
-    {
-        var dto = new MaterialDimensionsDto();
-
-        switch (d)
-        {
-            case RoundBarDimensions rb:
-                dto.Diameter = (double)rb.Diameter;
-                break;
-            case RoundTubeDimensions rt:
-                dto.OuterDiameter = (double)rt.OuterDiameter;
-                dto.Wall = (double)rt.Wall;
-                break;
-            case FlatBarDimensions fb:
-                dto.Width = (double)fb.Width;
-                dto.Thickness = (double)fb.Thickness;
-                break;
-            case SquareBarDimensions sb:
-                dto.Size = (double)sb.Size;
-                break;
-            case SquareTubeDimensions st:
-                dto.Size = (double)st.Size;
-                dto.Wall = (double)st.Wall;
-                break;
-            case RectangularTubeDimensions rect:
-                dto.Width = (double)rect.Width;
-                dto.Height = (double)rect.Height;
-                dto.Wall = (double)rect.Wall;
-                break;
-            case AngleDimensions a:
-                dto.Leg1 = (double)a.Leg1;
-                dto.Leg2 = (double)a.Leg2;
-                dto.Thickness = (double)a.Thickness;
-                break;
-            case ChannelDimensions c:
-                dto.Height = (double)c.Height;
-                dto.Flange = (double)c.Flange;
-                dto.Web = (double)c.Web;
-                break;
-            case IBeamDimensions i:
-                dto.Height = (double)i.Height;
-                dto.WeightPerFoot = (double)i.WeightPerFoot;
-                break;
-            case PipeDimensions p:
-                dto.NominalSize = (double)p.NominalSize;
-                dto.Wall = p.Wall.HasValue ? (double)p.Wall.Value : null;
-                dto.Schedule = p.Schedule;
-                break;
-        }
-
-        return dto;
     }
 
     #endregion
@@ -515,35 +195,28 @@ public class InventoryTools
         [Description("Include inactive stock items (default false)")]
         bool includeInactive = false)
     {
-        var query = _context.StockItems
-            .Include(s => s.Material)
-            .AsQueryable();
-
-        if (!includeInactive)
-            query = query.Where(s => s.IsActive);
+        List<ApiStockItemDto> items;
 
         if (materialId.HasValue)
-            query = query.Where(s => s.MaterialId == materialId.Value);
-
-        if (!string.IsNullOrEmpty(shape))
         {
-            var parsedShape = MaterialShapeExtensions.ParseShape(shape);
-            if (parsedShape.HasValue)
-            {
-                query = query.Where(s => s.Material.Shape == parsedShape.Value);
-            }
-            else
-            {
-                var shapeLower = shape.ToLower();
-                query = query.Where(s => s.Material.Shape.ToString().ToLower().Contains(shapeLower));
-            }
+            items = await _api.GetStockItemsAsync(materialId, includeInactive);
         }
-
-        var items = await query
-            .OrderBy(s => s.Material.Shape)
-            .ThenBy(s => s.Material.Size)
-            .ThenBy(s => s.LengthInches)
-            .ToListAsync();
+        else if (!string.IsNullOrEmpty(shape))
+        {
+            // Get materials for this shape, then get stock items for each
+            var materials = await _api.GetMaterialsAsync(shape, includeInactive);
+            var allItems = new List<ApiStockItemDto>();
+            foreach (var mat in materials)
+            {
+                var matItems = await _api.GetStockItemsAsync(mat.Id, includeInactive);
+                allItems.AddRange(matItems);
+            }
+            items = allItems;
+        }
+        else
+        {
+            items = await _api.GetStockItemsAsync(includeInactive: includeInactive);
+        }
 
         return new StockItemListResult
         {
@@ -552,9 +225,9 @@ public class InventoryTools
             {
                 Id = s.Id,
                 MaterialId = s.MaterialId,
-                MaterialName = s.Material.DisplayName,
+                MaterialName = s.MaterialName,
                 LengthInches = s.LengthInches,
-                LengthFormatted = ArchUnits.FormatFromInches((double)s.LengthInches),
+                LengthFormatted = s.LengthFormatted,
                 Name = s.Name,
                 QuantityOnHand = s.QuantityOnHand,
                 Notes = s.Notes,
@@ -576,76 +249,38 @@ public class InventoryTools
         [Description("Notes")]
         string? notes = null)
     {
-        var material = await _context.Materials.FindAsync(materialId);
-        if (material == null)
-        {
-            return new StockItemResult
-            {
-                Success = false,
-                Error = $"Material with ID {materialId} not found"
-            };
-        }
-
-        // Parse length
-        double lengthInches;
         try
         {
-            lengthInches = double.TryParse(length.Trim(), out var plain)
-                ? plain
-                : ArchUnits.ParseToInches(length);
-        }
-        catch
-        {
+            var stockItem = await _api.CreateStockItemAsync(materialId, length, name, quantityOnHand, notes);
+
+            if (stockItem == null)
+                return new StockItemResult { Success = false, Error = "Failed to create stock item" };
+
             return new StockItemResult
             {
-                Success = false,
-                Error = $"Could not parse length: {length}"
+                Success = true,
+                StockItem = new StockItemDto
+                {
+                    Id = stockItem.Id,
+                    MaterialId = stockItem.MaterialId,
+                    MaterialName = stockItem.MaterialName,
+                    LengthInches = stockItem.LengthInches,
+                    LengthFormatted = stockItem.LengthFormatted,
+                    Name = stockItem.Name,
+                    QuantityOnHand = stockItem.QuantityOnHand,
+                    Notes = stockItem.Notes,
+                    IsActive = stockItem.IsActive
+                }
             };
         }
-
-        // Check for duplicate
-        var existing = await _context.StockItems
-            .FirstOrDefaultAsync(s => s.MaterialId == materialId && s.LengthInches == (decimal)lengthInches && s.IsActive);
-
-        if (existing != null)
+        catch (ApiConflictException ex)
         {
-            return new StockItemResult
-            {
-                Success = false,
-                Error = $"Stock item for {material.DisplayName} at {ArchUnits.FormatFromInches(lengthInches)} already exists with ID {existing.Id}"
-            };
+            return new StockItemResult { Success = false, Error = ex.Message };
         }
-
-        var stockItem = new StockItem
+        catch (HttpRequestException ex)
         {
-            MaterialId = materialId,
-            LengthInches = (decimal)lengthInches,
-            Name = name,
-            QuantityOnHand = quantityOnHand,
-            Notes = notes,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.StockItems.Add(stockItem);
-        await _context.SaveChangesAsync();
-
-        return new StockItemResult
-        {
-            Success = true,
-            StockItem = new StockItemDto
-            {
-                Id = stockItem.Id,
-                MaterialId = stockItem.MaterialId,
-                MaterialName = material.DisplayName,
-                LengthInches = stockItem.LengthInches,
-                LengthFormatted = ArchUnits.FormatFromInches((double)stockItem.LengthInches),
-                Name = stockItem.Name,
-                QuantityOnHand = stockItem.QuantityOnHand,
-                Notes = stockItem.Notes,
-                IsActive = stockItem.IsActive
-            }
-        };
+            return new StockItemResult { Success = false, Error = ex.Message };
+        }
     }
 
     #endregion
@@ -661,27 +296,50 @@ public class InventoryTools
         [Description("Filter by material ID")]
         int? materialId = null)
     {
-        var query = _context.SupplierOfferings
-            .Include(o => o.Supplier)
-            .Include(o => o.StockItem)
-                .ThenInclude(s => s.Material)
-            .AsQueryable();
+        List<ApiOfferingDto> offerings;
 
         if (supplierId.HasValue)
-            query = query.Where(o => o.SupplierId == supplierId.Value);
-
-        if (stockItemId.HasValue)
-            query = query.Where(o => o.StockItemId == stockItemId.Value);
-
-        if (materialId.HasValue)
-            query = query.Where(o => o.StockItem.MaterialId == materialId.Value);
-
-        var offerings = await query
-            .OrderBy(o => o.Supplier.Name)
-            .ThenBy(o => o.StockItem.Material.Shape)
-            .ThenBy(o => o.StockItem.Material.Size)
-            .ThenBy(o => o.StockItem.LengthInches)
-            .ToListAsync();
+        {
+            offerings = await _api.GetOfferingsForSupplierAsync(supplierId.Value);
+            // Apply additional filters client-side
+            if (stockItemId.HasValue)
+                offerings = offerings.Where(o => o.StockItemId == stockItemId.Value).ToList();
+            if (materialId.HasValue)
+            {
+                // Need to get stock items for this material to filter
+                var stockItems = await _api.GetStockItemsAsync(materialId);
+                var stockItemIds = stockItems.Select(s => s.Id).ToHashSet();
+                offerings = offerings.Where(o => stockItemIds.Contains(o.StockItemId)).ToList();
+            }
+        }
+        else if (stockItemId.HasValue)
+        {
+            offerings = await _api.GetOfferingsForStockItemAsync(stockItemId.Value);
+        }
+        else if (materialId.HasValue)
+        {
+            // Get stock items for this material, then aggregate offerings
+            var stockItems = await _api.GetStockItemsAsync(materialId);
+            var allOfferings = new List<ApiOfferingDto>();
+            foreach (var si in stockItems)
+            {
+                var siOfferings = await _api.GetOfferingsForStockItemAsync(si.Id);
+                allOfferings.AddRange(siOfferings);
+            }
+            offerings = allOfferings;
+        }
+        else
+        {
+            // No filter - get all suppliers then aggregate
+            var suppliers = await _api.GetSuppliersAsync();
+            var allOfferings = new List<ApiOfferingDto>();
+            foreach (var s in suppliers)
+            {
+                var sOfferings = await _api.GetOfferingsForSupplierAsync(s.Id);
+                allOfferings.AddRange(sOfferings);
+            }
+            offerings = allOfferings;
+        }
 
         return new SupplierOfferingListResult
         {
@@ -690,14 +348,14 @@ public class InventoryTools
             {
                 Id = o.Id,
                 SupplierId = o.SupplierId,
-                SupplierName = o.Supplier.Name,
+                SupplierName = o.SupplierName ?? string.Empty,
                 StockItemId = o.StockItemId,
-                MaterialName = o.StockItem.Material.DisplayName,
-                LengthFormatted = ArchUnits.FormatFromInches((double)o.StockItem.LengthInches),
+                MaterialName = o.MaterialName ?? string.Empty,
+                LengthFormatted = o.LengthFormatted ?? string.Empty,
                 PartNumber = o.PartNumber,
                 SupplierDescription = o.SupplierDescription,
                 Price = o.Price,
-                                Notes = o.Notes
+                Notes = o.Notes
             }).ToList()
         };
     }
@@ -717,72 +375,39 @@ public class InventoryTools
         [Description("Notes")]
         string? notes = null)
     {
-        var supplier = await _context.Suppliers.FindAsync(supplierId);
-        if (supplier == null)
+        try
         {
+            var offering = await _api.CreateOfferingAsync(supplierId, stockItemId, partNumber, supplierDescription, price, notes);
+
+            if (offering == null)
+                return new SupplierOfferingResult { Success = false, Error = "Failed to create offering" };
+
             return new SupplierOfferingResult
             {
-                Success = false,
-                Error = $"Supplier with ID {supplierId} not found"
+                Success = true,
+                Offering = new SupplierOfferingDto
+                {
+                    Id = offering.Id,
+                    SupplierId = offering.SupplierId,
+                    SupplierName = offering.SupplierName ?? string.Empty,
+                    StockItemId = offering.StockItemId,
+                    MaterialName = offering.MaterialName ?? string.Empty,
+                    LengthFormatted = offering.LengthFormatted ?? string.Empty,
+                    PartNumber = offering.PartNumber,
+                    SupplierDescription = offering.SupplierDescription,
+                    Price = offering.Price,
+                    Notes = offering.Notes
+                }
             };
         }
-
-        var stockItem = await _context.StockItems
-            .Include(s => s.Material)
-            .FirstOrDefaultAsync(s => s.Id == stockItemId);
-
-        if (stockItem == null)
+        catch (ApiConflictException ex)
         {
-            return new SupplierOfferingResult
-            {
-                Success = false,
-                Error = $"Stock item with ID {stockItemId} not found"
-            };
+            return new SupplierOfferingResult { Success = false, Error = ex.Message };
         }
-
-        // Check for duplicate
-        var existing = await _context.SupplierOfferings
-            .FirstOrDefaultAsync(o => o.SupplierId == supplierId && o.StockItemId == stockItemId);
-
-        if (existing != null)
+        catch (HttpRequestException ex)
         {
-            return new SupplierOfferingResult
-            {
-                Success = false,
-                Error = $"Offering from {supplier.Name} for this stock item already exists with ID {existing.Id}"
-            };
+            return new SupplierOfferingResult { Success = false, Error = ex.Message };
         }
-
-        var offering = new SupplierOffering
-        {
-            SupplierId = supplierId,
-            StockItemId = stockItemId,
-            PartNumber = partNumber,
-            SupplierDescription = supplierDescription,
-            Price = price,
-            Notes = notes
-        };
-
-        _context.SupplierOfferings.Add(offering);
-        await _context.SaveChangesAsync();
-
-        return new SupplierOfferingResult
-        {
-            Success = true,
-            Offering = new SupplierOfferingDto
-            {
-                Id = offering.Id,
-                SupplierId = offering.SupplierId,
-                SupplierName = supplier.Name,
-                StockItemId = offering.StockItemId,
-                MaterialName = stockItem.Material.DisplayName,
-                LengthFormatted = ArchUnits.FormatFromInches((double)stockItem.LengthInches),
-                PartNumber = offering.PartNumber,
-                SupplierDescription = offering.SupplierDescription,
-                Price = offering.Price,
-                                Notes = offering.Notes
-            }
-        };
     }
 
     [McpServerTool(Name = "add_stock_with_offering"), Description("Convenience method: adds a material (if needed), stock item (if needed), and supplier offering all at once.")]
@@ -806,39 +431,7 @@ public class InventoryTools
         [Description("Price per unit")]
         decimal? price = null)
     {
-        var supplier = await _context.Suppliers.FindAsync(supplierId);
-        if (supplier == null)
-        {
-            return new AddStockWithOfferingResult
-            {
-                Success = false,
-                Error = $"Supplier with ID {supplierId} not found"
-            };
-        }
-
-        // Parse shape
-        var parsedShape = MaterialShapeExtensions.ParseShape(shape);
-        if (!parsedShape.HasValue)
-        {
-            return new AddStockWithOfferingResult
-            {
-                Success = false,
-                Error = $"Unknown shape: {shape}. Valid shapes are: RoundBar, RoundTube, FlatBar, SquareBar, SquareTube, RectangularTube, Angle, Channel, IBeam, Pipe"
-            };
-        }
-
-        // Parse material type (default to Steel if not provided)
-        var typeValue = string.IsNullOrWhiteSpace(type) ? "Steel" : type;
-        if (!Enum.TryParse<MaterialType>(typeValue, ignoreCase: true, out var parsedType))
-        {
-            return new AddStockWithOfferingResult
-            {
-                Success = false,
-                Error = $"Unknown material type: {typeValue}. Valid types are: Steel, Aluminum, Stainless, Brass, Copper"
-            };
-        }
-
-        // Parse length
+        // Parse length for formatted display
         double lengthInches;
         try
         {
@@ -855,106 +448,227 @@ public class InventoryTools
             };
         }
 
-        // Find or create material (match on shape, type, grade, and size)
-        var material = await _context.Materials
-            .Include(m => m.Dimensions)
-            .FirstOrDefaultAsync(m => m.Shape == parsedShape.Value
-                && m.Type == parsedType
-                && m.Grade == grade
-                && m.Size.ToLower() == size.ToLower());
-
+        // Step 1: Find or create material
         bool materialCreated = false;
+        ApiMaterialDto? material = null;
+
+        // Search for existing material by shape and size
+        var materials = await _api.GetMaterialsAsync(shape);
+        material = materials.FirstOrDefault(m =>
+            m.Size.Equals(size, StringComparison.OrdinalIgnoreCase) &&
+            m.Type.Equals(type, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(m.Grade, grade, StringComparison.OrdinalIgnoreCase));
+
         if (material == null)
         {
-            // Parse dimensions from size string
-            var (dimensions, sortOrder) = ParseSizeStringToDimensions(parsedShape.Value, size);
+            // Parse dimensions from size string for the API
+            var dimensions = ParseSizeStringToDimensions(shape, size);
 
-            material = new Material
+            try
             {
-                Shape = parsedShape.Value,
-                Type = parsedType,
-                Grade = grade,
-                Size = size,
-                SortOrder = sortOrder,
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.Materials.Add(material);
-            await _context.SaveChangesAsync();
-
-            // Add dimensions if parsed successfully
-            if (dimensions != null)
-            {
-                dimensions.MaterialId = material.Id;
-                _context.MaterialDimensions.Add(dimensions);
-                await _context.SaveChangesAsync();
+                material = await _api.CreateMaterialAsync(shape, size, null, type, grade, dimensions);
+                materialCreated = true;
             }
-
-            materialCreated = true;
+            catch (ApiConflictException)
+            {
+                // Race condition - material was created between check and create, re-fetch
+                materials = await _api.GetMaterialsAsync(shape);
+                material = materials.FirstOrDefault(m =>
+                    m.Size.Equals(size, StringComparison.OrdinalIgnoreCase));
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AddStockWithOfferingResult { Success = false, Error = $"Failed to create material: {ex.Message}" };
+            }
         }
 
-        // Find or create stock item
-        var stockItem = await _context.StockItems
-            .FirstOrDefaultAsync(s => s.MaterialId == material.Id && s.LengthInches == (decimal)lengthInches && s.IsActive);
+        if (material == null)
+            return new AddStockWithOfferingResult { Success = false, Error = "Failed to find or create material" };
 
+        // Step 2: Find or create stock item
         bool stockItemCreated = false;
+        var stockItems = await _api.GetStockItemsAsync(material.Id);
+        var stockItem = stockItems.FirstOrDefault(s => Math.Abs((double)s.LengthInches - lengthInches) < 0.01);
+
         if (stockItem == null)
         {
-            stockItem = new StockItem
+            try
             {
-                MaterialId = material.Id,
-                LengthInches = (decimal)lengthInches,
-                QuantityOnHand = 0,
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.StockItems.Add(stockItem);
-            await _context.SaveChangesAsync();
-            stockItemCreated = true;
+                stockItem = await _api.CreateStockItemAsync(material.Id, length, null, 0, null);
+                stockItemCreated = true;
+            }
+            catch (ApiConflictException)
+            {
+                // Race condition - re-fetch
+                stockItems = await _api.GetStockItemsAsync(material.Id);
+                stockItem = stockItems.FirstOrDefault(s => Math.Abs((double)s.LengthInches - lengthInches) < 0.01);
+            }
+            catch (HttpRequestException ex)
+            {
+                return new AddStockWithOfferingResult
+                {
+                    Success = false,
+                    Error = $"Failed to create stock item: {ex.Message}",
+                    MaterialCreated = materialCreated
+                };
+            }
         }
 
-        // Check if offering already exists
-        var existingOffering = await _context.SupplierOfferings
-            .FirstOrDefaultAsync(o => o.SupplierId == supplierId && o.StockItemId == stockItem.Id);
+        if (stockItem == null)
+            return new AddStockWithOfferingResult
+            {
+                Success = false,
+                Error = "Failed to find or create stock item",
+                MaterialCreated = materialCreated
+            };
 
-        if (existingOffering != null)
+        // Step 3: Create offering
+        try
+        {
+            var offering = await _api.CreateOfferingAsync(supplierId, stockItem.Id, partNumber, supplierDescription, price, null);
+
+            return new AddStockWithOfferingResult
+            {
+                Success = true,
+                MaterialId = material.Id,
+                MaterialName = $"{material.Shape} - {material.Size}",
+                MaterialCreated = materialCreated,
+                StockItemId = stockItem.Id,
+                StockItemCreated = stockItemCreated,
+                LengthFormatted = ArchUnits.FormatFromInches(lengthInches),
+                OfferingId = offering?.Id ?? 0,
+                PartNumber = partNumber,
+                SupplierDescription = supplierDescription,
+                Price = price
+            };
+        }
+        catch (ApiConflictException)
         {
             return new AddStockWithOfferingResult
             {
                 Success = false,
-                Error = $"Offering from {supplier.Name} for {material.DisplayName} at {ArchUnits.FormatFromInches(lengthInches)} already exists",
+                Error = $"Offering for this supplier and stock item already exists",
                 MaterialCreated = materialCreated,
                 StockItemCreated = stockItemCreated
             };
         }
-
-        // Create offering
-        var offering = new SupplierOffering
+        catch (HttpRequestException ex)
         {
-            SupplierId = supplierId,
-            StockItemId = stockItem.Id,
-            PartNumber = partNumber,
-            SupplierDescription = supplierDescription,
-            Price = price
+            return new AddStockWithOfferingResult
+            {
+                Success = false,
+                Error = $"Failed to create offering: {ex.Message}",
+                MaterialCreated = materialCreated,
+                StockItemCreated = stockItemCreated
+            };
+        }
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private static MaterialDto MapMaterial(ApiMaterialDto m)
+    {
+        var dto = new MaterialDto
+        {
+            Id = m.Id,
+            Shape = m.Shape,
+            Size = m.Size,
+            Description = m.Description,
+            DisplayName = $"{m.Shape} - {m.Size}",
+            IsActive = m.IsActive,
         };
 
-        _context.SupplierOfferings.Add(offering);
-        await _context.SaveChangesAsync();
-
-        return new AddStockWithOfferingResult
+        if (m.Dimensions != null)
         {
-            Success = true,
-            MaterialId = material.Id,
-            MaterialName = material.DisplayName,
-            MaterialCreated = materialCreated,
-            StockItemId = stockItem.Id,
-            StockItemCreated = stockItemCreated,
-            LengthFormatted = ArchUnits.FormatFromInches(lengthInches),
-            OfferingId = offering.Id,
-            PartNumber = partNumber,
-            SupplierDescription = supplierDescription,
-            Price = price
+            dto.Dimensions = MapDimensions(m.Dimensions);
+        }
+
+        return dto;
+    }
+
+    private static MaterialDimensionsDto MapDimensions(ApiMaterialDimensionsDto d)
+    {
+        var dto = new MaterialDimensionsDto();
+        var v = d.Values;
+
+        if (v.TryGetValue("Diameter", out var diameter)) dto.Diameter = (double)diameter;
+        if (v.TryGetValue("OuterDiameter", out var od)) dto.OuterDiameter = (double)od;
+        if (v.TryGetValue("Width", out var width)) dto.Width = (double)width;
+        if (v.TryGetValue("Height", out var height)) dto.Height = (double)height;
+        if (v.TryGetValue("Size", out var size)) dto.Size = (double)size;
+        if (v.TryGetValue("Thickness", out var thickness)) dto.Thickness = (double)thickness;
+        if (v.TryGetValue("Wall", out var wall)) dto.Wall = (double)wall;
+        if (v.TryGetValue("Leg1", out var leg1)) dto.Leg1 = (double)leg1;
+        if (v.TryGetValue("Leg2", out var leg2)) dto.Leg2 = (double)leg2;
+        if (v.TryGetValue("Flange", out var flange)) dto.Flange = (double)flange;
+        if (v.TryGetValue("Web", out var web)) dto.Web = (double)web;
+        if (v.TryGetValue("WeightPerFoot", out var wpf)) dto.WeightPerFoot = (double)wpf;
+        if (v.TryGetValue("NominalSize", out var ns)) dto.NominalSize = (double)ns;
+
+        return dto;
+    }
+
+    /// <summary>
+    /// Parses a size string into a dimensions dictionary based on shape.
+    /// Format: values separated by 'x' (e.g., "1 1/2 x 1/8", "2 x 2 x 1/4")
+    /// </summary>
+    private static Dictionary<string, decimal>? ParseSizeStringToDimensions(string shape, string sizeString)
+    {
+        var parts = sizeString.Split('x', StringSplitOptions.TrimEntries)
+            .Select(ParseDimension)
+            .ToArray();
+
+        if (parts.Length == 0 || parts.All(p => !p.HasValue))
+            return null;
+
+        decimal D(int i) => (decimal)parts[i]!.Value;
+
+        var shapeLower = shape.ToLowerInvariant().Replace(" ", "");
+
+        return shapeLower switch
+        {
+            "roundbar" when parts.Length >= 1 && parts[0].HasValue
+                => new Dictionary<string, decimal> { ["Diameter"] = D(0) },
+
+            "roundtube" when parts.Length >= 2 && parts[0].HasValue && parts[1].HasValue
+                => new Dictionary<string, decimal> { ["OuterDiameter"] = D(0), ["Wall"] = D(1) },
+
+            "flatbar" when parts.Length >= 2 && parts[0].HasValue && parts[1].HasValue
+                => new Dictionary<string, decimal> { ["Width"] = D(0), ["Thickness"] = D(1) },
+
+            "squarebar" when parts.Length >= 1 && parts[0].HasValue
+                => new Dictionary<string, decimal> { ["Size"] = D(0) },
+
+            "squaretube" when parts.Length >= 2 && parts[0].HasValue && parts[1].HasValue
+                => new Dictionary<string, decimal> { ["Size"] = D(0), ["Wall"] = D(1) },
+
+            "rectangulartube" or "recttube" when parts.Length >= 3 && parts[0].HasValue && parts[1].HasValue && parts[2].HasValue
+                => new Dictionary<string, decimal> { ["Width"] = D(0), ["Height"] = D(1), ["Wall"] = D(2) },
+
+            "angle" when parts.Length >= 3 && parts[0].HasValue && parts[1].HasValue && parts[2].HasValue
+                => new Dictionary<string, decimal> { ["Leg1"] = D(0), ["Leg2"] = D(1), ["Thickness"] = D(2) },
+
+            "channel" when parts.Length >= 3 && parts[0].HasValue && parts[1].HasValue && parts[2].HasValue
+                => new Dictionary<string, decimal> { ["Height"] = D(0), ["Flange"] = D(1), ["Web"] = D(2) },
+
+            "ibeam" when parts.Length >= 2 && parts[0].HasValue && parts[1].HasValue
+                => new Dictionary<string, decimal> { ["Height"] = D(0), ["WeightPerFoot"] = D(1) },
+
+            "pipe" when parts.Length >= 1 && parts[0].HasValue
+                => new Dictionary<string, decimal> { ["NominalSize"] = D(0) },
+
+            _ => null
         };
+
+        static double? ParseDimension(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            var processed = Fraction.ReplaceFractionsWithDecimals(value.Trim());
+            return processed.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Sum(part => double.TryParse(part, out var d) ? d : 0) is > 0 and var total ? total : null;
+        }
     }
 
     #endregion

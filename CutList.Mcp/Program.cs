@@ -1,14 +1,15 @@
-using CutList.Web.Data;
-using Microsoft.EntityFrameworkCore;
+using CutList.Mcp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Server;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Add DbContext for inventory tools
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=CutListDb;Trusted_Connection=True;MultipleActiveResultSets=true"));
+// Register HttpClient for API calls to CutList.Web
+builder.Services.AddHttpClient<ApiClient>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5009");
+});
 
 builder.Services
     .AddMcpServer()
