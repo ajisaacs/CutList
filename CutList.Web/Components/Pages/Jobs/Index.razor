@@ -1,0 +1,120 @@
+@page "/jobs"
+@inject JobService JobService
+@inject NavigationManager Navigation
+
+<PageTitle>Jobs</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Jobs</h1>
+    <div class="d-flex gap-2">
+        <button class="btn btn-success" @onclick="QuickCreateJob" disabled="@creating">
+            @if (creating)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Quick Create
+        </button>
+        <a href="jobs/new" class="btn btn-primary">New Job</a>
+    </div>
+</div>
+
+@if (loading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (jobs.Count == 0)
+{
+    <div class="alert alert-info">
+        No jobs found. <a href="jobs/new">Create your first job</a>.
+    </div>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Job #</th>
+                <th>Name</th>
+                <th>Customer</th>
+                <th>Cutting Tool</th>
+                <th>Last Modified</th>
+                <th style="width: 200px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var job in jobs)
+            {
+                <tr>
+                    <td><a href="jobs/@job.Id">@job.JobNumber</a></td>
+                    <td>@(job.Name ?? "-")</td>
+                    <td>@(job.Customer ?? "-")</td>
+                    <td>@(job.CuttingTool?.Name ?? "-")</td>
+                    <td>@((job.UpdatedAt ?? job.CreatedAt).ToLocalTime().ToString("g"))</td>
+                    <td>
+                        <a href="jobs/@job.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <a href="jobs/@job.Id/results" class="btn btn-sm btn-success">Optimize</a>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => DuplicateJob(job)">Copy</button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(job)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<ConfirmDialog @ref="deleteDialog"
+               Title="Delete Job"
+               Message="@deleteMessage"
+               ConfirmText="Delete"
+               OnConfirm="DeleteConfirmed" />
+
+@code {
+    private List<Job> jobs = new();
+    private bool loading = true;
+    private bool creating = false;
+    private ConfirmDialog deleteDialog = null!;
+    private Job? jobToDelete;
+    private string deleteMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        jobs = await JobService.GetAllAsync();
+        loading = false;
+    }
+
+    private async Task QuickCreateJob()
+    {
+        creating = true;
+        try
+        {
+            var job = await JobService.QuickCreateAsync();
+            Navigation.NavigateTo($"jobs/{job.Id}");
+        }
+        finally
+        {
+            creating = false;
+        }
+    }
+
+    private void ConfirmDelete(Job job)
+    {
+        jobToDelete = job;
+        deleteMessage = $"Are you sure you want to delete \"{job.DisplayName}\"? This will also delete all parts.";
+        deleteDialog.Show();
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (jobToDelete != null)
+        {
+            await JobService.DeleteAsync(jobToDelete.Id);
+            jobs = await JobService.GetAllAsync();
+        }
+    }
+
+    private async Task DuplicateJob(Job job)
+    {
+        var duplicate = await JobService.DuplicateAsync(job.Id);
+        Navigation.NavigateTo($"jobs/{duplicate.Id}");
+    }
+}

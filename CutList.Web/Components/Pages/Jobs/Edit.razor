@@ -1,0 +1,810 @@
+@page "/jobs/new"
+@page "/jobs/{Id:int}"
+@inject JobService JobService
+@inject MaterialService MaterialService
+@inject StockItemService StockItemService
+@inject NavigationManager Navigation
+@using CutList.Core.Formatting
+@using CutList.Web.Data.Entities
+
+<PageTitle>@(IsNew ? "New Job" : job.DisplayName)</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>@(IsNew ? "New Job" : job.DisplayName)</h1>
+    @if (!IsNew)
+    {
+        <a href="jobs/@Id/results" class="btn btn-success">Run Optimization</a>
+    }
+</div>
+
+@if (loading)
+{
+    <p><em>Loading...</em></p>
+}
+else if (IsNew)
+{
+    <!-- New Job: Simple form -->
+    <div class="row">
+        <div class="col-lg-6">
+            @RenderDetailsForm()
+        </div>
+    </div>
+}
+else
+{
+    <!-- Existing Job: Tabbed interface -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == Tab.Details ? "active" : "")"
+                    @onclick="() => SetTab(Tab.Details)" type="button">
+                Details
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == Tab.Parts ? "active" : "")"
+                    @onclick="() => SetTab(Tab.Parts)" type="button">
+                Parts
+                @if (job.Parts.Count > 0)
+                {
+                    <span class="badge bg-secondary ms-1">@job.Parts.Sum(p => p.Quantity)</span>
+                }
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == Tab.Stock ? "active" : "")"
+                    @onclick="() => SetTab(Tab.Stock)" type="button">
+                Stock
+                @if (job.Stock.Count > 0)
+                {
+                    <span class="badge bg-secondary ms-1">@job.Stock.Count</span>
+                }
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        @if (activeTab == Tab.Details)
+        {
+            <div class="row">
+                <div class="col-lg-6">
+                    @RenderDetailsForm()
+                </div>
+            </div>
+        }
+        else if (activeTab == Tab.Parts)
+        {
+            @RenderPartsTab()
+        }
+        else if (activeTab == Tab.Stock)
+        {
+            @RenderStockTab()
+        }
+    </div>
+}
+
+@code {
+    private enum Tab { Details, Parts, Stock }
+
+    [Parameter]
+    public int? Id { get; set; }
+
+    private Job job = new();
+    private List<Material> materials = new();
+    private List<CuttingTool> cuttingTools = new();
+
+    private bool loading = true;
+    private bool savingJob;
+    private string? jobErrorMessage;
+    private Tab activeTab = Tab.Details;
+
+    private void SetTab(Tab tab) => activeTab = tab;
+
+    // Parts form
+    private bool showPartForm;
+    private JobPart newPart = new();
+    private JobPart? editingPart;
+    private string? partErrorMessage;
+    private MaterialShape? selectedShape;
+
+    // Stock form
+    private bool showStockForm;
+    private bool showCustomStockForm;
+    private JobStock newStock = new();
+    private JobStock? editingStock;
+    private string? stockErrorMessage;
+    private MaterialShape? stockSelectedShape;
+    private int stockSelectedMaterialId;
+    private List<StockItem> availableStockItems = new();
+
+    private IEnumerable<MaterialShape> DistinctShapes => materials.Select(m => m.Shape).Distinct().OrderBy(s => s);
+    private IEnumerable<Material> FilteredMaterials => !selectedShape.HasValue
+        ? Enumerable.Empty<Material>()
+        : materials.Where(m => m.Shape == selectedShape.Value).OrderBy(m => m.Size);
+
+    private bool IsNew => !Id.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        materials = await MaterialService.GetAllAsync();
+        cuttingTools = await JobService.GetCuttingToolsAsync();
+
+        if (Id.HasValue)
+        {
+            var existing = await JobService.GetByIdAsync(Id.Value);
+            if (existing == null)
+            {
+                Navigation.NavigateTo("jobs");
+                return;
+            }
+            job = existing;
+        }
+        else
+        {
+            // Set default cutting tool for new jobs
+            var defaultTool = await JobService.GetDefaultCuttingToolAsync();
+            if (defaultTool != null)
+            {
+                job.CuttingToolId = defaultTool.Id;
+            }
+        }
+
+        loading = false;
+    }
+
+    private RenderFragment RenderDetailsForm() => __builder =>
+    {
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Job Details</h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="job" OnValidSubmit="SaveJobAsync">
+                    @if (!IsNew)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Job Number</label>
+                            <input type="text" class="form-control" value="@job.JobNumber" readonly />
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Job Name <span class="text-muted fw-normal">(optional)</span></label>
+                        <InputText class="form-control" @bind-Value="job.Name" placeholder="Descriptive name for this job" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Customer <span class="text-muted fw-normal">(optional)</span></label>
+                        <InputText class="form-control" @bind-Value="job.Customer" placeholder="Customer name" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Cutting Tool</label>
+                        <InputSelect class="form-select" @bind-Value="job.CuttingToolId">
+                            <option value="">-- Select Tool --</option>
+                            @foreach (var tool in cuttingTools)
+                            {
+                                <option value="@tool.Id">@tool.Name (@tool.KerfInches" kerf)</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <InputTextArea class="form-control" @bind-Value="job.Notes" rows="3" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(jobErrorMessage))
+                    {
+                        <div class="alert alert-danger">@jobErrorMessage</div>
+                    }
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" disabled="@savingJob">
+                            @if (savingJob)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            @(IsNew ? "Create Job" : "Save")
+                        </button>
+                        <a href="jobs" class="btn btn-outline-secondary">Back</a>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderPartsTab() => __builder =>
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Parts to Cut</h5>
+                <button class="btn btn-primary" @onclick="ShowAddPartForm">Add Part</button>
+            </div>
+            <div class="card-body">
+                @if (showPartForm)
+                {
+                    <div class="border rounded p-3 mb-3 bg-light">
+                        <h6>@(editingPart == null ? "Add Part" : "Edit Part")</h6>
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <label class="form-label">Shape</label>
+                                <select class="form-select" @bind="selectedShape" @bind:after="OnShapeChanged">
+                                    <option value="">-- Select --</option>
+                                    @foreach (var shape in DistinctShapes)
+                                    {
+                                        <option value="@shape">@shape.GetDisplayName()</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Size</label>
+                                <select class="form-select" @bind="newPart.MaterialId" disabled="@(!selectedShape.HasValue)">
+                                    <option value="0">-- Select --</option>
+                                    @foreach (var material in FilteredMaterials)
+                                    {
+                                        <option value="@material.Id">@material.Size</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Length</label>
+                                <LengthInput @bind-Value="newPart.LengthInches" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Qty</label>
+                                <input type="number" class="form-control" @bind="newPart.Quantity" min="1" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Name <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="text" class="form-control" @bind="newPart.Name" placeholder="Part name" />
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(partErrorMessage))
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">@partErrorMessage</div>
+                        }
+                        <div class="mt-3 d-flex gap-2">
+                            <button class="btn btn-primary" @onclick="SavePartAsync">@(editingPart == null ? "Add Part" : "Save Changes")</button>
+                            <button class="btn btn-outline-secondary" @onclick="CancelPartForm">Cancel</button>
+                        </div>
+                    </div>
+                }
+
+                @if (job.Parts.Count == 0)
+                {
+                    <div class="text-center py-4 text-muted">
+                        <p class="mb-2">No parts added yet.</p>
+                        <p class="small">Add the parts you need to cut, selecting the material for each.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Material</th>
+                                    <th>Length</th>
+                                    <th>Qty</th>
+                                    <th>Name</th>
+                                    <th style="width: 120px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var part in job.Parts)
+                                {
+                                    <tr>
+                                        <td>@part.Material.DisplayName</td>
+                                        <td>@ArchUnits.FormatFromInches((double)part.LengthInches)</td>
+                                        <td>@part.Quantity</td>
+                                        <td>@(string.IsNullOrWhiteSpace(part.Name) ? "-" : part.Name)</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditPart(part)">Edit</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePart(part)">Delete</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3 text-muted">
+                        Total: @job.Parts.Sum(p => p.Quantity) pieces
+                    </div>
+                }
+            </div>
+        </div>
+    };
+
+    private async Task SaveJobAsync()
+    {
+        jobErrorMessage = null;
+        savingJob = true;
+
+        try
+        {
+            if (IsNew)
+            {
+                var created = await JobService.CreateAsync(job);
+                Navigation.NavigateTo($"jobs/{created.Id}");
+            }
+            else
+            {
+                await JobService.UpdateAsync(job);
+            }
+        }
+        finally
+        {
+            savingJob = false;
+        }
+    }
+
+    // Parts methods
+    private void ShowAddPartForm()
+    {
+        editingPart = null;
+        newPart = new JobPart { JobId = Id!.Value, Quantity = 1 };
+        selectedShape = null;
+        showPartForm = true;
+        partErrorMessage = null;
+    }
+
+    private void OnShapeChanged()
+    {
+        newPart.MaterialId = 0;
+    }
+
+    private void EditPart(JobPart part)
+    {
+        editingPart = part;
+        newPart = new JobPart
+        {
+            Id = part.Id,
+            JobId = part.JobId,
+            MaterialId = part.MaterialId,
+            Name = part.Name,
+            LengthInches = part.LengthInches,
+            Quantity = part.Quantity,
+            SortOrder = part.SortOrder
+        };
+        selectedShape = part.Material?.Shape;
+        showPartForm = true;
+        partErrorMessage = null;
+    }
+
+    private void CancelPartForm()
+    {
+        showPartForm = false;
+        editingPart = null;
+    }
+
+    private async Task SavePartAsync()
+    {
+        partErrorMessage = null;
+
+        if (!selectedShape.HasValue)
+        {
+            partErrorMessage = "Please select a shape";
+            return;
+        }
+
+        if (newPart.MaterialId == 0)
+        {
+            partErrorMessage = "Please select a size";
+            return;
+        }
+
+        if (newPart.LengthInches <= 0)
+        {
+            partErrorMessage = "Length must be greater than zero";
+            return;
+        }
+
+        if (newPart.Quantity < 1)
+        {
+            partErrorMessage = "Quantity must be at least 1";
+            return;
+        }
+
+        if (editingPart == null)
+        {
+            await JobService.AddPartAsync(newPart);
+        }
+        else
+        {
+            await JobService.UpdatePartAsync(newPart);
+        }
+
+        job = (await JobService.GetByIdAsync(Id!.Value))!;
+        showPartForm = false;
+        editingPart = null;
+    }
+
+    private async Task DeletePart(JobPart part)
+    {
+        await JobService.DeletePartAsync(part.Id);
+        job = (await JobService.GetByIdAsync(Id!.Value))!;
+    }
+
+    // Stock tab
+    private RenderFragment RenderStockTab() => __builder =>
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Stock for This Job</h5>
+                <div class="btn-group">
+                    <button class="btn btn-primary" @onclick="ShowAddStockFromInventory">Add from Inventory</button>
+                    <button class="btn btn-outline-primary" @onclick="ShowAddCustomStock">Add Custom Length</button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (showStockForm)
+                {
+                    @RenderStockFromInventoryForm()
+                }
+                else if (showCustomStockForm)
+                {
+                    @RenderCustomStockForm()
+                }
+
+                @if (job.Stock.Count == 0)
+                {
+                    <div class="text-center py-4 text-muted">
+                        <p class="mb-2">No stock configured for this job.</p>
+                        <p class="small">Add stock from your inventory or define custom lengths.</p>
+                        <p class="small">If no stock is selected, the optimizer will use all available stock for the materials in your parts list.</p>
+                    </div>
+                }
+                else
+                {
+                    @RenderStockTable()
+                }
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderStockFromInventoryForm() => __builder =>
+    {
+        <div class="border rounded p-3 mb-3 bg-light">
+            <h6>@(editingStock == null ? "Add Stock from Inventory" : "Edit Stock Selection")</h6>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Shape</label>
+                    <select class="form-select" @bind="stockSelectedShape" @bind:after="OnStockShapeChanged">
+                        <option value="">-- Select --</option>
+                        @foreach (var shape in DistinctShapes)
+                        {
+                            <option value="@shape">@shape.GetDisplayName()</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Size</label>
+                    <select class="form-select" @bind="stockSelectedMaterialId" @bind:after="OnStockMaterialChanged"
+                            disabled="@(!stockSelectedShape.HasValue)">
+                        <option value="0">-- Select --</option>
+                        @foreach (var material in materials.Where(m => stockSelectedShape.HasValue && m.Shape == stockSelectedShape.Value).OrderBy(m => m.Size))
+                        {
+                            <option value="@material.Id">@material.Size</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Stock Length</label>
+                    <select class="form-select" @bind="newStock.StockItemId" disabled="@(stockSelectedMaterialId == 0)">
+                        <option value="">-- Select --</option>
+                        @foreach (var stock in availableStockItems)
+                        {
+                            <option value="@stock.Id">@ArchUnits.FormatFromInches((double)stock.LengthInches) (@stock.QuantityOnHand available)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Qty to Use</label>
+                    <input type="number" class="form-control" @bind="newStock.Quantity" min="1" />
+                </div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-md-3">
+                    <label class="form-label">Priority</label>
+                    <input type="number" class="form-control" @bind="newStock.Priority" min="1" />
+                    <small class="text-muted">Lower = used first</small>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(stockErrorMessage))
+            {
+                <div class="alert alert-danger mt-3 mb-0">@stockErrorMessage</div>
+            }
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-primary" @onclick="SaveStockFromInventoryAsync">
+                    @(editingStock == null ? "Add Stock" : "Save Changes")
+                </button>
+                <button class="btn btn-outline-secondary" @onclick="CancelStockForm">Cancel</button>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderCustomStockForm() => __builder =>
+    {
+        <div class="border rounded p-3 mb-3 bg-light">
+            <h6>@(editingStock == null ? "Add Custom Stock Length" : "Edit Custom Stock")</h6>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Shape</label>
+                    <select class="form-select" @bind="stockSelectedShape" @bind:after="OnStockShapeChanged">
+                        <option value="">-- Select --</option>
+                        @foreach (var shape in DistinctShapes)
+                        {
+                            <option value="@shape">@shape.GetDisplayName()</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Size</label>
+                    <select class="form-select" @bind="newStock.MaterialId" disabled="@(!stockSelectedShape.HasValue)">
+                        <option value="0">-- Select --</option>
+                        @foreach (var material in materials.Where(m => stockSelectedShape.HasValue && m.Shape == stockSelectedShape.Value).OrderBy(m => m.Size))
+                        {
+                            <option value="@material.Id">@material.Size</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Length</label>
+                    <LengthInput @bind-Value="newStock.LengthInches" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" class="form-control" @bind="newStock.Quantity" min="1" />
+                    <small class="text-muted">Use -1 for unlimited</small>
+                </div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-md-3">
+                    <label class="form-label">Priority</label>
+                    <input type="number" class="form-control" @bind="newStock.Priority" min="1" />
+                    <small class="text-muted">Lower = used first</small>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(stockErrorMessage))
+            {
+                <div class="alert alert-danger mt-3 mb-0">@stockErrorMessage</div>
+            }
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-primary" @onclick="SaveCustomStockAsync">
+                    @(editingStock == null ? "Add Stock" : "Save Changes")
+                </button>
+                <button class="btn btn-outline-secondary" @onclick="CancelStockForm">Cancel</button>
+            </div>
+        </div>
+    };
+
+    private RenderFragment RenderStockTable() => __builder =>
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Length</th>
+                        <th>Qty</th>
+                        <th>Priority</th>
+                        <th>Source</th>
+                        <th style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var stock in job.Stock.OrderBy(s => s.Material?.Shape).ThenBy(s => s.Material?.Size).ThenBy(s => s.Priority))
+                    {
+                        <tr>
+                            <td>@stock.Material?.DisplayName</td>
+                            <td>@ArchUnits.FormatFromInches((double)stock.LengthInches)</td>
+                            <td>@(stock.Quantity == -1 ? "Unlimited" : stock.Quantity.ToString())</td>
+                            <td>@stock.Priority</td>
+                            <td>
+                                @if (stock.IsCustomLength)
+                                {
+                                    <span class="badge bg-info">Custom</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inventory</span>
+                                }
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditStock(stock)">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteStock(stock)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    };
+
+    private void ShowAddStockFromInventory()
+    {
+        editingStock = null;
+        newStock = new JobStock { JobId = Id!.Value, Quantity = 1, Priority = 10 };
+        stockSelectedShape = null;
+        stockSelectedMaterialId = 0;
+        availableStockItems.Clear();
+        showStockForm = true;
+        showCustomStockForm = false;
+        stockErrorMessage = null;
+    }
+
+    private void ShowAddCustomStock()
+    {
+        editingStock = null;
+        newStock = new JobStock { JobId = Id!.Value, Quantity = -1, Priority = 10, IsCustomLength = true };
+        stockSelectedShape = null;
+        showStockForm = false;
+        showCustomStockForm = true;
+        stockErrorMessage = null;
+    }
+
+    private void CancelStockForm()
+    {
+        showStockForm = false;
+        showCustomStockForm = false;
+        editingStock = null;
+    }
+
+    private async Task OnStockShapeChanged()
+    {
+        stockSelectedMaterialId = 0;
+        newStock.MaterialId = 0;
+        newStock.StockItemId = null;
+        availableStockItems.Clear();
+    }
+
+    private async Task OnStockMaterialChanged()
+    {
+        newStock.MaterialId = stockSelectedMaterialId;
+        newStock.StockItemId = null;
+        if (stockSelectedMaterialId > 0)
+        {
+            availableStockItems = await JobService.GetAvailableStockForMaterialAsync(stockSelectedMaterialId);
+        }
+        else
+        {
+            availableStockItems.Clear();
+        }
+    }
+
+    private void EditStock(JobStock stock)
+    {
+        editingStock = stock;
+        newStock = new JobStock
+        {
+            Id = stock.Id,
+            JobId = stock.JobId,
+            MaterialId = stock.MaterialId,
+            StockItemId = stock.StockItemId,
+            LengthInches = stock.LengthInches,
+            Quantity = stock.Quantity,
+            IsCustomLength = stock.IsCustomLength,
+            Priority = stock.Priority,
+            SortOrder = stock.SortOrder
+        };
+        stockSelectedShape = stock.Material?.Shape;
+        stockSelectedMaterialId = stock.MaterialId;
+        stockErrorMessage = null;
+
+        if (stock.IsCustomLength)
+        {
+            showStockForm = false;
+            showCustomStockForm = true;
+        }
+        else
+        {
+            showStockForm = true;
+            showCustomStockForm = false;
+            _ = OnStockMaterialChanged();
+        }
+    }
+
+    private async Task SaveStockFromInventoryAsync()
+    {
+        stockErrorMessage = null;
+
+        if (!stockSelectedShape.HasValue)
+        {
+            stockErrorMessage = "Please select a shape";
+            return;
+        }
+
+        if (stockSelectedMaterialId == 0)
+        {
+            stockErrorMessage = "Please select a size";
+            return;
+        }
+
+        if (!newStock.StockItemId.HasValue)
+        {
+            stockErrorMessage = "Please select a stock length";
+            return;
+        }
+
+        if (newStock.Quantity < 1)
+        {
+            stockErrorMessage = "Quantity must be at least 1";
+            return;
+        }
+
+        var selectedStock = availableStockItems.FirstOrDefault(s => s.Id == newStock.StockItemId);
+        if (selectedStock == null)
+        {
+            stockErrorMessage = "Selected stock not found";
+            return;
+        }
+
+        newStock.MaterialId = stockSelectedMaterialId;
+        newStock.LengthInches = selectedStock.LengthInches;
+        newStock.IsCustomLength = false;
+
+        if (editingStock == null)
+        {
+            await JobService.AddStockAsync(newStock);
+        }
+        else
+        {
+            await JobService.UpdateStockAsync(newStock);
+        }
+
+        job = (await JobService.GetByIdAsync(Id!.Value))!;
+        showStockForm = false;
+        editingStock = null;
+    }
+
+    private async Task SaveCustomStockAsync()
+    {
+        stockErrorMessage = null;
+
+        if (!stockSelectedShape.HasValue)
+        {
+            stockErrorMessage = "Please select a shape";
+            return;
+        }
+
+        if (newStock.MaterialId == 0)
+        {
+            stockErrorMessage = "Please select a size";
+            return;
+        }
+
+        if (newStock.LengthInches <= 0)
+        {
+            stockErrorMessage = "Length must be greater than zero";
+            return;
+        }
+
+        if (newStock.Quantity < -1 || newStock.Quantity == 0)
+        {
+            stockErrorMessage = "Quantity must be at least 1 (or -1 for unlimited)";
+            return;
+        }
+
+        newStock.StockItemId = null;
+        newStock.IsCustomLength = true;
+
+        if (editingStock == null)
+        {
+            await JobService.AddStockAsync(newStock);
+        }
+        else
+        {
+            await JobService.UpdateStockAsync(newStock);
+        }
+
+        job = (await JobService.GetByIdAsync(Id!.Value))!;
+        showCustomStockForm = false;
+        editingStock = null;
+    }
+
+    private async Task DeleteStock(JobStock stock)
+    {
+        await JobService.DeleteStockAsync(stock.Id);
+        job = (await JobService.GetByIdAsync(Id!.Value))!;
+    }
+}
