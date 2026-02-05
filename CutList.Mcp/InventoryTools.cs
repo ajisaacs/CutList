@@ -117,6 +117,7 @@ public class InventoryTools
 
         var materials = await query
             .OrderBy(m => m.Shape)
+            .ThenBy(m => m.SortOrder)
             .ThenBy(m => m.Size)
             .ToListAsync();
 
@@ -313,6 +314,7 @@ public class InventoryTools
         return await query
             .Select(d => d.Material)
             .OrderBy(m => m.Shape)
+            .ThenBy(m => m.SortOrder)
             .ThenBy(m => m.Size)
             .ToListAsync();
     }
@@ -322,7 +324,7 @@ public class InventoryTools
     {
         var flatBars = await SearchByDimension<FlatBarDimensions>(d => d.Width >= minValue && d.Width <= maxValue, shape);
         var rectTubes = await SearchByDimension<RectangularTubeDimensions>(d => d.Width >= minValue && d.Width <= maxValue, shape);
-        return flatBars.Concat(rectTubes).OrderBy(m => m.Shape).ThenBy(m => m.Size).ToList();
+        return flatBars.Concat(rectTubes).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
     }
 
     // Height is used by RectangularTube, Channel, IBeam
@@ -331,7 +333,7 @@ public class InventoryTools
         var rectTubes = await SearchByDimension<RectangularTubeDimensions>(d => d.Height >= minValue && d.Height <= maxValue, shape);
         var channels = await SearchByDimension<ChannelDimensions>(d => d.Height >= minValue && d.Height <= maxValue, shape);
         var ibeams = await SearchByDimension<IBeamDimensions>(d => d.Height >= minValue && d.Height <= maxValue, shape);
-        return rectTubes.Concat(channels).Concat(ibeams).OrderBy(m => m.Shape).ThenBy(m => m.Size).ToList();
+        return rectTubes.Concat(channels).Concat(ibeams).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
     }
 
     // Size is used by SquareBar, SquareTube
@@ -339,7 +341,7 @@ public class InventoryTools
     {
         var squareBars = await SearchByDimension<SquareBarDimensions>(d => d.Size >= minValue && d.Size <= maxValue, shape);
         var squareTubes = await SearchByDimension<SquareTubeDimensions>(d => d.Size >= minValue && d.Size <= maxValue, shape);
-        return squareBars.Concat(squareTubes).OrderBy(m => m.Shape).ThenBy(m => m.Size).ToList();
+        return squareBars.Concat(squareTubes).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
     }
 
     // Thickness is used by FlatBar, Angle
@@ -347,7 +349,7 @@ public class InventoryTools
     {
         var flatBars = await SearchByDimension<FlatBarDimensions>(d => d.Thickness >= minValue && d.Thickness <= maxValue, shape);
         var angles = await SearchByDimension<AngleDimensions>(d => d.Thickness >= minValue && d.Thickness <= maxValue, shape);
-        return flatBars.Concat(angles).OrderBy(m => m.Shape).ThenBy(m => m.Size).ToList();
+        return flatBars.Concat(angles).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
     }
 
     // Wall is used by RoundTube, SquareTube, RectangularTube, Pipe
@@ -357,7 +359,7 @@ public class InventoryTools
         var squareTubes = await SearchByDimension<SquareTubeDimensions>(d => d.Wall >= minValue && d.Wall <= maxValue, shape);
         var rectTubes = await SearchByDimension<RectangularTubeDimensions>(d => d.Wall >= minValue && d.Wall <= maxValue, shape);
         var pipes = await SearchByDimension<PipeDimensions>(d => d.Wall != null && d.Wall >= minValue && d.Wall <= maxValue, shape);
-        return roundTubes.Concat(squareTubes).Concat(rectTubes).Concat(pipes).OrderBy(m => m.Shape).ThenBy(m => m.Size).ToList();
+        return roundTubes.Concat(squareTubes).Concat(rectTubes).Concat(pipes).OrderBy(m => m.Shape).ThenBy(m => m.SortOrder).ThenBy(m => m.Size).ToList();
     }
 
     private static MaterialDimensions? CreateDimensionsForShape(
@@ -825,13 +827,14 @@ public class InventoryTools
             };
         }
 
-        // Parse material type
-        if (!Enum.TryParse<MaterialType>(type, ignoreCase: true, out var parsedType))
+        // Parse material type (default to Steel if not provided)
+        var typeValue = string.IsNullOrWhiteSpace(type) ? "Steel" : type;
+        if (!Enum.TryParse<MaterialType>(typeValue, ignoreCase: true, out var parsedType))
         {
             return new AddStockWithOfferingResult
             {
                 Success = false,
-                Error = $"Unknown material type: {type}. Valid types are: Steel, Aluminum, Stainless, Brass, Copper"
+                Error = $"Unknown material type: {typeValue}. Valid types are: Steel, Aluminum, Stainless, Brass, Copper"
             };
         }
 

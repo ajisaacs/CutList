@@ -22,6 +22,7 @@ public class MaterialsController : ControllerBase
         var materials = await _context.Materials
             .Where(m => m.IsActive)
             .OrderBy(m => m.Shape)
+            .ThenBy(m => m.SortOrder)
             .ThenBy(m => m.Size)
             .Select(m => new MaterialDto
             {

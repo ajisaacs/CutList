@@ -157,7 +157,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.Diameter >= minValue && d.Diameter <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -174,7 +174,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.OuterDiameter >= minValue && d.OuterDiameter <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -191,7 +191,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.Width >= minValue && d.Width <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -208,7 +208,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.Size >= minValue && d.Size <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -225,7 +225,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.Size >= minValue && d.Size <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -242,7 +242,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.Width >= minValue && d.Width <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -259,7 +259,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.Leg1 >= minValue && d.Leg1 <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -276,7 +276,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.Height >= minValue && d.Height <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -293,7 +293,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.Height >= minValue && d.Height <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -310,7 +310,7 @@ public class MaterialService
             .Where(d => d.Material.IsActive)
             .Where(d => d.NominalSize >= minValue && d.NominalSize <= maxValue)
             .Select(d => d.Material)
-            .OrderBy(m => m.Size)
+            .OrderBy(m => m.SortOrder).ThenBy(m => m.Size)
             .ToListAsync();
     }
 
@@ -328,7 +328,7 @@ public class MaterialService
             query = query.Where(m => m.IsActive);
         }
 
-        return await query.OrderBy(m => m.Size).ToListAsync();
+        return await query.OrderBy(m => m.SortOrder).ThenBy(m => m.Size).ToListAsync();
     }
 
     /// <summary>
