@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CutList.Core\CutList.Core.csproj" />
+    <ProjectReference Include="..\CutList.Web\CutList.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>
