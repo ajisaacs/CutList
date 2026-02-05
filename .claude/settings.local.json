@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(roslyn-bridge)",
+      "Bash(dotnet build:*)",
+      "SlashCommand(/rb)",
+      "mcp__roslyn-bridge__get_projects",
+      "Bash(dotnet tool install:*)",
+      "Bash(dotnet ilspy:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(git -C /c/Users/AJ/Desktop/Projects/CutList add CutList.Core/BinComparer.cs CutList.Core/BinItem.cs CutList.Core/MultiBin.cs CutList/Tool.cs)",
+      "Bash(git -C /c/Users/AJ/Desktop/Projects/CutList commit --amend --no-edit)",
+      "mcp__roslyn-bridge__get_code_smells",
+      "mcp__roslyn-bridge__get_duplicates",
+      "mcp__roslyn-bridge__get_code_smell_summary",
+      "mcp__cutlist__create_cutlist",
+      "Bash(dotnet run:*)",
+      "mcp__roslyn-bridge__get_files",
+      "mcp__roslyn-bridge__refresh_workspace",
+      "mcp__roslyn-bridge__get_diagnostics",
+      "Bash(dotnet ef database update:*)",
+      "mcp__roslyn-bridge__search_symbol",
+      "Bash(dotnet ef migrations add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
