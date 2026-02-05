@@ -84,78 +84,7 @@ namespace CutList.Web.Migrations
                         });
                 });
 
-            modelBuilder.Entity("CutList.Web.Data.Entities.Material", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Shape")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Size")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Materials");
-                });
-
-            modelBuilder.Entity("CutList.Web.Data.Entities.MaterialStockLength", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("LengthInches")
-                        .HasPrecision(10, 4)
-                        .HasColumnType("decimal(10,4)");
-
-                    b.Property<int>("MaterialId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MaterialId", "LengthInches")
-                        .IsUnique();
-
-                    b.ToTable("MaterialStockLengths");
-                });
-
-            modelBuilder.Entity("CutList.Web.Data.Entities.Project", b =>
+            modelBuilder.Entity("CutList.Web.Data.Entities.Job", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -175,8 +104,12 @@ namespace CutList.Web.Migrations
                     b.Property<int?>("CuttingToolId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("JobNumber")
                         .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Name")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -190,16 +123,22 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("CuttingToolId");
 
-                    b.ToTable("Projects");
+                    b.HasIndex("JobNumber")
+                        .IsUnique();
+
+                    b.ToTable("Jobs");
                 });
 
-            modelBuilder.Entity("CutList.Web.Data.Entities.ProjectPart", b =>
+            modelBuilder.Entity("CutList.Web.Data.Entities.JobPart", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("JobId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("LengthInches")
                         .HasPrecision(10, 4)
@@ -213,9 +152,6 @@ namespace CutList.Web.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("int");
-
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
@@ -224,11 +160,133 @@ namespace CutList.Web.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("JobId");
+
                     b.HasIndex("MaterialId");
 
-                    b.HasIndex("ProjectId");
+                    b.ToTable("JobParts");
+                });
 
-                    b.ToTable("ProjectParts");
+            modelBuilder.Entity("CutList.Web.Data.Entities.JobStock", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsCustomLength")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("JobId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("LengthInches")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<int>("MaterialId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("StockItemId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("MaterialId");
+
+                    b.HasIndex("StockItemId");
+
+                    b.ToTable("JobStocks");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.Material", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Grade")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Shape")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Size")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Materials");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.MaterialDimensions", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DimensionType")
+                        .IsRequired()
+                        .HasMaxLength(21)
+                        .HasColumnType("nvarchar(21)");
+
+                    b.Property<int>("MaterialId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialId")
+                        .IsUnique();
+
+                    b.ToTable("MaterialDimensions");
+
+                    b.HasDiscriminator<string>("DimensionType").HasValue("MaterialDimensions");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.StockItem", b =>
@@ -258,6 +316,13 @@ namespace CutList.Web.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("QuantityOnHand")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -267,6 +332,53 @@ namespace CutList.Web.Migrations
                         .IsUnique();
 
                     b.ToTable("StockItems");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.StockTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<int?>("JobId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StockItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("StockItemId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.ToTable("StockTransactions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.Supplier", b =>
@@ -345,44 +457,274 @@ namespace CutList.Web.Migrations
                     b.ToTable("SupplierOfferings");
                 });
 
-            modelBuilder.Entity("CutList.Web.Data.Entities.MaterialStockLength", b =>
+            modelBuilder.Entity("CutList.Web.Data.Entities.AngleDimensions", b =>
                 {
-                    b.HasOne("CutList.Web.Data.Entities.Material", "Material")
-                        .WithMany("StockLengths")
-                        .HasForeignKey("MaterialId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
 
-                    b.Navigation("Material");
+                    b.Property<decimal>("Leg1")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal>("Leg2")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal>("Thickness")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Thickness");
+
+                    b.HasIndex("Leg1");
+
+                    b.HasDiscriminator().HasValue("Angle");
                 });
 
-            modelBuilder.Entity("CutList.Web.Data.Entities.Project", b =>
+            modelBuilder.Entity("CutList.Web.Data.Entities.ChannelDimensions", b =>
+                {
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
+
+                    b.Property<decimal>("Flange")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal>("Height")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Height");
+
+                    b.Property<decimal>("Web")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.HasIndex("Height");
+
+                    b.HasDiscriminator().HasValue("Channel");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.FlatBarDimensions", b =>
+                {
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
+
+                    b.Property<decimal>("Thickness")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Thickness");
+
+                    b.Property<decimal>("Width")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Width");
+
+                    b.HasIndex("Width");
+
+                    b.HasDiscriminator().HasValue("FlatBar");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.IBeamDimensions", b =>
+                {
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
+
+                    b.Property<decimal>("Height")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Height");
+
+                    b.Property<decimal>("WeightPerFoot")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.HasIndex("Height");
+
+                    b.HasDiscriminator().HasValue("IBeam");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.PipeDimensions", b =>
+                {
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
+
+                    b.Property<decimal>("NominalSize")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<string>("Schedule")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("Wall")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Wall");
+
+                    b.HasIndex("NominalSize");
+
+                    b.HasDiscriminator().HasValue("Pipe");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.RectangularTubeDimensions", b =>
+                {
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
+
+                    b.Property<decimal>("Height")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Height");
+
+                    b.Property<decimal>("Wall")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Wall");
+
+                    b.Property<decimal>("Width")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Width");
+
+                    b.HasIndex("Width");
+
+                    b.HasDiscriminator().HasValue("RectangularTube");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.RoundBarDimensions", b =>
+                {
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
+
+                    b.Property<decimal>("Diameter")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.HasIndex("Diameter");
+
+                    b.HasDiscriminator().HasValue("RoundBar");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.RoundTubeDimensions", b =>
+                {
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
+
+                    b.Property<decimal>("OuterDiameter")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal>("Wall")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Wall");
+
+                    b.HasIndex("OuterDiameter");
+
+                    b.HasDiscriminator().HasValue("RoundTube");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.SquareBarDimensions", b =>
+                {
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
+
+                    b.Property<decimal>("Size")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Size");
+
+                    b.HasIndex("Size");
+
+                    b.HasDiscriminator().HasValue("SquareBar");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.SquareTubeDimensions", b =>
+                {
+                    b.HasBaseType("CutList.Web.Data.Entities.MaterialDimensions");
+
+                    b.Property<decimal>("Size")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Size");
+
+                    b.Property<decimal>("Wall")
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)")
+                        .HasColumnName("Wall");
+
+                    b.HasIndex("Size");
+
+                    b.HasDiscriminator().HasValue("SquareTube");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.Job", b =>
                 {
                     b.HasOne("CutList.Web.Data.Entities.CuttingTool", "CuttingTool")
-                        .WithMany("Projects")
+                        .WithMany("Jobs")
                         .HasForeignKey("CuttingToolId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CuttingTool");
                 });
 
-            modelBuilder.Entity("CutList.Web.Data.Entities.ProjectPart", b =>
+            modelBuilder.Entity("CutList.Web.Data.Entities.JobPart", b =>
                 {
+                    b.HasOne("CutList.Web.Data.Entities.Job", "Job")
+                        .WithMany("Parts")
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("CutList.Web.Data.Entities.Material", "Material")
-                        .WithMany("ProjectParts")
+                        .WithMany("JobParts")
                         .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("CutList.Web.Data.Entities.Project", "Project")
-                        .WithMany("Parts")
-                        .HasForeignKey("ProjectId")
+                    b.Navigation("Job");
+
+                    b.Navigation("Material");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.JobStock", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.Job", "Job")
+                        .WithMany("Stock")
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CutList.Web.Data.Entities.Material", "Material")
+                        .WithMany()
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CutList.Web.Data.Entities.StockItem", "StockItem")
+                        .WithMany()
+                        .HasForeignKey("StockItemId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Material");
+
+                    b.Navigation("StockItem");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.MaterialDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.Material", "Material")
+                        .WithOne("Dimensions")
+                        .HasForeignKey("CutList.Web.Data.Entities.MaterialDimensions", "MaterialId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Material");
-
-                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.StockItem", b =>
@@ -394,6 +736,31 @@ namespace CutList.Web.Migrations
                         .IsRequired();
 
                     b.Navigation("Material");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.StockTransaction", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CutList.Web.Data.Entities.StockItem", "StockItem")
+                        .WithMany("Transactions")
+                        .HasForeignKey("StockItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CutList.Web.Data.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Job");
+
+                    b.Navigation("StockItem");
+
+                    b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.SupplierOffering", b =>
@@ -417,26 +784,30 @@ namespace CutList.Web.Migrations
 
             modelBuilder.Entity("CutList.Web.Data.Entities.CuttingTool", b =>
                 {
-                    b.Navigation("Projects");
+                    b.Navigation("Jobs");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.Job", b =>
+                {
+                    b.Navigation("Parts");
+
+                    b.Navigation("Stock");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.Material", b =>
                 {
-                    b.Navigation("ProjectParts");
+                    b.Navigation("Dimensions");
+
+                    b.Navigation("JobParts");
 
                     b.Navigation("StockItems");
-
-                    b.Navigation("StockLengths");
-                });
-
-            modelBuilder.Entity("CutList.Web.Data.Entities.Project", b =>
-                {
-                    b.Navigation("Parts");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.StockItem", b =>
                 {
                     b.Navigation("SupplierOfferings");
+
+                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.Supplier", b =>

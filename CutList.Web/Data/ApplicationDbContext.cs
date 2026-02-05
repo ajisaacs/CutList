@@ -11,13 +11,15 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<Material> Materials => Set<Material>();
-    public DbSet<MaterialStockLength> MaterialStockLengths => Set<MaterialStockLength>();
+    public DbSet<MaterialDimensions> MaterialDimensions => Set<MaterialDimensions>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<StockItem> StockItems => Set<StockItem>();
     public DbSet<SupplierOffering> SupplierOfferings => Set<SupplierOffering>();
+    public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
     public DbSet<CuttingTool> CuttingTools => Set<CuttingTool>();
-    public DbSet<Project> Projects => Set<Project>();
-    public DbSet<ProjectPart> ProjectParts => Set<ProjectPart>();
+    public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<JobPart> JobParts => Set<JobPart>();
+    public DbSet<JobStock> JobStocks => Set<JobStock>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,25 +29,119 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Material>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Shape).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Shape)
+                .HasMaxLength(50)
+                .IsRequired()
+                .HasConversion(
+                    v => v.ToString(),  // Enum to string (uses enum name)
+                    v => Enum.Parse<MaterialShape>(v)); // String to enum
             entity.Property(e => e.Size).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Type)
+                .HasMaxLength(20)
+                .HasConversion(
+                    v => v.ToString(),
+                    v => Enum.Parse<MaterialType>(v));
+            entity.Property(e => e.Grade).HasMaxLength(50);
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         });
 
-        // MaterialStockLength
-        modelBuilder.Entity<MaterialStockLength>(entity =>
+        // MaterialDimensions - TPH inheritance
+        modelBuilder.Entity<MaterialDimensions>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.LengthInches).HasPrecision(10, 4);
-            entity.Property(e => e.Notes).HasMaxLength(255);
 
+            // 1:1 relationship with Material
             entity.HasOne(e => e.Material)
-                .WithMany(m => m.StockLengths)
-                .HasForeignKey(e => e.MaterialId)
+                .WithOne(m => m.Dimensions)
+                .HasForeignKey<MaterialDimensions>(e => e.MaterialId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(e => new { e.MaterialId, e.LengthInches }).IsUnique();
+            // TPH discriminator
+            entity.HasDiscriminator<string>("DimensionType")
+                .HasValue<RoundBarDimensions>("RoundBar")
+                .HasValue<RoundTubeDimensions>("RoundTube")
+                .HasValue<FlatBarDimensions>("FlatBar")
+                .HasValue<SquareBarDimensions>("SquareBar")
+                .HasValue<SquareTubeDimensions>("SquareTube")
+                .HasValue<RectangularTubeDimensions>("RectangularTube")
+                .HasValue<AngleDimensions>("Angle")
+                .HasValue<ChannelDimensions>("Channel")
+                .HasValue<IBeamDimensions>("IBeam")
+                .HasValue<PipeDimensions>("Pipe");
+        });
+
+        // Configure each dimension type's properties
+        modelBuilder.Entity<RoundBarDimensions>(entity =>
+        {
+            entity.Property(e => e.Diameter).HasPrecision(10, 4);
+            entity.HasIndex(e => e.Diameter);
+        });
+
+        modelBuilder.Entity<RoundTubeDimensions>(entity =>
+        {
+            entity.Property(e => e.OuterDiameter).HasPrecision(10, 4);
+            entity.Property(e => e.Wall).HasColumnName("Wall").HasPrecision(10, 4);
+            entity.HasIndex(e => e.OuterDiameter);
+        });
+
+        modelBuilder.Entity<FlatBarDimensions>(entity =>
+        {
+            entity.Property(e => e.Width).HasColumnName("Width").HasPrecision(10, 4);
+            entity.Property(e => e.Thickness).HasColumnName("Thickness").HasPrecision(10, 4);
+            entity.HasIndex(e => e.Width);
+        });
+
+        modelBuilder.Entity<SquareBarDimensions>(entity =>
+        {
+            entity.Property(e => e.Size).HasColumnName("Size").HasPrecision(10, 4);
+            entity.HasIndex(e => e.Size);
+        });
+
+        modelBuilder.Entity<SquareTubeDimensions>(entity =>
+        {
+            entity.Property(e => e.Size).HasColumnName("Size").HasPrecision(10, 4);
+            entity.Property(e => e.Wall).HasColumnName("Wall").HasPrecision(10, 4);
+            entity.HasIndex(e => e.Size);
+        });
+
+        modelBuilder.Entity<RectangularTubeDimensions>(entity =>
+        {
+            entity.Property(e => e.Width).HasColumnName("Width").HasPrecision(10, 4);
+            entity.Property(e => e.Height).HasColumnName("Height").HasPrecision(10, 4);
+            entity.Property(e => e.Wall).HasColumnName("Wall").HasPrecision(10, 4);
+            entity.HasIndex(e => e.Width);
+        });
+
+        modelBuilder.Entity<AngleDimensions>(entity =>
+        {
+            entity.Property(e => e.Leg1).HasPrecision(10, 4);
+            entity.Property(e => e.Leg2).HasPrecision(10, 4);
+            entity.Property(e => e.Thickness).HasColumnName("Thickness").HasPrecision(10, 4);
+            entity.HasIndex(e => e.Leg1);
+        });
+
+        modelBuilder.Entity<ChannelDimensions>(entity =>
+        {
+            entity.Property(e => e.Height).HasColumnName("Height").HasPrecision(10, 4);
+            entity.Property(e => e.Flange).HasPrecision(10, 4);
+            entity.Property(e => e.Web).HasPrecision(10, 4);
+            entity.HasIndex(e => e.Height);
+        });
+
+        modelBuilder.Entity<IBeamDimensions>(entity =>
+        {
+            entity.Property(e => e.Height).HasColumnName("Height").HasPrecision(10, 4);
+            entity.Property(e => e.WeightPerFoot).HasPrecision(10, 4);
+            entity.HasIndex(e => e.Height);
+        });
+
+        modelBuilder.Entity<PipeDimensions>(entity =>
+        {
+            entity.Property(e => e.NominalSize).HasPrecision(10, 4);
+            entity.Property(e => e.Wall).HasColumnName("Wall").HasPrecision(10, 4);
+            entity.Property(e => e.Schedule).HasMaxLength(20);
+            entity.HasIndex(e => e.NominalSize);
         });
 
         // Supplier
@@ -63,6 +159,7 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.LengthInches).HasPrecision(10, 4);
             entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             entity.HasOne(e => e.Material)
@@ -71,6 +168,30 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(e => new { e.MaterialId, e.LengthInches }).IsUnique();
+        });
+
+        // StockTransaction
+        modelBuilder.Entity<StockTransaction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.UnitPrice).HasPrecision(10, 2);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasOne(e => e.StockItem)
+                .WithMany(s => s.Transactions)
+                .HasForeignKey(e => e.StockItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Job)
+                .WithMany()
+                .HasForeignKey(e => e.JobId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Supplier)
+                .WithMany()
+                .HasForeignKey(e => e.SupplierId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // SupplierOffering
@@ -103,36 +224,61 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.KerfInches).HasPrecision(6, 4);
         });
 
-        // Project
-        modelBuilder.Entity<Project>(entity =>
+        // Job
+        modelBuilder.Entity<Job>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.JobNumber).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Customer).HasMaxLength(100);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
+            entity.HasIndex(e => e.JobNumber).IsUnique();
+
             entity.HasOne(e => e.CuttingTool)
-                .WithMany(t => t.Projects)
+                .WithMany(t => t.Jobs)
                 .HasForeignKey(e => e.CuttingToolId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
-        // ProjectPart
-        modelBuilder.Entity<ProjectPart>(entity =>
+        // JobPart
+        modelBuilder.Entity<JobPart>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.LengthInches).HasPrecision(10, 4);
 
-            entity.HasOne(e => e.Project)
+            entity.HasOne(e => e.Job)
                 .WithMany(p => p.Parts)
-                .HasForeignKey(e => e.ProjectId)
+                .HasForeignKey(e => e.JobId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.Material)
-                .WithMany(m => m.ProjectParts)
+                .WithMany(m => m.JobParts)
                 .HasForeignKey(e => e.MaterialId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // JobStock
+        modelBuilder.Entity<JobStock>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.LengthInches).HasPrecision(10, 4);
+
+            entity.HasOne(e => e.Job)
+                .WithMany(j => j.Stock)
+                .HasForeignKey(e => e.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Material)
+                .WithMany()
+                .HasForeignKey(e => e.MaterialId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.StockItem)
+                .WithMany()
+                .HasForeignKey(e => e.StockItemId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Seed default cutting tools
