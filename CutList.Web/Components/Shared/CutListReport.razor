@@ -8,14 +8,14 @@
         <h1>CUT LIST</h1>
         <div class="meta-info">
             <div class="meta-row"><span>Date:</span> @DateTime.Now.ToString("g")</div>
-            <div class="meta-row"><span>Project:</span> @Project.Name</div>
-            @if (!string.IsNullOrWhiteSpace(Project.Customer))
+            <div class="meta-row"><span>Job:</span> @Job.Name</div>
+            @if (!string.IsNullOrWhiteSpace(Job.Customer))
             {
-                <div class="meta-row"><span>Customer:</span> @Project.Customer</div>
+                <div class="meta-row"><span>Customer:</span> @Job.Customer</div>
             }
-            @if (Project.CuttingTool != null)
+            @if (Job.CuttingTool != null)
             {
-                <div class="meta-row"><span>Cut Method:</span> @Project.CuttingTool.Name (kerf: @Project.CuttingTool.KerfInches")</div>
+                <div class="meta-row"><span>Cut Method:</span> @Job.CuttingTool.Name (kerf: @Job.CuttingTool.KerfInches")</div>
             }
             <div class="meta-row"><span>Stock Bars:</span> @PackResult.Bins.Count</div>
             <div class="meta-row"><span>Total Pieces:</span> @TotalPieces</div>
@@ -64,18 +64,18 @@
         </div>
     </footer>
 
-    @if (!string.IsNullOrEmpty(Project.Notes))
+    @if (!string.IsNullOrEmpty(Job.Notes))
     {
         <div class="notes-section">
             <h3>Notes</h3>
-            <p>@Project.Notes</p>
+            <p>@Job.Notes</p>
         </div>
     }
 </div>
 
 @code {
     [Parameter, EditorRequired]
-    public Project Project { get; set; } = null!;
+    public Job Job { get; set; } = null!;
 
     [Parameter, EditorRequired]
     public PackResult PackResult { get; set; } = null!;

@@ -13,6 +13,13 @@
 {
     <p><em>Loading...</em></p>
 }
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <strong>Error loading materials:</strong>
+        <pre style="white-space: pre-wrap;">@errorMessage</pre>
+    </div>
+}
 else if (materials.Count == 0)
 {
     <div class="alert alert-info">
@@ -25,21 +32,27 @@ else
         <thead>
             <tr>
                 <th>Shape</th>
+                <th>Type</th>
+                <th>Grade</th>
                 <th>Size</th>
                 <th>Description</th>
-                <th style="width: 120px;">Actions</th>
+                <th style="width: 160px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var material in materials)
             {
                 <tr>
-                    <td>@material.Shape</td>
+                    <td>@material.Shape.GetDisplayName()</td>
+                    <td>@material.Type</td>
+                    <td>@material.Grade</td>
                     <td>@material.Size</td>
                     <td>@material.Description</td>
                     <td>
-                        <a href="materials/@material.Id" class="btn btn-sm btn-outline-primary">Edit</a>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(material)">Delete</button>
+                        <div class="d-flex gap-1">
+                            <a href="materials/@material.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(material)">Delete</button>
+                        </div>
                     </td>
                 </tr>
             }
@@ -56,14 +69,25 @@ else
 @code {
     private List<Material> materials = new();
     private bool loading = true;
+    private string? errorMessage;
     private ConfirmDialog deleteDialog = null!;
     private Material? materialToDelete;
     private string deleteMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
-        materials = await MaterialService.GetAllAsync();
-        loading = false;
+        try
+        {
+            materials = await MaterialService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.ToString();
+        }
+        finally
+        {
+            loading = false;
+        }
     }
 
     private void ConfirmDelete(Material material)

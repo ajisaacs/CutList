@@ -2,6 +2,7 @@
 @inject StockItemService StockItemService
 @inject NavigationManager Navigation
 @using CutList.Core.Formatting
+@using CutList.Web.Data.Entities
 
 <PageTitle>Stock Items</PageTitle>
 
@@ -25,22 +26,39 @@ else
     <table class="table table-striped table-hover">
         <thead>
             <tr>
-                <th>Material</th>
+                <th>Shape</th>
+                <th>Type</th>
+                <th>Grade</th>
+                <th>Size</th>
                 <th>Length</th>
-                <th>Name</th>
-                <th style="width: 120px;">Actions</th>
+                <th>On Hand</th>
+                <th style="width: 160px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var item in stockItems)
             {
                 <tr>
-                    <td>@item.Material.DisplayName</td>
+                    <td>@item.Material.Shape.GetDisplayName()</td>
+                    <td>@item.Material.Type</td>
+                    <td>@item.Material.Grade</td>
+                    <td>@item.Material.Size</td>
                     <td>@ArchUnits.FormatFromInches((double)item.LengthInches)</td>
-                    <td>@(item.Name ?? "-")</td>
                     <td>
-                        <a href="stock/@item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(item)">Delete</button>
+                        @if (item.QuantityOnHand > 0)
+                        {
+                            <span class="badge bg-success">@item.QuantityOnHand</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">0</span>
+                        }
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="stock/@item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(item)">Delete</button>
+                        </div>
                     </td>
                 </tr>
             }

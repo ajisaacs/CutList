@@ -3,6 +3,8 @@
 @inject MaterialService MaterialService
 @inject NavigationManager Navigation
 @using CutList.Core.Formatting
+@using CutList.Web.Data.Entities
+@using CutList.Web.Components.Shared
 
 <PageTitle>@(IsNew ? "Add Material" : "Edit Material")</PageTitle>
 
@@ -26,21 +28,41 @@ else
 
                         <div class="mb-3">
                             <label class="form-label">Shape</label>
-                            <InputSelect class="form-select" @bind-Value="material.Shape">
+                            <InputSelect class="form-select" @bind-Value="selectedShape" @bind-Value:after="OnShapeChanged">
                                 <option value="">-- Select Shape --</option>
-                                @foreach (var shape in MaterialService.CommonShapes)
+                                @foreach (var shape in Enum.GetValues<MaterialShape>())
                                 {
-                                    <option value="@shape">@shape</option>
+                                    <option value="@shape">@shape.GetDisplayName()</option>
                                 }
                             </InputSelect>
                             <ValidationMessage For="@(() => material.Shape)" />
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Type</label>
+                                <InputSelect class="form-select" @bind-Value="material.Type">
+                                    @foreach (var type in Enum.GetValues<MaterialType>())
+                                    {
+                                        <option value="@type">@type</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Grade</label>
+                                <InputText class="form-control" @bind-Value="material.Grade" placeholder="e.g., A36, Hot Roll, 304" />
+                            </div>
+                        </div>
+
+                        @if (selectedShape != null)
+                        {
+                            @RenderDimensionInputs()
+                        }
+
                         <div class="mb-3">
-                            <label class="form-label">Size</label>
-                            <InputText class="form-control" @bind-Value="material.Size" placeholder="e.g., 1&quot; OD x 0.065 wall" />
-                            <ValidationMessage For="@(() => material.Size)" />
-                            <div class="form-text">Examples: "1&quot; OD x 0.065 wall", "2x2", "1.5 x 1.5 x 0.125"</div>
+                            <label class="form-label">Size Display (auto-generated)</label>
+                            <InputText class="form-control" @bind-Value="material.Size" placeholder="Will be auto-generated from dimensions" />
+                            <div class="form-text">Leave blank to auto-generate from dimensions, or customize as needed.</div>
                         </div>
 
                         <div class="mb-3">
@@ -68,82 +90,36 @@ else
             </div>
         </div>
 
-        @if (!IsNew)
+        @if (selectedShape != null)
         {
-            <div class="col-lg-6">
+            <div class="col-lg-6 mb-4">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Available Stock Lengths</h5>
-                        <button class="btn btn-sm btn-primary" @onclick="ShowAddStockForm">Add Length</button>
+                    <div class="card-header">
+                        <h5 class="mb-0">Preview</h5>
                     </div>
                     <div class="card-body">
-                        @if (showStockForm)
-                        {
-                            <div class="border rounded p-3 mb-3 bg-light">
-                                <h6>@(editingStock == null ? "Add Stock Length" : "Edit Stock Length")</h6>
-                                <div class="row g-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Length</label>
-                                        <LengthInput @bind-Value="newStock.LengthInches" />
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Qty in Stock</label>
-                                        <input type="number" class="form-control" @bind="newStock.Quantity" min="0" />
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label">Notes (optional)</label>
-                                        <InputText class="form-control" @bind-Value="newStock.Notes" />
-                                    </div>
-                                </div>
-                                @if (!string.IsNullOrEmpty(stockErrorMessage))
-                                {
-                                    <div class="alert alert-danger mt-2 mb-0">@stockErrorMessage</div>
-                                }
-                                <div class="mt-3 d-flex gap-2">
-                                    <button class="btn btn-primary btn-sm" @onclick="SaveStockAsync" disabled="@savingStock">
-                                        @if (savingStock)
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-1"></span>
-                                        }
-                                        @(editingStock == null ? "Add" : "Save")
-                                    </button>
-                                    <button class="btn btn-outline-secondary btn-sm" @onclick="CancelStockForm">Cancel</button>
-                                </div>
-                            </div>
-                        }
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Shape</dt>
+                            <dd class="col-sm-8">@selectedShape.Value.GetDisplayName()</dd>
 
-                        @if (stockLengths.Count == 0)
-                        {
-                            <p class="text-muted">No stock lengths configured yet.</p>
-                            <p class="text-muted small">Add common stock lengths for this material (e.g., 20', 24') to quickly populate project stock bins.</p>
-                        }
-                        else
-                        {
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Length</th>
-                                        <th>Qty</th>
-                                        <th>Notes</th>
-                                        <th style="width: 100px;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var stock in stockLengths)
-                                    {
-                                        <tr>
-                                            <td>@ArchUnits.FormatFromInches((double)stock.LengthInches)</td>
-                                            <td>@stock.Quantity</td>
-                                            <td>@(stock.Notes ?? "-")</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditStock(stock)">Edit</button>
-                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteStock(stock)">Delete</button>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        }
+                            <dt class="col-sm-4">Type</dt>
+                            <dd class="col-sm-8">@material.Type</dd>
+
+                            @if (!string.IsNullOrWhiteSpace(material.Grade))
+                            {
+                                <dt class="col-sm-4">Grade</dt>
+                                <dd class="col-sm-8">@material.Grade</dd>
+                            }
+
+                            <dt class="col-sm-4">Size</dt>
+                            <dd class="col-sm-8">@GetPreviewSize()</dd>
+
+                            @if (!string.IsNullOrWhiteSpace(material.Description))
+                            {
+                                <dt class="col-sm-4">Description</dt>
+                                <dd class="col-sm-8">@material.Description</dd>
+                            }
+                        </dl>
                     </div>
                 </div>
             </div>
@@ -151,33 +127,27 @@ else
     </div>
 }
 
-<ConfirmDialog @ref="deleteStockDialog"
-               Title="Delete Stock Length"
-               Message="@deleteStockMessage"
-               ConfirmText="Delete"
-               OnConfirm="DeleteStockConfirmed" />
-
 @code {
     [Parameter]
     public int? Id { get; set; }
 
     private Material material = new();
-    private List<MaterialStockLength> stockLengths = new();
+    private MaterialShape? selectedShape;
     private bool loading = true;
     private bool saving;
     private string? errorMessage;
 
-    // Stock form
-    private bool showStockForm;
-    private bool savingStock;
-    private MaterialStockLength newStock = new();
-    private MaterialStockLength? editingStock;
-    private string? stockErrorMessage;
-
-    // Delete dialog
-    private ConfirmDialog deleteStockDialog = null!;
-    private MaterialStockLength? stockToDelete;
-    private string deleteStockMessage = "";
+    // Typed dimension objects for each shape
+    private RoundBarDimensions roundBarDims = new();
+    private RoundTubeDimensions roundTubeDims = new();
+    private FlatBarDimensions flatBarDims = new();
+    private SquareBarDimensions squareBarDims = new();
+    private SquareTubeDimensions squareTubeDims = new();
+    private RectangularTubeDimensions rectTubeDims = new();
+    private AngleDimensions angleDims = new();
+    private ChannelDimensions channelDims = new();
+    private IBeamDimensions ibeamDims = new();
+    private PipeDimensions pipeDims = new();
 
     private bool IsNew => !Id.HasValue;
 
@@ -192,10 +162,200 @@ else
                 return;
             }
             material = existing;
-            stockLengths = await MaterialService.GetStockLengthsAsync(Id.Value);
+            selectedShape = existing.Shape;
+            LoadDimensionsFromMaterial(existing);
         }
         loading = false;
     }
+
+    private void LoadDimensionsFromMaterial(Material m)
+    {
+        if (m.Dimensions == null) return;
+
+        switch (m.Dimensions)
+        {
+            case RoundBarDimensions d: roundBarDims = d; break;
+            case RoundTubeDimensions d: roundTubeDims = d; break;
+            case FlatBarDimensions d: flatBarDims = d; break;
+            case SquareBarDimensions d: squareBarDims = d; break;
+            case SquareTubeDimensions d: squareTubeDims = d; break;
+            case RectangularTubeDimensions d: rectTubeDims = d; break;
+            case AngleDimensions d: angleDims = d; break;
+            case ChannelDimensions d: channelDims = d; break;
+            case IBeamDimensions d: ibeamDims = d; break;
+            case PipeDimensions d: pipeDims = d; break;
+        }
+    }
+
+    private MaterialDimensions GetCurrentDimensions() => selectedShape switch
+    {
+        MaterialShape.RoundBar => roundBarDims,
+        MaterialShape.RoundTube => roundTubeDims,
+        MaterialShape.FlatBar => flatBarDims,
+        MaterialShape.SquareBar => squareBarDims,
+        MaterialShape.SquareTube => squareTubeDims,
+        MaterialShape.RectangularTube => rectTubeDims,
+        MaterialShape.Angle => angleDims,
+        MaterialShape.Channel => channelDims,
+        MaterialShape.IBeam => ibeamDims,
+        MaterialShape.Pipe => pipeDims,
+        _ => throw new InvalidOperationException("No shape selected")
+    };
+
+    private void OnShapeChanged()
+    {
+        if (selectedShape.HasValue)
+        {
+            material.Shape = selectedShape.Value;
+        }
+    }
+
+    private string GetPreviewSize()
+    {
+        if (!string.IsNullOrWhiteSpace(material.Size))
+        {
+            return material.Size;
+        }
+
+        if (selectedShape.HasValue)
+        {
+            try
+            {
+                var generated = GetCurrentDimensions().GenerateSizeString();
+                return string.IsNullOrWhiteSpace(generated) ? "(enter dimensions)" : generated;
+            }
+            catch
+            {
+                return "(enter dimensions)";
+            }
+        }
+
+        return "(select shape and enter dimensions)";
+    }
+
+    private RenderFragment RenderDimensionInputs() => __builder =>
+    {
+        switch (selectedShape!.Value)
+        {
+            case MaterialShape.RoundBar:
+                <div class="mb-3">
+                    <label class="form-label">Diameter</label>
+                    <LengthInput @bind-Value="roundBarDims.Diameter" Placeholder="e.g., 1/2&quot; or 0.5" />
+                </div>
+                break;
+
+            case MaterialShape.RoundTube:
+                <div class="mb-3">
+                    <label class="form-label">Outer Diameter</label>
+                    <LengthInput @bind-Value="roundTubeDims.OuterDiameter" Placeholder="e.g., 1&quot; or 1.0" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Wall Thickness</label>
+                    <LengthInput @bind-Value="roundTubeDims.Wall" Placeholder="e.g., 0.065 or 1/16&quot;" />
+                </div>
+                break;
+
+            case MaterialShape.FlatBar:
+                <div class="mb-3">
+                    <label class="form-label">Width</label>
+                    <LengthInput @bind-Value="flatBarDims.Width" Placeholder="e.g., 2&quot; or 2.0" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Thickness</label>
+                    <LengthInput @bind-Value="flatBarDims.Thickness" Placeholder="e.g., 1/4&quot; or 0.25" />
+                </div>
+                break;
+
+            case MaterialShape.SquareBar:
+                <div class="mb-3">
+                    <label class="form-label">Size</label>
+                    <LengthInput @bind-Value="squareBarDims.Size" Placeholder="e.g., 1&quot; or 1.0" />
+                </div>
+                break;
+
+            case MaterialShape.SquareTube:
+                <div class="mb-3">
+                    <label class="form-label">Size</label>
+                    <LengthInput @bind-Value="squareTubeDims.Size" Placeholder="e.g., 2&quot; or 2.0" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Wall Thickness</label>
+                    <LengthInput @bind-Value="squareTubeDims.Wall" Placeholder="e.g., 0.125 or 1/8&quot;" />
+                </div>
+                break;
+
+            case MaterialShape.RectangularTube:
+                <div class="mb-3">
+                    <label class="form-label">Width</label>
+                    <LengthInput @bind-Value="rectTubeDims.Width" Placeholder="e.g., 2&quot; or 2.0" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Height</label>
+                    <LengthInput @bind-Value="rectTubeDims.Height" Placeholder="e.g., 3&quot; or 3.0" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Wall Thickness</label>
+                    <LengthInput @bind-Value="rectTubeDims.Wall" Placeholder="e.g., 0.125 or 1/8&quot;" />
+                </div>
+                break;
+
+            case MaterialShape.Angle:
+                <div class="mb-3">
+                    <label class="form-label">Leg 1</label>
+                    <LengthInput @bind-Value="angleDims.Leg1" Placeholder="e.g., 2&quot; or 2.0" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Leg 2</label>
+                    <LengthInput @bind-Value="angleDims.Leg2" Placeholder="e.g., 2&quot; or 2.0" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Thickness</label>
+                    <LengthInput @bind-Value="angleDims.Thickness" Placeholder="e.g., 1/4&quot; or 0.25" />
+                </div>
+                break;
+
+            case MaterialShape.Channel:
+                <div class="mb-3">
+                    <label class="form-label">Height</label>
+                    <LengthInput @bind-Value="channelDims.Height" Placeholder="e.g., 4&quot; or 4.0" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Flange Width</label>
+                    <LengthInput @bind-Value="channelDims.Flange" Placeholder="e.g., 1.58" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Web Thickness</label>
+                    <LengthInput @bind-Value="channelDims.Web" Placeholder="e.g., 0.18" />
+                </div>
+                break;
+
+            case MaterialShape.IBeam:
+                <div class="mb-3">
+                    <label class="form-label">Height (nominal)</label>
+                    <LengthInput @bind-Value="ibeamDims.Height" Placeholder="e.g., 8" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Weight per Foot (lbs)</label>
+                    <input type="number" class="form-control" step="0.01" @bind="ibeamDims.WeightPerFoot" placeholder="e.g., 31" />
+                </div>
+                break;
+
+            case MaterialShape.Pipe:
+                <div class="mb-3">
+                    <label class="form-label">Nominal Pipe Size (NPS)</label>
+                    <LengthInput @bind-Value="pipeDims.NominalSize" Placeholder="e.g., 1&quot; or 1.0" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Schedule (optional)</label>
+                    <InputText class="form-control" @bind-Value="pipeDims.Schedule" placeholder="e.g., 40, 80, STD" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Wall Thickness (if no schedule)</label>
+                    <LengthInput @bind-NullableValue="pipeDims.Wall" Placeholder="e.g., 0.133" />
+                </div>
+                break;
+        }
+    };
 
     private async Task SaveAsync()
     {
@@ -204,15 +364,24 @@ else
 
         try
         {
-            if (string.IsNullOrWhiteSpace(material.Shape))
+            if (!selectedShape.HasValue)
             {
                 errorMessage = "Shape is required";
                 return;
             }
 
+            material.Shape = selectedShape.Value;
+            var dimensions = GetCurrentDimensions();
+
+            // Auto-generate Size if empty
             if (string.IsNullOrWhiteSpace(material.Size))
             {
-                errorMessage = "Size is required";
+                material.Size = dimensions.GenerateSizeString();
+            }
+
+            if (string.IsNullOrWhiteSpace(material.Size))
+            {
+                errorMessage = "Size is required. Please enter dimensions or provide a size string.";
                 return;
             }
 
@@ -225,107 +394,17 @@ else
 
             if (IsNew)
             {
-                var created = await MaterialService.CreateAsync(material);
+                var created = await MaterialService.CreateWithDimensionsAsync(material, dimensions);
                 Navigation.NavigateTo($"materials/{created.Id}");
             }
             else
             {
-                await MaterialService.UpdateAsync(material);
+                await MaterialService.UpdateWithDimensionsAsync(material, dimensions);
             }
         }
         finally
         {
             saving = false;
-        }
-    }
-
-    // Stock length methods
-    private void ShowAddStockForm()
-    {
-        editingStock = null;
-        newStock = new MaterialStockLength { MaterialId = Id!.Value };
-        showStockForm = true;
-        stockErrorMessage = null;
-    }
-
-    private void EditStock(MaterialStockLength stock)
-    {
-        editingStock = stock;
-        newStock = new MaterialStockLength
-        {
-            Id = stock.Id,
-            MaterialId = stock.MaterialId,
-            LengthInches = stock.LengthInches,
-            Quantity = stock.Quantity,
-            Notes = stock.Notes
-        };
-        showStockForm = true;
-        stockErrorMessage = null;
-    }
-
-    private void CancelStockForm()
-    {
-        showStockForm = false;
-        editingStock = null;
-        stockErrorMessage = null;
-    }
-
-    private async Task SaveStockAsync()
-    {
-        stockErrorMessage = null;
-        savingStock = true;
-
-        try
-        {
-            if (newStock.LengthInches <= 0)
-            {
-                stockErrorMessage = "Length must be greater than zero";
-                return;
-            }
-
-            var exists = await MaterialService.StockLengthExistsAsync(
-                newStock.MaterialId,
-                newStock.LengthInches,
-                editingStock?.Id);
-
-            if (exists)
-            {
-                stockErrorMessage = "This stock length already exists for this material";
-                return;
-            }
-
-            if (editingStock == null)
-            {
-                await MaterialService.AddStockLengthAsync(newStock);
-            }
-            else
-            {
-                await MaterialService.UpdateStockLengthAsync(newStock);
-            }
-
-            stockLengths = await MaterialService.GetStockLengthsAsync(Id!.Value);
-            showStockForm = false;
-            editingStock = null;
-        }
-        finally
-        {
-            savingStock = false;
-        }
-    }
-
-    private void ConfirmDeleteStock(MaterialStockLength stock)
-    {
-        stockToDelete = stock;
-        deleteStockMessage = $"Are you sure you want to delete the {ArchUnits.FormatFromInches((double)stock.LengthInches)} stock length?";
-        deleteStockDialog.Show();
-    }
-
-    private async Task DeleteStockConfirmed()
-    {
-        if (stockToDelete != null)
-        {
-            await MaterialService.DeleteStockLengthAsync(stockToDelete.Id);
-            stockLengths = await MaterialService.GetStockLengthsAsync(Id!.Value);
         }
     }
 }

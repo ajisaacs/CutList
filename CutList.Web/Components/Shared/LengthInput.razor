@@ -4,7 +4,8 @@
     <input type="text"
            class="form-control @(HasError ? "is-invalid" : "")"
            value="@DisplayValue"
-           @onchange="OnInputChange"
+           @oninput="OnInputChange"
+           @onblur="OnBlur"
            placeholder="@Placeholder" />
     @if (HasError)
     {
@@ -13,11 +14,24 @@
 </div>
 
 @code {
+    /// <summary>
+    /// Non-nullable decimal value binding.
+    /// </summary>
     [Parameter]
     public decimal Value { get; set; }
 
     [Parameter]
     public EventCallback<decimal> ValueChanged { get; set; }
+
+    /// <summary>
+    /// Nullable decimal value binding (used for optional dimension fields).
+    /// Takes precedence over Value if both ValueChanged and NullableValueChanged are set.
+    /// </summary>
+    [Parameter]
+    public decimal? NullableValue { get; set; }
+
+    [Parameter]
+    public EventCallback<decimal?> NullableValueChanged { get; set; }
 
     [Parameter]
     public string Placeholder { get; set; } = "e.g., 12' 6\" or 144";
@@ -25,12 +39,28 @@
     private string DisplayValue { get; set; } = string.Empty;
     private bool HasError { get; set; }
     private string ErrorMessage { get; set; } = string.Empty;
+    private decimal? _lastValue;
+
+    private bool IsNullableMode => NullableValueChanged.HasDelegate;
+
+    private decimal? CurrentValue => IsNullableMode ? NullableValue : Value;
 
     protected override void OnParametersSet()
     {
-        if (Value > 0 && string.IsNullOrEmpty(DisplayValue))
+        // Reset display when Value changes externally (e.g., form reset)
+        if (CurrentValue != _lastValue)
         {
-            DisplayValue = ArchUnits.FormatFromInches((double)Value);
+            _lastValue = CurrentValue;
+            if (CurrentValue.HasValue && CurrentValue.Value > 0)
+            {
+                DisplayValue = ArchUnits.FormatFromInches((double)CurrentValue.Value);
+            }
+            else
+            {
+                DisplayValue = string.Empty;
+                HasError = false;
+                ErrorMessage = string.Empty;
+            }
         }
     }
 
@@ -43,7 +73,15 @@
 
         if (string.IsNullOrWhiteSpace(input))
         {
-            await ValueChanged.InvokeAsync(0);
+            _lastValue = null;
+            if (IsNullableMode)
+            {
+                await NullableValueChanged.InvokeAsync(null);
+            }
+            else
+            {
+                await ValueChanged.InvokeAsync(0);
+            }
             return;
         }
 
@@ -51,20 +89,47 @@
         {
             // Try to parse as architectural units
             var inches = ArchUnits.ParseToInches(input);
-            await ValueChanged.InvokeAsync((decimal)inches);
+            _lastValue = (decimal)inches;
+
+            if (IsNullableMode)
+            {
+                await NullableValueChanged.InvokeAsync(_lastValue);
+            }
+            else
+            {
+                await ValueChanged.InvokeAsync(_lastValue.Value);
+            }
         }
         catch
         {
             // Try to parse as plain decimal (inches)
             if (decimal.TryParse(input, out var decimalValue))
             {
-                await ValueChanged.InvokeAsync(decimalValue);
+                _lastValue = decimalValue;
+
+                if (IsNullableMode)
+                {
+                    await NullableValueChanged.InvokeAsync(decimalValue);
+                }
+                else
+                {
+                    await ValueChanged.InvokeAsync(decimalValue);
+                }
             }
             else
             {
                 HasError = true;
                 ErrorMessage = "Invalid format. Use feet (12'), inches (6\"), or decimal (144)";
             }
+        }
+    }
+
+    private void OnBlur()
+    {
+        // Format the display value nicely on blur if we have a valid value
+        if (!HasError && _lastValue.HasValue && _lastValue.Value > 0)
+        {
+            DisplayValue = ArchUnits.FormatFromInches((double)_lastValue.Value);
         }
     }
 
