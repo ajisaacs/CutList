@@ -18,7 +18,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<MaterialService>();
 builder.Services.AddScoped<SupplierService>();
 builder.Services.AddScoped<StockItemService>();
-builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<CutListPackingService>();
 builder.Services.AddScoped<ReportService>();
 

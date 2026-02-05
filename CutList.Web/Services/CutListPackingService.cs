@@ -15,12 +15,21 @@ public class CutListPackingService
         _context = context;
     }
 
-    public async Task<MultiMaterialPackResult> PackAsync(IEnumerable<ProjectPart> parts, decimal kerfInches)
+    public async Task<MultiMaterialPackResult> PackAsync(IEnumerable<JobPart> parts, decimal kerfInches)
+    {
+        return await PackAsync(parts, kerfInches, null);
+    }
+
+    public async Task<MultiMaterialPackResult> PackAsync(IEnumerable<JobPart> parts, decimal kerfInches, IEnumerable<JobStock>? jobStock)
     {
         var result = new MultiMaterialPackResult();
 
         // Group parts by material
         var partsByMaterial = parts.GroupBy(p => p.MaterialId);
+
+        // Group job stock by material for quick lookup
+        var jobStockByMaterial = jobStock?.GroupBy(s => s.MaterialId)
+            .ToDictionary(g => g.Key, g => g.ToList()) ?? new Dictionary<int, List<JobStock>>();
 
         foreach (var group in partsByMaterial)
         {
@@ -33,42 +42,49 @@ public class CutListPackingService
 
             if (material == null) continue;
 
-            // Get in-stock lengths for this material
-            var inStockLengths = await _context.MaterialStockLengths
-                .Where(s => s.MaterialId == materialId && s.IsActive && s.Quantity > 0)
-                .ToListAsync();
-
-            // Get stock item lengths for this material (for purchase)
-            var stockItemLengths = await _context.StockItems
-                .Where(s => s.MaterialId == materialId && s.IsActive)
-                .Select(s => s.LengthInches)
-                .Distinct()
-                .ToListAsync();
-
-            // Build stock bins: in-stock first (priority 1), then supplier stock (priority 2)
+            // Build stock bins
             var stockBins = new List<StockBinSource>();
 
-            // In-stock bins with finite quantity
-            foreach (var stock in inStockLengths)
+            // Check if job has specific stock configured for this material
+            if (jobStockByMaterial.TryGetValue(materialId, out var materialJobStock) && materialJobStock.Count > 0)
             {
-                stockBins.Add(new StockBinSource
-                {
-                    LengthInches = stock.LengthInches,
-                    Quantity = stock.Quantity,
-                    Priority = 1,
-                    IsInStock = true
-                });
-            }
-
-            // Stock item bins with unlimited quantity
-            foreach (var length in stockItemLengths)
-            {
-                // Only add if not already covered by in-stock
-                if (!stockBins.Any(b => b.LengthInches == length && b.IsInStock))
+                // Use job-specific stock configuration
+                foreach (var stock in materialJobStock.OrderBy(s => s.Priority))
                 {
                     stockBins.Add(new StockBinSource
                     {
-                        LengthInches = length,
+                        LengthInches = stock.LengthInches,
+                        Quantity = stock.Quantity,
+                        Priority = stock.Priority,
+                        IsInStock = !stock.IsCustomLength && stock.StockItemId.HasValue
+                    });
+                }
+            }
+            else
+            {
+                // No job-specific stock - use all available stock items for this material
+                var stockItems = await _context.StockItems
+                    .Where(s => s.MaterialId == materialId && s.IsActive)
+                    .ToListAsync();
+
+                foreach (var stock in stockItems)
+                {
+                    if (stock.QuantityOnHand > 0)
+                    {
+                        // In-stock with finite quantity
+                        stockBins.Add(new StockBinSource
+                        {
+                            LengthInches = stock.LengthInches,
+                            Quantity = stock.QuantityOnHand,
+                            Priority = 1,
+                            IsInStock = true
+                        });
+                    }
+
+                    // Always add as purchasable (unlimited) - algorithm will use in-stock first due to priority
+                    stockBins.Add(new StockBinSource
+                    {
+                        LengthInches = stock.LengthInches,
                         Quantity = -1, // unlimited
                         Priority = 2,
                         IsInStock = false
@@ -122,10 +138,11 @@ public class CutListPackingService
             var inStockBins = new List<Bin>();
             var toBePurchasedBins = new List<Bin>();
 
-            // Track remaining in-stock quantities
-            var remainingStock = inStockLengths.ToDictionary(
-                s => s.LengthInches,
-                s => s.Quantity);
+            // Track remaining in-stock quantities from the stock bins we configured
+            var remainingStock = stockBins
+                .Where(s => s.IsInStock && s.Quantity > 0)
+                .GroupBy(s => s.LengthInches)
+                .ToDictionary(g => g.Key, g => g.Sum(s => s.Quantity));
 
             foreach (var bin in packResult.Bins)
             {
