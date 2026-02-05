@@ -28,7 +28,17 @@ namespace CutList.Core.Formatting
             var match2 = regex.Match(input);
 
             if (!match2.Success)
+            {
+                // If no unit symbols, try to parse as plain inches (e.g., "0.5" or "1/2" converted to "0.5")
+                if (!input.Contains("'") && !input.Contains("\""))
+                {
+                    if (double.TryParse(input.Trim(), out var plainInches))
+                    {
+                        return Math.Round(plainInches, 8);
+                    }
+                }
                 throw new Exception("Input is not in a valid format.");
+            }
 
             var feet = match2.Groups["Feet"];
             var inches = match2.Groups["Inches"];

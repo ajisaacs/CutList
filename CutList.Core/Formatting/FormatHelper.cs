@@ -39,6 +39,12 @@ namespace CutList.Core.Formatting
                 return wholeNumber.ToString();
             }
 
+            // If whole number is 0, just show the fraction
+            if (wholeNumber == 0)
+            {
+                return $"{numerator}/{denominator}";
+            }
+
             return $"{wholeNumber}-{numerator}/{denominator}";
         }
 
