@@ -63,7 +63,7 @@ public class SeedController : ControllerBase
         foreach (var size in sizes)
         {
             var exists = await _context.Materials
-                .AnyAsync(m => m.Shape == "Round Bar" && m.Size == size && m.IsActive);
+                .AnyAsync(m => m.Shape == MaterialShape.RoundBar && m.Size == size && m.IsActive);
 
             if (exists)
             {
@@ -73,7 +73,7 @@ public class SeedController : ControllerBase
 
             _context.Materials.Add(new Material
             {
-                Shape = "Round Bar",
+                Shape = MaterialShape.RoundBar,
                 Size = size,
                 Description = "1018 Cold Finished",
                 CreatedAt = DateTime.UtcNow

@@ -8,5 +8,5 @@ public class CuttingTool
     public bool IsDefault { get; set; }
     public bool IsActive { get; set; } = true;
 
-    public ICollection<Project> Projects { get; set; } = new List<Project>();
+    public ICollection<Job> Jobs { get; set; } = new List<Job>();
 }

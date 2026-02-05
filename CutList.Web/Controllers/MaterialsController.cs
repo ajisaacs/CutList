@@ -26,7 +26,7 @@ public class MaterialsController : ControllerBase
             .Select(m => new MaterialDto
             {
                 Id = m.Id,
-                Shape = m.Shape,
+                Shape = m.Shape.GetDisplayName(),
                 Size = m.Size,
                 Description = m.Description
             })
@@ -46,7 +46,7 @@ public class MaterialsController : ControllerBase
         return Ok(new MaterialDto
         {
             Id = material.Id,
-            Shape = material.Shape,
+            Shape = material.Shape.GetDisplayName(),
             Size = material.Size,
             Description = material.Description
         });
@@ -61,16 +61,20 @@ public class MaterialsController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Size))
             return BadRequest("Size is required");
 
+        var parsedShape = MaterialShapeExtensions.ParseShape(dto.Shape);
+        if (!parsedShape.HasValue)
+            return BadRequest($"Unknown shape: {dto.Shape}");
+
         // Check for duplicates
         var exists = await _context.Materials
-            .AnyAsync(m => m.Shape == dto.Shape && m.Size == dto.Size && m.IsActive);
+            .AnyAsync(m => m.Shape == parsedShape.Value && m.Size == dto.Size && m.IsActive);
 
         if (exists)
             return Conflict($"Material '{dto.Shape} - {dto.Size}' already exists");
 
         var material = new Material
         {
-            Shape = dto.Shape,
+            Shape = parsedShape.Value,
             Size = dto.Size,
             Description = dto.Description,
             CreatedAt = DateTime.UtcNow
@@ -82,7 +86,7 @@ public class MaterialsController : ControllerBase
         return CreatedAtAction(nameof(GetMaterial), new { id = material.Id }, new MaterialDto
         {
             Id = material.Id,
-            Shape = material.Shape,
+            Shape = material.Shape.GetDisplayName(),
             Size = material.Size,
             Description = material.Description
         });
@@ -103,8 +107,15 @@ public class MaterialsController : ControllerBase
                 continue;
             }
 
+            var parsedShape = MaterialShapeExtensions.ParseShape(dto.Shape);
+            if (!parsedShape.HasValue)
+            {
+                errors.Add($"Unknown shape: {dto.Shape}");
+                continue;
+            }
+
             var exists = await _context.Materials
-                .AnyAsync(m => m.Shape == dto.Shape && m.Size == dto.Size && m.IsActive);
+                .AnyAsync(m => m.Shape == parsedShape.Value && m.Size == dto.Size && m.IsActive);
 
             if (exists)
             {
@@ -114,7 +125,7 @@ public class MaterialsController : ControllerBase
 
             _context.Materials.Add(new Material
             {
-                Shape = dto.Shape,
+                Shape = parsedShape.Value,
                 Size = dto.Size,
                 Description = dto.Description,
                 CreatedAt = DateTime.UtcNow
