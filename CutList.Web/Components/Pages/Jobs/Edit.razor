@@ -143,6 +143,102 @@ else
     </div>
 }
 
+@* Import Stock Modal *@
+@if (showImportModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Stock from Inventory</h5>
+                    <button type="button" class="btn-close" @onclick="CloseImportModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (loadingImport)
+                    {
+                        <div class="text-center py-4">
+                            <span class="spinner-border"></span>
+                            <p class="mt-2 text-muted">Finding matching stock...</p>
+                        </div>
+                    }
+                    else if (importCandidates.Count == 0)
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <p class="mb-2">No matching inventory stock found.</p>
+                            <p class="small">Either no stock items exist for the materials in your parts, or they have already been added to this job.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" @onclick="() => ToggleAllImportCandidates(true)">Select All</button>
+                                <button class="btn btn-outline-secondary" @onclick="() => ToggleAllImportCandidates(false)">Select None</button>
+                            </div>
+                            <small class="text-muted">@importCandidates.Count(c => c.Selected) of @importCandidates.Count selected</small>
+                        </div>
+
+                        @foreach (var group in importCandidates
+                            .GroupBy(c => c.StockItem.MaterialId)
+                            .OrderBy(g => g.First().StockItem.Material.Shape)
+                            .ThenBy(g => g.First().StockItem.Material.Size))
+                        {
+                            var material = group.First().StockItem.Material;
+                            <h6 class="mt-3 mb-2 text-primary">@material.DisplayName</h6>
+                            <table class="table table-sm table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;"></th>
+                                        <th>Length</th>
+                                        <th>On Hand</th>
+                                        <th style="width: 120px;">Qty to Use</th>
+                                        <th style="width: 100px;">Priority</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var candidate in group.OrderByDescending(c => c.StockItem.LengthInches))
+                                    {
+                                        <tr class="@(candidate.Selected ? "" : "text-muted")">
+                                            <td>
+                                                <input type="checkbox" class="form-check-input" @bind="candidate.Selected" />
+                                            </td>
+                                            <td>@ArchUnits.FormatFromInches((double)candidate.StockItem.LengthInches)</td>
+                                            <td>@candidate.StockItem.QuantityOnHand</td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm" @bind="candidate.Quantity"
+                                                       min="-1" disabled="@(!candidate.Selected)" />
+                                                <small class="text-muted">-1 = unlimited</small>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm" @bind="candidate.Priority"
+                                                       min="1" disabled="@(!candidate.Selected)" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    }
+                    @if (!string.IsNullOrEmpty(importErrorMessage))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">@importErrorMessage</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseImportModal">Cancel</button>
+                    @if (importCandidates.Count > 0)
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="ImportSelectedStockAsync"
+                                disabled="@(!importCandidates.Any(c => c.Selected))">
+                            Import @importCandidates.Count(c => c.Selected) Item@(importCandidates.Count(c => c.Selected) != 1 ? "s" : "")
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private enum Tab { Details, Parts, Stock }
 
@@ -176,6 +272,12 @@ else
     private MaterialShape? stockSelectedShape;
     private int stockSelectedMaterialId;
     private List<StockItem> availableStockItems = new();
+
+    // Import modal
+    private bool showImportModal;
+    private bool loadingImport;
+    private List<ImportStockCandidate> importCandidates = new();
+    private string? importErrorMessage;
 
     private IEnumerable<MaterialShape> DistinctShapes => materials.Select(m => m.Shape).Distinct().OrderBy(s => s);
     private IEnumerable<Material> FilteredMaterials => !selectedShape.HasValue
@@ -443,9 +545,15 @@ else
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Stock for This Job</h5>
-                <div class="btn-group">
-                    <button class="btn btn-primary" @onclick="ShowAddStockFromInventory">Add from Inventory</button>
-                    <button class="btn btn-outline-primary" @onclick="ShowAddCustomStock">Add Custom Length</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" @onclick="ShowImportModal" disabled="@(job.Parts.Count == 0)"
+                            title="@(job.Parts.Count == 0 ? "Add parts first to match against inventory" : "Find and import stock matching your parts")">
+                        Import from Inventory
+                    </button>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" @onclick="ShowAddStockFromInventory">Add from Inventory</button>
+                        <button class="btn btn-outline-primary" @onclick="ShowAddCustomStock">Add Custom Length</button>
+                    </div>
                 </div>
             </div>
             <div class="card-body">
@@ -818,5 +926,104 @@ else
     {
         await JobService.DeleteStockAsync(stock.Id);
         job = (await JobService.GetByIdAsync(Id!.Value))!;
+    }
+
+    // Import modal methods
+    private async Task ShowImportModal()
+    {
+        importErrorMessage = null;
+        importCandidates.Clear();
+        loadingImport = true;
+        showImportModal = true;
+
+        try
+        {
+            var materialIds = job.Parts.Select(p => p.MaterialId).Distinct().ToList();
+            var existingStockItemIds = job.Stock
+                .Where(s => s.StockItemId.HasValue)
+                .Select(s => s.StockItemId!.Value)
+                .ToHashSet();
+
+            foreach (var materialId in materialIds)
+            {
+                var stockItems = await JobService.GetAvailableStockForMaterialAsync(materialId);
+                foreach (var item in stockItems.Where(s => !existingStockItemIds.Contains(s.Id)))
+                {
+                    importCandidates.Add(new ImportStockCandidate
+                    {
+                        StockItem = item,
+                        Selected = true,
+                        Quantity = -1,
+                        Priority = 10
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            importErrorMessage = $"Error loading stock: {ex.Message}";
+        }
+        finally
+        {
+            loadingImport = false;
+        }
+    }
+
+    private void CloseImportModal()
+    {
+        showImportModal = false;
+        importCandidates.Clear();
+        importErrorMessage = null;
+    }
+
+    private void ToggleAllImportCandidates(bool selected)
+    {
+        foreach (var c in importCandidates)
+            c.Selected = selected;
+    }
+
+    private async Task ImportSelectedStockAsync()
+    {
+        importErrorMessage = null;
+        var selected = importCandidates.Where(c => c.Selected).ToList();
+        if (selected.Count == 0)
+        {
+            importErrorMessage = "No items selected";
+            return;
+        }
+
+        try
+        {
+            foreach (var candidate in selected)
+            {
+                var jobStock = new JobStock
+                {
+                    JobId = Id!.Value,
+                    MaterialId = candidate.StockItem.MaterialId,
+                    StockItemId = candidate.StockItem.Id,
+                    LengthInches = candidate.StockItem.LengthInches,
+                    Quantity = candidate.Quantity,
+                    Priority = candidate.Priority,
+                    IsCustomLength = false
+                };
+                await JobService.AddStockAsync(jobStock);
+            }
+
+            job = (await JobService.GetByIdAsync(Id!.Value))!;
+            showImportModal = false;
+            importCandidates.Clear();
+        }
+        catch (Exception ex)
+        {
+            importErrorMessage = $"Error importing stock: {ex.Message}";
+        }
+    }
+
+    private class ImportStockCandidate
+    {
+        public StockItem StockItem { get; set; } = null!;
+        public bool Selected { get; set; } = true;
+        public int Quantity { get; set; } = -1;
+        public int Priority { get; set; } = 10;
     }
 }
