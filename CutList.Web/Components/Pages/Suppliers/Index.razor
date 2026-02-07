@@ -27,7 +27,7 @@ else
                 <th>Name</th>
                 <th>Contact Info</th>
                 <th>Notes</th>
-                <th style="width: 160px;">Actions</th>
+                <th style="width: 100px;">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -39,8 +39,8 @@ else
                     <td>@TruncateText(supplier.Notes, 50)</td>
                     <td>
                         <div class="d-flex gap-1">
-                            <a href="suppliers/@supplier.Id" class="btn btn-sm btn-outline-primary">Edit</a>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(supplier)">Delete</button>
+                            <a href="suppliers/@supplier.Id" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(supplier)" title="Delete"><i class="bi bi-trash"></i></button>
                         </div>
                     </td>
                 </tr>
