@@ -31,7 +31,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var supplier in suppliers)
+            @foreach (var supplier in pagedSuppliers)
             {
                 <tr>
                     <td><a href="suppliers/@supplier.Id">@supplier.Name</a></td>
@@ -47,6 +47,8 @@ else
             }
         </tbody>
     </table>
+
+    <Pager TotalCount="suppliers.Count" PageSize="pageSize" CurrentPage="currentPage" CurrentPageChanged="OnPageChanged" />
 }
 
 <ConfirmDialog @ref="deleteDialog"
@@ -58,9 +60,13 @@ else
 @code {
     private List<Supplier> suppliers = new();
     private bool loading = true;
+    private int currentPage = 1;
+    private int pageSize = 25;
     private ConfirmDialog deleteDialog = null!;
     private Supplier? supplierToDelete;
     private string deleteMessage = "";
+
+    private IEnumerable<Supplier> pagedSuppliers => suppliers.Skip((currentPage - 1) * pageSize).Take(pageSize);
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,8 +87,14 @@ else
         {
             await SupplierService.DeleteAsync(supplierToDelete.Id);
             suppliers = await SupplierService.GetAllAsync();
+
+            var totalPages = (int)Math.Ceiling((double)suppliers.Count / pageSize);
+            if (currentPage > totalPages && totalPages > 0)
+                currentPage = totalPages;
         }
     }
+
+    private void OnPageChanged(int page) => currentPage = page;
 
     private string? TruncateText(string? text, int maxLength)
     {

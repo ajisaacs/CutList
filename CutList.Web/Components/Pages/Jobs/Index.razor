@@ -47,7 +47,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var job in jobs)
+            @foreach (var job in pagedJobs)
             {
                 <tr>
                     <td><a href="jobs/@job.Id">@job.JobNumber</a></td>
@@ -65,6 +65,8 @@ else
             }
         </tbody>
     </table>
+
+    <Pager TotalCount="jobs.Count" PageSize="pageSize" CurrentPage="currentPage" CurrentPageChanged="OnPageChanged" />
 }
 
 <ConfirmDialog @ref="deleteDialog"
@@ -77,9 +79,13 @@ else
     private List<Job> jobs = new();
     private bool loading = true;
     private bool creating = false;
+    private int currentPage = 1;
+    private int pageSize = 25;
     private ConfirmDialog deleteDialog = null!;
     private Job? jobToDelete;
     private string deleteMessage = "";
+
+    private IEnumerable<Job> pagedJobs => jobs.Skip((currentPage - 1) * pageSize).Take(pageSize);
 
     protected override async Task OnInitializedAsync()
     {
@@ -114,8 +120,14 @@ else
         {
             await JobService.DeleteAsync(jobToDelete.Id);
             jobs = await JobService.GetAllAsync();
+
+            var totalPages = (int)Math.Ceiling((double)jobs.Count / pageSize);
+            if (currentPage > totalPages && totalPages > 0)
+                currentPage = totalPages;
         }
     }
+
+    private void OnPageChanged(int page) => currentPage = page;
 
     private async Task DuplicateJob(Job job)
     {

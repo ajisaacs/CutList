@@ -40,19 +40,17 @@ else
                 <th>Type</th>
                 <th>Grade</th>
                 <th>Size</th>
-                <th>Description</th>
                 <th style="width: 160px;">Actions</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var material in materials)
+            @foreach (var material in pagedMaterials)
             {
                 <tr>
                     <td>@material.Shape.GetDisplayName()</td>
                     <td>@material.Type</td>
                     <td>@material.Grade</td>
                     <td>@material.Size</td>
-                    <td>@material.Description</td>
                     <td>
                         <div class="d-flex gap-1">
                             <a href="materials/@material.Id" class="btn btn-sm btn-outline-primary">Edit</a>
@@ -63,6 +61,8 @@ else
             }
         </tbody>
     </table>
+
+    <Pager TotalCount="materials.Count" PageSize="pageSize" CurrentPage="currentPage" CurrentPageChanged="OnPageChanged" />
 }
 
 <ConfirmDialog @ref="deleteDialog"
@@ -75,9 +75,13 @@ else
     private List<Material> materials = new();
     private bool loading = true;
     private string? errorMessage;
+    private int currentPage = 1;
+    private int pageSize = 25;
     private ConfirmDialog deleteDialog = null!;
     private Material? materialToDelete;
     private string deleteMessage = "";
+
+    private IEnumerable<Material> pagedMaterials => materials.Skip((currentPage - 1) * pageSize).Take(pageSize);
 
     protected override async Task OnInitializedAsync()
     {
@@ -108,6 +112,12 @@ else
         {
             await MaterialService.DeleteAsync(materialToDelete.Id);
             materials = await MaterialService.GetAllAsync();
+
+            var totalPages = (int)Math.Ceiling((double)materials.Count / pageSize);
+            if (currentPage > totalPages && totalPages > 0)
+                currentPage = totalPages;
         }
     }
+
+    private void OnPageChanged(int page) => currentPage = page;
 }
