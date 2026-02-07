@@ -1,0 +1,109 @@
+@if (TotalCount == 0)
+{
+    return;
+}
+
+@{
+    var totalPages = (int)Math.Ceiling((double)TotalCount / PageSize);
+    var start = (CurrentPage - 1) * PageSize + 1;
+    var end = Math.Min(CurrentPage * PageSize, TotalCount);
+}
+
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <small class="text-muted">Showing @start–@end of @TotalCount</small>
+
+    @if (totalPages > 1)
+    {
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => SetPage(CurrentPage - 1)" disabled="@(CurrentPage == 1)">Previous</button>
+                </li>
+
+                @foreach (var page in GetPageWindow(totalPages))
+                {
+                    @if (page == -1)
+                    {
+                        <li class="page-item disabled">
+                            <span class="page-link">&hellip;</span>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="page-item @(page == CurrentPage ? "active" : "")">
+                            <button class="page-link" @onclick="() => SetPage(page)">@(page)</button>
+                        </li>
+                    }
+                }
+
+                <li class="page-item @(CurrentPage == totalPages ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => SetPage(CurrentPage + 1)" disabled="@(CurrentPage == totalPages)">Next</button>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public int TotalCount { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 25;
+
+    [Parameter]
+    public int CurrentPage { get; set; } = 1;
+
+    [Parameter]
+    public EventCallback<int> CurrentPageChanged { get; set; }
+
+    private async Task SetPage(int page)
+    {
+        if (page < 1 || page > (int)Math.Ceiling((double)TotalCount / PageSize))
+            return;
+        if (page == CurrentPage)
+            return;
+
+        CurrentPage = page;
+        await CurrentPageChanged.InvokeAsync(page);
+    }
+
+    private IEnumerable<int> GetPageWindow(int totalPages)
+    {
+        const int maxVisible = 7;
+
+        if (totalPages <= maxVisible)
+        {
+            for (var i = 1; i <= totalPages; i++)
+                yield return i;
+            yield break;
+        }
+
+        // Always show first page
+        yield return 1;
+
+        var windowStart = Math.Max(2, CurrentPage - 2);
+        var windowEnd = Math.Min(totalPages - 1, CurrentPage + 2);
+
+        // Adjust window to show 5 middle pages when possible
+        if (windowEnd - windowStart < 4)
+        {
+            if (windowStart == 2)
+                windowEnd = Math.Min(totalPages - 1, windowStart + 4);
+            else
+                windowStart = Math.Max(2, windowEnd - 4);
+        }
+
+        if (windowStart > 2)
+            yield return -1; // ellipsis
+
+        for (var i = windowStart; i <= windowEnd; i++)
+            yield return i;
+
+        if (windowEnd < totalPages - 1)
+            yield return -1; // ellipsis
+
+        // Always show last page
+        yield return totalPages;
+    }
+}
