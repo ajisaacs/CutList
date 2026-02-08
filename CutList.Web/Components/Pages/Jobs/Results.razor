@@ -3,6 +3,8 @@
 @inject CutListPackingService PackingService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject PurchaseItemService PurchaseItemService
+@inject StockItemService StockItemService
 @using CutList.Core
 @using CutList.Core.Nesting
 @using CutList.Core.Formatting
@@ -21,7 +23,13 @@ else
 {
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h1>@job.DisplayName</h1>
+            <h1>
+                @job.DisplayName
+                @if (job.IsLocked)
+                {
+                    <i class="bi bi-lock-fill text-warning ms-2" title="Job locked — materials ordered"></i>
+                }
+            </h1>
             @if (!string.IsNullOrWhiteSpace(job.Customer))
             {
                 <p class="text-muted mb-0">Customer: @job.Customer</p>
@@ -115,7 +123,29 @@ else
                     </div>
                     <div class="card-body">
                         <h3>@summary.TotalToBePurchasedBins bars</h3>
-                        <p class="text-muted mb-0">Need to order from supplier</p>
+                        @if (summary.TotalToBePurchasedBins > 0)
+                        {
+                            @if (addedToOrderList)
+                            {
+                                <div class="alert alert-success mb-0 mt-2 py-2">
+                                    Added to order list. <a href="orders">View Orders</a>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="btn btn-warning btn-sm mt-2" @onclick="AddToOrderList" disabled="@addingToOrderList">
+                                    @if (addingToOrderList)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    <i class="bi bi-cart-plus"></i> Add to Order List
+                                </button>
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">Need to order from supplier</p>
+                        }
                     </div>
                 </div>
             </div>
@@ -195,6 +225,9 @@ else
     private MultiMaterialPackingSummary? summary;
     private bool loading = true;
 
+    private bool addingToOrderList;
+    private bool addedToOrderList;
+
     private bool CanOptimize => job != null &&
                                 job.Parts.Count > 0 &&
                                 job.CuttingToolId != null;
@@ -209,6 +242,7 @@ else
             // Pass job stock if configured, otherwise packing service uses all available stock
             packResult = await PackingService.PackAsync(job.Parts, kerf, job.Stock.Count > 0 ? job.Stock : null);
             summary = PackingService.GetSummary(packResult);
+            addedToOrderList = job.IsLocked;
         }
 
         loading = false;
@@ -249,6 +283,58 @@ else
             </table>
         </div>
     };
+
+    private async Task AddToOrderList()
+    {
+        addingToOrderList = true;
+        try
+        {
+            var purchaseItems = new List<PurchaseItem>();
+            var stockItems = await StockItemService.GetAllAsync();
+
+            foreach (var materialResult in packResult!.MaterialResults)
+            {
+                if (materialResult.ToBePurchasedBins.Count == 0) continue;
+
+                var materialId = materialResult.Material.Id;
+
+                // Group bins by length to consolidate quantities
+                foreach (var group in materialResult.ToBePurchasedBins.GroupBy(b => b.Length))
+                {
+                    var lengthInches = (decimal)group.Key;
+                    var quantity = group.Count();
+
+                    // Find the matching stock item
+                    var stockItem = stockItems.FirstOrDefault(s =>
+                        s.MaterialId == materialId && s.LengthInches == lengthInches);
+
+                    if (stockItem != null)
+                    {
+                        purchaseItems.Add(new PurchaseItem
+                        {
+                            StockItemId = stockItem.Id,
+                            Quantity = quantity,
+                            JobId = Id,
+                            Status = PurchaseItemStatus.Pending
+                        });
+                    }
+                }
+            }
+
+            if (purchaseItems.Count > 0)
+            {
+                await PurchaseItemService.CreateBulkAsync(purchaseItems);
+            }
+
+            await JobService.LockAsync(Id);
+            job = await JobService.GetByIdAsync(Id);
+            addedToOrderList = true;
+        }
+        finally
+        {
+            addingToOrderList = false;
+        }
+    }
 
     private async Task PrintReport()
     {

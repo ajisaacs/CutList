@@ -1,0 +1,151 @@
+@page "/orders/add"
+@inject PurchaseItemService PurchaseItemService
+@inject StockItemService StockItemService
+@inject SupplierService SupplierService
+@inject JobService JobService
+@inject NavigationManager Navigation
+@using CutList.Core.Formatting
+@using CutList.Web.Data.Entities
+
+<PageTitle>Add Order Item</PageTitle>
+
+<h1>Add Order Item</h1>
+
+@if (loading)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Order Item Details</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="item" OnValidSubmit="SaveAsync">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Stock Item</label>
+                            <select class="form-select" @bind="item.StockItemId">
+                                <option value="0">-- Select Stock Item --</option>
+                                @foreach (var group in stockItemGroups)
+                                {
+                                    <optgroup label="@group.Key">
+                                        @foreach (var si in group.Value)
+                                        {
+                                            <option value="@si.Id">@si.Material.Size - @ArchUnits.FormatFromInches((double)si.LengthInches)</option>
+                                        }
+                                    </optgroup>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Quantity</label>
+                            <InputNumber class="form-control" @bind-Value="item.Quantity" min="1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Supplier (optional)</label>
+                            <select class="form-select" @bind="item.SupplierId">
+                                <option value="">-- Select Supplier --</option>
+                                @foreach (var supplier in suppliers)
+                                {
+                                    <option value="@supplier.Id">@supplier.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Job (optional)</label>
+                            <select class="form-select" @bind="item.JobId">
+                                <option value="">-- Select Job --</option>
+                                @foreach (var job in jobs)
+                                {
+                                    <option value="@job.Id">@job.DisplayName</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Notes (optional)</label>
+                            <InputText class="form-control" @bind-Value="item.Notes" placeholder="Any notes about this order" />
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">@errorMessage</div>
+                        }
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Add to Order List
+                            </button>
+                            <a href="orders" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PurchaseItem item = new() { Quantity = 1 };
+    private List<StockItem> stockItems = new();
+    private Dictionary<string, List<StockItem>> stockItemGroups = new();
+    private List<Supplier> suppliers = new();
+    private List<Job> jobs = new();
+    private bool loading = true;
+    private bool saving;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        stockItems = await StockItemService.GetAllAsync();
+        suppliers = await SupplierService.GetAllAsync();
+        jobs = await JobService.GetAllAsync();
+
+        stockItemGroups = stockItems
+            .GroupBy(s => s.Material.Shape.GetDisplayName())
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.OrderBy(s => s.Material.Size).ThenBy(s => s.LengthInches).ToList());
+
+        loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        errorMessage = null;
+        saving = true;
+
+        try
+        {
+            if (item.StockItemId == 0)
+            {
+                errorMessage = "Please select a stock item";
+                return;
+            }
+
+            if (item.Quantity <= 0)
+            {
+                errorMessage = "Quantity must be at least 1";
+                return;
+            }
+
+            await PurchaseItemService.CreateAsync(item);
+            Navigation.NavigateTo("orders");
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+}
