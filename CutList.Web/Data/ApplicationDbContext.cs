@@ -20,6 +20,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<JobPart> JobParts => Set<JobPart>();
     public DbSet<JobStock> JobStocks => Set<JobStock>();
+    public DbSet<PurchaseItem> PurchaseItems => Set<PurchaseItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -278,6 +279,34 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(e => e.StockItem)
                 .WithMany()
                 .HasForeignKey(e => e.StockItemId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // PurchaseItem
+        modelBuilder.Entity<PurchaseItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasConversion(
+                    v => v.ToString(),
+                    v => Enum.Parse<PurchaseItemStatus>(v));
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasOne(e => e.StockItem)
+                .WithMany()
+                .HasForeignKey(e => e.StockItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Supplier)
+                .WithMany()
+                .HasForeignKey(e => e.SupplierId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Job)
+                .WithMany()
+                .HasForeignKey(e => e.JobId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 

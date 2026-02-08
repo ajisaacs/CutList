@@ -10,6 +10,9 @@ public class Job
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    public DateTime? LockedAt { get; set; }
+
+    public bool IsLocked => LockedAt.HasValue;
 
     public CuttingTool? CuttingTool { get; set; }
     public ICollection<JobPart> Parts { get; set; } = new List<JobPart>();

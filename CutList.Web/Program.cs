@@ -21,6 +21,7 @@ builder.Services.AddScoped<StockItemService>();
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<CutListPackingService>();
 builder.Services.AddScoped<ReportService>();
+builder.Services.AddScoped<PurchaseItemService>();
 
 var app = builder.Build();
 

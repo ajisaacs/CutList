@@ -76,6 +76,26 @@ public class JobService
         await _context.SaveChangesAsync();
     }
 
+    public async Task LockAsync(int id)
+    {
+        var job = await _context.Jobs.FindAsync(id);
+        if (job != null)
+        {
+            job.LockedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task UnlockAsync(int id)
+    {
+        var job = await _context.Jobs.FindAsync(id);
+        if (job != null)
+        {
+            job.LockedAt = null;
+            await _context.SaveChangesAsync();
+        }
+    }
+
     public async Task DeleteAsync(int id)
     {
         var job = await _context.Jobs.FindAsync(id);
