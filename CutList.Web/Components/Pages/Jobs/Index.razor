@@ -50,7 +50,13 @@ else
             @foreach (var job in pagedJobs)
             {
                 <tr>
-                    <td><a href="jobs/@job.Id">@job.JobNumber</a></td>
+                    <td>
+                        <a href="jobs/@job.Id">@job.JobNumber</a>
+                        @if (job.IsLocked)
+                        {
+                            <i class="bi bi-lock-fill text-warning ms-1" title="Locked — materials ordered"></i>
+                        }
+                    </td>
                     <td>@(job.Name ?? "-")</td>
                     <td>@(job.Customer ?? "-")</td>
                     <td>@(job.CuttingTool?.Name ?? "-")</td>

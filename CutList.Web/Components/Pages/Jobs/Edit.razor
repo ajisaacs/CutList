@@ -17,6 +17,19 @@
     }
 </div>
 
+@if (!IsNew && job.IsLocked)
+{
+    <div class="alert alert-warning d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <i class="bi bi-lock-fill me-2"></i>
+            <strong>This job is locked</strong> — materials ordered on @job.LockedAt!.Value.ToLocalTime().ToString("g"). Unlock to make changes.
+        </div>
+        <button class="btn btn-outline-warning btn-sm" @onclick="UnlockJob">
+            <i class="bi bi-unlock"></i> Unlock Job
+        </button>
+    </div>
+}
+
 @if (loading)
 {
     <p><em>Loading...</em></p>
@@ -286,6 +299,15 @@ else
 
     private bool IsNew => !Id.HasValue;
 
+    private async Task UnlockJob()
+    {
+        if (Id.HasValue)
+        {
+            await JobService.UnlockAsync(Id.Value);
+            job = (await JobService.GetByIdAsync(Id.Value))!;
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         materials = await MaterialService.GetAllAsync();
@@ -322,55 +344,57 @@ else
             </div>
             <div class="card-body">
                 <EditForm Model="job" OnValidSubmit="SaveJobAsync">
-                    @if (!IsNew)
-                    {
+                    <fieldset disabled="@job.IsLocked">
+                        @if (!IsNew)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Job Number</label>
+                                <input type="text" class="form-control" value="@job.JobNumber" readonly />
+                            </div>
+                        }
+
                         <div class="mb-3">
-                            <label class="form-label">Job Number</label>
-                            <input type="text" class="form-control" value="@job.JobNumber" readonly />
+                            <label class="form-label">Job Name <span class="text-muted fw-normal">(optional)</span></label>
+                            <InputText class="form-control" @bind-Value="job.Name" placeholder="Descriptive name for this job" />
                         </div>
-                    }
 
-                    <div class="mb-3">
-                        <label class="form-label">Job Name <span class="text-muted fw-normal">(optional)</span></label>
-                        <InputText class="form-control" @bind-Value="job.Name" placeholder="Descriptive name for this job" />
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label">Customer <span class="text-muted fw-normal">(optional)</span></label>
+                            <InputText class="form-control" @bind-Value="job.Customer" placeholder="Customer name" />
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Customer <span class="text-muted fw-normal">(optional)</span></label>
-                        <InputText class="form-control" @bind-Value="job.Customer" placeholder="Customer name" />
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label">Cutting Tool</label>
+                            <InputSelect class="form-select" @bind-Value="job.CuttingToolId">
+                                <option value="">-- Select Tool --</option>
+                                @foreach (var tool in cuttingTools)
+                                {
+                                    <option value="@tool.Id">@tool.Name (@tool.KerfInches" kerf)</option>
+                                }
+                            </InputSelect>
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Cutting Tool</label>
-                        <InputSelect class="form-select" @bind-Value="job.CuttingToolId">
-                            <option value="">-- Select Tool --</option>
-                            @foreach (var tool in cuttingTools)
-                            {
-                                <option value="@tool.Id">@tool.Name (@tool.KerfInches" kerf)</option>
-                            }
-                        </InputSelect>
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <InputTextArea class="form-control" @bind-Value="job.Notes" rows="3" />
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <InputTextArea class="form-control" @bind-Value="job.Notes" rows="3" />
-                    </div>
+                        @if (!string.IsNullOrEmpty(jobErrorMessage))
+                        {
+                            <div class="alert alert-danger">@jobErrorMessage</div>
+                        }
 
-                    @if (!string.IsNullOrEmpty(jobErrorMessage))
-                    {
-                        <div class="alert alert-danger">@jobErrorMessage</div>
-                    }
-
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary" disabled="@savingJob">
-                            @if (savingJob)
-                            {
-                                <span class="spinner-border spinner-border-sm me-1"></span>
-                            }
-                            @(IsNew ? "Create Job" : "Save")
-                        </button>
-                        <a href="jobs" class="btn btn-outline-secondary">Back</a>
-                    </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@savingJob">
+                                @if (savingJob)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                @(IsNew ? "Create Job" : "Save")
+                            </button>
+                            <a href="jobs" class="btn btn-outline-secondary">Back</a>
+                        </div>
+                    </fieldset>
                 </EditForm>
             </div>
         </div>
@@ -381,7 +405,10 @@ else
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Parts to Cut</h5>
-                <button class="btn btn-primary" @onclick="ShowAddPartForm">Add Part</button>
+                @if (!job.IsLocked)
+                {
+                    <button class="btn btn-primary" @onclick="ShowAddPartForm">Add Part</button>
+                }
             </div>
             <div class="card-body">
                 @if (job.Parts.Count == 0)
@@ -413,8 +440,11 @@ else
                                         <td>@part.Quantity</td>
                                         <td>@(string.IsNullOrWhiteSpace(part.Name) ? "-" : part.Name)</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditPart(part)" title="Edit"><i class="bi bi-pencil"></i></button>
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePart(part)" title="Delete"><i class="bi bi-trash"></i></button>
+                                            @if (!job.IsLocked)
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditPart(part)" title="Edit"><i class="bi bi-pencil"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePart(part)" title="Delete"><i class="bi bi-trash"></i></button>
+                                            }
                                         </td>
                                     </tr>
                                 }
@@ -545,16 +575,19 @@ else
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Stock for This Job</h5>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-success" @onclick="ShowImportModal" disabled="@(job.Parts.Count == 0)"
-                            title="@(job.Parts.Count == 0 ? "Add parts first to match against inventory" : "Find and import stock matching your parts")">
-                        Import from Inventory
-                    </button>
-                    <div class="btn-group">
-                        <button class="btn btn-primary" @onclick="ShowAddStockFromInventory">Add from Inventory</button>
-                        <button class="btn btn-outline-primary" @onclick="ShowAddCustomStock">Add Custom Length</button>
+                @if (!job.IsLocked)
+                {
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" @onclick="ShowImportModal" disabled="@(job.Parts.Count == 0)"
+                                title="@(job.Parts.Count == 0 ? "Add parts first to match against inventory" : "Find and import stock matching your parts")">
+                            Import from Inventory
+                        </button>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" @onclick="ShowAddStockFromInventory">Add from Inventory</button>
+                            <button class="btn btn-outline-primary" @onclick="ShowAddCustomStock">Add Custom Length</button>
+                        </div>
                     </div>
-                </div>
+                }
             </div>
             <div class="card-body">
                 @if (showStockForm)
@@ -731,8 +764,11 @@ else
                                 }
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditStock(stock)" title="Edit"><i class="bi bi-pencil"></i></button>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteStock(stock)" title="Delete"><i class="bi bi-trash"></i></button>
+                                @if (!job.IsLocked)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditStock(stock)" title="Edit"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteStock(stock)" title="Delete"><i class="bi bi-trash"></i></button>
+                                }
                             </td>
                         </tr>
                     }
