@@ -115,6 +115,8 @@ Abstract base; derived types per shape: `RoundBarDimensions`, `RoundTubeDimensio
 ### Job
 - `JobNumber` (auto-generated "JOB-#####", unique), `Name`, `Customer`, `CuttingToolId`, `Notes`
 - `LockedAt` (DateTime?) — set when materials ordered; `IsLocked` computed property
+- `OptimizationResultJson` (string?, nvarchar(max)) — serialized optimization results
+- `OptimizedAt` (DateTime?) — when optimization was last run
 - **Relationships**: `Parts` (1:many JobPart), `Stock` (1:many JobStock), `CuttingTool`
 
 ### JobPart
@@ -146,14 +148,16 @@ Abstract base; derived types per shape: `RoundBarDimensions`, `RoundTubeDimensio
 ### JobService
 - Job CRUD: `CreateAsync` (auto-generates JobNumber), `DuplicateAsync` (deep copy), `QuickCreateAsync`
 - Lock/Unlock: `LockAsync(id)`, `UnlockAsync(id)` — controls job editability after ordering
-- Parts: `AddPartAsync`, `UpdatePartAsync`, `DeletePartAsync` (all update job timestamp)
-- Stock: `AddStockAsync`, `UpdateStockAsync`, `DeleteStockAsync`
+- Parts: `AddPartAsync`, `UpdatePartAsync`, `DeletePartAsync` (all update job timestamp + clear optimization results)
+- Stock: `AddStockAsync`, `UpdateStockAsync`, `DeleteStockAsync` (all clear optimization results)
+- Optimization: `SaveOptimizationResultAsync`, `ClearOptimizationResultAsync`
 - Cutting tools: full CRUD with single-default enforcement
 
 ### CutListPackingService
 - `PackAsync(parts, kerfInches, jobStock?)` — runs optimization per material group
 - Separates results into `InStockBins` (from inventory) and `ToBePurchasedBins`
 - `GetSummary(result)` — calculates total bins, pieces, waste, efficiency %
+- `SerializeResult(result)` / `LoadSavedResult(json)` — JSON round-trip via DTO layer (`SavedOptimizationResult` etc.)
 
 ### PurchaseItemService
 - CRUD + `CreateBulkAsync` for batch creation from optimization results
@@ -169,8 +173,7 @@ Abstract base; derived types per shape: `RoundBarDimensions`, `RoundTubeDimensio
 | `/` | Home | Welcome page with feature cards and workflow guide |
 | `/jobs` | Jobs/Index | Job list with pagination, lock icons, Quick Create, Duplicate, Delete |
 | `/jobs/new` | Jobs/Edit | New job form (details only) |
-| `/jobs/{Id}` | Jobs/Edit | Tabbed editor (Details, Parts, Stock); locked jobs show banner + disable editing |
-| `/jobs/{Id}/results` | Jobs/Results | Optimization results, summary cards, "Add to Order List" (locks job), Print Report |
+| `/jobs/{Id}` | Jobs/Edit | Tabbed editor (Details, Parts, Stock, Results); locked jobs show banner + disable editing |
 | `/materials` | Materials/Index | Material list with MaterialFilter, pagination |
 | `/materials/new`, `/materials/{Id}` | Materials/Edit | Material + dimension form (varies by shape) |
 | `/stock` | Stock/Index | Stock items with MaterialFilter, quantity badges |
@@ -200,6 +203,7 @@ Abstract base; derived types per shape: `RoundBarDimensions`, `RoundTubeDimensio
 - **Material selection flow** — Shape dropdown -> Size dropdown -> Length input -> Quantity (conditional dropdowns)
 - **Stock priority** — Lower number = used first; `-1` quantity = unlimited
 - **Job stock** — Jobs can use auto-discovered inventory OR define custom stock lengths
+- **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
 - **Purchase flow** — Optimize job -> "Add to Order List" creates PurchaseItems + locks job -> Orders page manages status (Pending -> Ordered -> Received)
 - **Timestamps** — `CreatedAt` defaults to `GETUTCDATE()`; `UpdatedAt` set on modifications
 - **Collections** — Encapsulated in Core; use `AsReadOnly()`, access via `Add*` methods
@@ -216,6 +220,5 @@ Abstract base; derived types per shape: `RoundBarDimensions`, `RoundTubeDimensio
 | `CutList.Web/Data/ApplicationDbContext.cs` | EF Core context with all DbSets and configuration |
 | `CutList.Web/Services/JobService.cs` | Job orchestration (CRUD, parts, stock, tools, lock/unlock) |
 | `CutList.Web/Services/CutListPackingService.cs` | Bridges web entities to Core packing engine |
-| `CutList.Web/Components/Pages/Jobs/Edit.razor` | Job editor (tabbed: Details, Parts, Stock) |
-| `CutList.Web/Components/Pages/Jobs/Results.razor` | Optimization results + order creation |
+| `CutList.Web/Components/Pages/Jobs/Edit.razor` | Job editor (tabbed: Details, Parts, Stock, Results) |
 | `CutList/Presenters/MainFormPresenter.cs` | WinForms business logic orchestrator |
