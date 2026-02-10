@@ -9,9 +9,9 @@ namespace CutList.Core.Nesting
     {
         /// <summary>
         /// Default maximum number of items before falling back to AdvancedFitEngine.
-        /// Testing showed 20 items is safe (~100ms worst case), while 21+ can take seconds.
+        /// Testing showed 25 items is safe (~84ms worst case), while 30+ can take seconds.
         /// </summary>
-        public const int DefaultMaxItems = 20;
+        public const int DefaultMaxItems = 25;
 
         private readonly IEngine _fallbackEngine;
         private readonly int _maxItems;
@@ -67,7 +67,15 @@ namespace CutList.Core.Nesting
                 BinCount = 0
             };
 
-            Search(sortedItems, 0, currentState, bestSolution, request);
+            // Precompute suffix sums of item lengths (including spacing per item)
+            // for lower-bound pruning. suffixVolume[i] = total volume of items[i..n-1].
+            var suffixVolume = new double[sortedItems.Count + 1];
+            for (int i = sortedItems.Count - 1; i >= 0; i--)
+            {
+                suffixVolume[i] = suffixVolume[i + 1] + sortedItems[i].Length + request.Spacing;
+            }
+
+            Search(sortedItems, 0, currentState, bestSolution, request, suffixVolume);
 
             // Build result from best solution
             var result = new PackResult();
@@ -101,7 +109,8 @@ namespace CutList.Core.Nesting
             int itemIndex,
             SearchState current,
             SearchState best,
-            PackingRequest request)
+            PackingRequest request,
+            double[] suffixVolume)
         {
             // All items placed - check if this is better
             if (itemIndex >= items.Count)
@@ -121,6 +130,18 @@ namespace CutList.Core.Nesting
 
             // Respect max bin count
             if (current.BinCount >= request.MaxBinCount)
+                return;
+
+            // Lower-bound pruning: remaining items need at least this many additional bins
+            double remainingVolume = suffixVolume[itemIndex];
+            double availableInExisting = 0;
+            for (int b = 0; b < current.Bins.Count; b++)
+            {
+                availableInExisting += request.StockLength - GetBinUsedLength(current.Bins[b], request.Spacing);
+            }
+            double overflow = remainingVolume - availableInExisting;
+            int additionalBinsNeeded = overflow > 0 ? (int)Math.Ceiling(overflow / request.StockLength) : 0;
+            if (current.BinCount + additionalBinsNeeded >= best.BinCount)
                 return;
 
             var item = items[itemIndex];
@@ -148,7 +169,7 @@ namespace CutList.Core.Nesting
                     current.Bins[i].Add(item);
                     var prevBinIndex = current.LastBinIndexUsed;
                     current.LastBinIndexUsed = i;
-                    Search(items, itemIndex + 1, current, best, request);
+                    Search(items, itemIndex + 1, current, best, request, suffixVolume);
                     current.LastBinIndexUsed = prevBinIndex;
                     current.Bins[i].RemoveAt(current.Bins[i].Count - 1);
                 }
@@ -162,7 +183,7 @@ namespace CutList.Core.Nesting
                 current.BinCount++;
                 var prevBinIndex = current.LastBinIndexUsed;
                 current.LastBinIndexUsed = newBinIndex;
-                Search(items, itemIndex + 1, current, best, request);
+                Search(items, itemIndex + 1, current, best, request, suffixVolume);
                 current.LastBinIndexUsed = prevBinIndex;
                 current.Bins.RemoveAt(current.Bins.Count - 1);
                 current.BinCount--;
