@@ -63,7 +63,6 @@ else
                     <td>@((job.UpdatedAt ?? job.CreatedAt).ToLocalTime().ToString("g"))</td>
                     <td>
                         <a href="jobs/@job.Id" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                        <a href="jobs/@job.Id/results" class="btn btn-sm btn-success" title="Optimize"><i class="bi bi-scissors"></i></a>
                         <button class="btn btn-sm btn-outline-secondary" @onclick="() => DuplicateJob(job)" title="Copy"><i class="bi bi-copy"></i></button>
                         <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(job)" title="Delete"><i class="bi bi-trash"></i></button>
                     </td>
