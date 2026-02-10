@@ -234,6 +234,8 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Customer).HasMaxLength(100);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
+            entity.Property(e => e.OptimizationResultJson).HasColumnType("nvarchar(max)");
+
             entity.HasIndex(e => e.JobNumber).IsUnique();
 
             entity.HasOne(e => e.CuttingTool)

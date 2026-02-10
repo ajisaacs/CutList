@@ -72,6 +72,8 @@ public class JobService
     public async Task UpdateAsync(Job job)
     {
         job.UpdatedAt = DateTime.UtcNow;
+        job.OptimizationResultJson = null;
+        job.OptimizedAt = null;
         _context.Jobs.Update(job);
         await _context.SaveChangesAsync();
     }
@@ -161,6 +163,29 @@ public class JobService
         return duplicate;
     }
 
+    // Optimization result persistence
+    public async Task SaveOptimizationResultAsync(int jobId, string resultJson, DateTime optimizedAt)
+    {
+        var job = await _context.Jobs.FindAsync(jobId);
+        if (job != null)
+        {
+            job.OptimizationResultJson = resultJson;
+            job.OptimizedAt = optimizedAt;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task ClearOptimizationResultAsync(int jobId)
+    {
+        var job = await _context.Jobs.FindAsync(jobId);
+        if (job != null && job.OptimizationResultJson != null)
+        {
+            job.OptimizationResultJson = null;
+            job.OptimizedAt = null;
+            await _context.SaveChangesAsync();
+        }
+    }
+
     // Parts management
     public async Task<JobPart> AddPartAsync(JobPart part)
     {
@@ -172,11 +197,13 @@ public class JobService
         _context.JobParts.Add(part);
         await _context.SaveChangesAsync();
 
-        // Update job timestamp
+        // Update job timestamp and clear stale results
         var job = await _context.Jobs.FindAsync(part.JobId);
         if (job != null)
         {
             job.UpdatedAt = DateTime.UtcNow;
+            job.OptimizationResultJson = null;
+            job.OptimizedAt = null;
             await _context.SaveChangesAsync();
         }
 
@@ -192,6 +219,8 @@ public class JobService
         if (job != null)
         {
             job.UpdatedAt = DateTime.UtcNow;
+            job.OptimizationResultJson = null;
+            job.OptimizedAt = null;
             await _context.SaveChangesAsync();
         }
     }
@@ -209,6 +238,8 @@ public class JobService
             if (job != null)
             {
                 job.UpdatedAt = DateTime.UtcNow;
+                job.OptimizationResultJson = null;
+                job.OptimizedAt = null;
                 await _context.SaveChangesAsync();
             }
         }
@@ -229,6 +260,8 @@ public class JobService
         if (job != null)
         {
             job.UpdatedAt = DateTime.UtcNow;
+            job.OptimizationResultJson = null;
+            job.OptimizedAt = null;
             await _context.SaveChangesAsync();
         }
 
@@ -244,6 +277,8 @@ public class JobService
         if (job != null)
         {
             job.UpdatedAt = DateTime.UtcNow;
+            job.OptimizationResultJson = null;
+            job.OptimizedAt = null;
             await _context.SaveChangesAsync();
         }
     }
@@ -261,6 +296,8 @@ public class JobService
             if (job != null)
             {
                 job.UpdatedAt = DateTime.UtcNow;
+                job.OptimizationResultJson = null;
+                job.OptimizedAt = null;
                 await _context.SaveChangesAsync();
             }
         }

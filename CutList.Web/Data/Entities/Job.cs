@@ -11,6 +11,8 @@ public class Job
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public DateTime? LockedAt { get; set; }
+    public string? OptimizationResultJson { get; set; }
+    public DateTime? OptimizedAt { get; set; }
 
     public bool IsLocked => LockedAt.HasValue;
 
