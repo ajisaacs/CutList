@@ -172,6 +172,18 @@ public class CutListPackingService
         return result;
     }
 
+    public MultiMaterialPackResult? LoadSavedResult(string json)
+    {
+        var saved = System.Text.Json.JsonSerializer.Deserialize<SavedOptimizationResult>(json);
+        return saved?.ToPackResult(_context);
+    }
+
+    public string SerializeResult(MultiMaterialPackResult result)
+    {
+        var saved = SavedOptimizationResult.FromPackResult(result);
+        return System.Text.Json.JsonSerializer.Serialize(saved);
+    }
+
     public MultiMaterialPackingSummary GetSummary(MultiMaterialPackResult result)
     {
         var summary = new MultiMaterialPackingSummary();
@@ -274,4 +286,110 @@ public class MaterialPackingSummary
     public double TotalWaste { get; set; }
     public double Efficiency { get; set; }
     public int ItemsNotPlaced { get; set; }
+}
+
+// --- Serialization DTOs for persisting optimization results ---
+
+public class SavedBinItem
+{
+    public string Name { get; set; } = string.Empty;
+    public double Length { get; set; }
+}
+
+public class SavedBin
+{
+    public double Length { get; set; }
+    public double Spacing { get; set; }
+    public List<SavedBinItem> Items { get; set; } = new();
+}
+
+public class SavedMaterialResult
+{
+    public int MaterialId { get; set; }
+    public string MaterialDisplayName { get; set; } = string.Empty;
+    public List<SavedBin> InStockBins { get; set; } = new();
+    public List<SavedBin> ToBePurchasedBins { get; set; } = new();
+    public List<SavedBinItem> ItemsNotPlaced { get; set; } = new();
+}
+
+public class SavedOptimizationResult
+{
+    public DateTime OptimizedAt { get; set; }
+    public List<SavedMaterialResult> MaterialResults { get; set; } = new();
+
+    public static SavedOptimizationResult FromPackResult(MultiMaterialPackResult result)
+    {
+        var saved = new SavedOptimizationResult
+        {
+            OptimizedAt = DateTime.UtcNow
+        };
+
+        foreach (var mr in result.MaterialResults)
+        {
+            var savedMr = new SavedMaterialResult
+            {
+                MaterialId = mr.Material.Id,
+                MaterialDisplayName = mr.Material.DisplayName
+            };
+
+            savedMr.InStockBins = mr.InStockBins.Select(ToBinDto).ToList();
+            savedMr.ToBePurchasedBins = mr.ToBePurchasedBins.Select(ToBinDto).ToList();
+            savedMr.ItemsNotPlaced = mr.PackResult.ItemsNotUsed
+                .Select(i => new SavedBinItem { Name = i.Name, Length = i.Length })
+                .ToList();
+
+            saved.MaterialResults.Add(savedMr);
+        }
+
+        return saved;
+    }
+
+    public MultiMaterialPackResult ToPackResult(ApplicationDbContext context)
+    {
+        var result = new MultiMaterialPackResult();
+
+        foreach (var savedMr in MaterialResults)
+        {
+            var material = context.Materials.Find(savedMr.MaterialId);
+            if (material == null) continue;
+
+            var packResult = new PackResult();
+            var inStockBins = savedMr.InStockBins.Select(FromBinDto).ToList();
+            var toBePurchasedBins = savedMr.ToBePurchasedBins.Select(FromBinDto).ToList();
+
+            // Add all bins to PackResult so summary calculations work
+            foreach (var bin in inStockBins) packResult.AddBin(bin);
+            foreach (var bin in toBePurchasedBins) packResult.AddBin(bin);
+            foreach (var item in savedMr.ItemsNotPlaced)
+                packResult.AddItemNotUsed(new BinItem(item.Name, item.Length));
+
+            result.MaterialResults.Add(new MaterialPackResult
+            {
+                Material = material,
+                PackResult = packResult,
+                InStockBins = inStockBins,
+                ToBePurchasedBins = toBePurchasedBins
+            });
+        }
+
+        return result;
+    }
+
+    private static SavedBin ToBinDto(Bin bin)
+    {
+        return new SavedBin
+        {
+            Length = bin.Length,
+            Spacing = bin.Spacing,
+            Items = bin.Items.Select(i => new SavedBinItem { Name = i.Name, Length = i.Length }).ToList()
+        };
+    }
+
+    private static Bin FromBinDto(SavedBin dto)
+    {
+        var bin = new Bin(dto.Length) { Spacing = dto.Spacing };
+        foreach (var item in dto.Items)
+            bin.AddItem(new BinItem(item.Name, item.Length));
+        return bin;
+    }
 }
