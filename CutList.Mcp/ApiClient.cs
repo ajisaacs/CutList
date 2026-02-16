@@ -109,6 +109,109 @@ public class ApiClient
 
     #endregion
 
+    #region Jobs
+
+    public async Task<List<ApiJobDto>> GetJobsAsync()
+    {
+        return await _http.GetFromJsonAsync<List<ApiJobDto>>("api/jobs") ?? [];
+    }
+
+    public async Task<ApiJobDetailDto?> GetJobAsync(int id)
+    {
+        return await _http.GetFromJsonAsync<ApiJobDetailDto>($"api/jobs/{id}");
+    }
+
+    public async Task<ApiJobDetailDto?> CreateJobAsync(string? name, string? customer, int? cuttingToolId, string? notes)
+    {
+        var response = await _http.PostAsJsonAsync("api/jobs", new { Name = name, Customer = customer, CuttingToolId = cuttingToolId, Notes = notes });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ApiJobDetailDto>();
+    }
+
+    public async Task<ApiJobDetailDto?> UpdateJobAsync(int id, string? name, string? customer, int? cuttingToolId, string? notes)
+    {
+        var response = await _http.PutAsJsonAsync($"api/jobs/{id}", new { Name = name, Customer = customer, CuttingToolId = cuttingToolId, Notes = notes });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ApiJobDetailDto>();
+    }
+
+    public async Task DeleteJobAsync(int id)
+    {
+        var response = await _http.DeleteAsync($"api/jobs/{id}");
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<ApiJobPartDto?> AddJobPartAsync(int jobId, int materialId, string name, string length, int quantity)
+    {
+        var response = await _http.PostAsJsonAsync($"api/jobs/{jobId}/parts", new { MaterialId = materialId, Name = name, Length = length, Quantity = quantity });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ApiJobPartDto>();
+    }
+
+    public async Task<ApiJobPartDto?> UpdateJobPartAsync(int jobId, int partId, int? materialId, string? name, string? length, int? quantity)
+    {
+        var response = await _http.PutAsJsonAsync($"api/jobs/{jobId}/parts/{partId}", new { MaterialId = materialId, Name = name, Length = length, Quantity = quantity });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ApiJobPartDto>();
+    }
+
+    public async Task DeleteJobPartAsync(int jobId, int partId)
+    {
+        var response = await _http.DeleteAsync($"api/jobs/{jobId}/parts/{partId}");
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<ApiJobStockDto?> AddJobStockAsync(int jobId, int materialId, int? stockItemId, string length, int quantity, bool isCustomLength, int priority)
+    {
+        var response = await _http.PostAsJsonAsync($"api/jobs/{jobId}/stock", new
+        {
+            MaterialId = materialId,
+            StockItemId = stockItemId,
+            Length = length,
+            Quantity = quantity,
+            IsCustomLength = isCustomLength,
+            Priority = priority
+        });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ApiJobStockDto>();
+    }
+
+    public async Task DeleteJobStockAsync(int jobId, int stockId)
+    {
+        var response = await _http.DeleteAsync($"api/jobs/{jobId}/stock/{stockId}");
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<ApiPackResponseDto?> PackJobAsync(int jobId, decimal? kerfOverride = null)
+    {
+        var response = await _http.PostAsJsonAsync($"api/jobs/{jobId}/pack", new { KerfOverride = kerfOverride });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ApiPackResponseDto>();
+    }
+
+    #endregion
+
+    #region Cutting Tools
+
+    public async Task<List<ApiCuttingToolDto>> GetCuttingToolsAsync(bool includeInactive = false)
+    {
+        return await _http.GetFromJsonAsync<List<ApiCuttingToolDto>>($"api/cutting-tools?includeInactive={includeInactive}") ?? [];
+    }
+
+    public async Task<ApiCuttingToolDto?> GetDefaultCuttingToolAsync()
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<ApiCuttingToolDto>("api/cutting-tools/default");
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    #endregion
+
     #region Offerings
 
     public async Task<List<ApiOfferingDto>> GetOfferingsForSupplierAsync(int supplierId)
@@ -153,7 +256,134 @@ public class ApiConflictException : Exception
     public ApiConflictException(string message) : base(message) { }
 }
 
-#region API Response DTOs
+#region API Response DTOs — Jobs & Cutting Tools
+
+public class ApiJobDto
+{
+    public int Id { get; set; }
+    public string JobNumber { get; set; } = string.Empty;
+    public string? Name { get; set; }
+    public string? Customer { get; set; }
+    public int? CuttingToolId { get; set; }
+    public string? CuttingToolName { get; set; }
+    public string? Notes { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public int PartCount { get; set; }
+    public int StockCount { get; set; }
+}
+
+public class ApiJobDetailDto : ApiJobDto
+{
+    public List<ApiJobPartDto> Parts { get; set; } = new();
+    public List<ApiJobStockDto> Stock { get; set; } = new();
+}
+
+public class ApiJobPartDto
+{
+    public int Id { get; set; }
+    public int JobId { get; set; }
+    public int MaterialId { get; set; }
+    public string MaterialName { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public decimal LengthInches { get; set; }
+    public string LengthFormatted { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public int SortOrder { get; set; }
+}
+
+public class ApiJobStockDto
+{
+    public int Id { get; set; }
+    public int JobId { get; set; }
+    public int MaterialId { get; set; }
+    public string MaterialName { get; set; } = string.Empty;
+    public int? StockItemId { get; set; }
+    public decimal LengthInches { get; set; }
+    public string LengthFormatted { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public bool IsCustomLength { get; set; }
+    public int Priority { get; set; }
+    public int SortOrder { get; set; }
+}
+
+public class ApiCuttingToolDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public decimal KerfInches { get; set; }
+    public bool IsDefault { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public class ApiPackResponseDto
+{
+    public List<ApiMaterialPackResultDto> Materials { get; set; } = new();
+    public ApiPackingSummaryDto Summary { get; set; } = new();
+}
+
+public class ApiMaterialPackResultDto
+{
+    public int MaterialId { get; set; }
+    public string MaterialName { get; set; } = string.Empty;
+    public List<ApiPackedBinDto> InStockBins { get; set; } = new();
+    public List<ApiPackedBinDto> ToBePurchasedBins { get; set; } = new();
+    public List<ApiPackedItemDto> ItemsNotPlaced { get; set; } = new();
+    public ApiMaterialPackingSummaryDto Summary { get; set; } = new();
+}
+
+public class ApiPackedBinDto
+{
+    public double LengthInches { get; set; }
+    public string LengthFormatted { get; set; } = string.Empty;
+    public double UsedInches { get; set; }
+    public string UsedFormatted { get; set; } = string.Empty;
+    public double WasteInches { get; set; }
+    public string WasteFormatted { get; set; } = string.Empty;
+    public double Efficiency { get; set; }
+    public List<ApiPackedItemDto> Items { get; set; } = new();
+}
+
+public class ApiPackedItemDto
+{
+    public string Name { get; set; } = string.Empty;
+    public double LengthInches { get; set; }
+    public string LengthFormatted { get; set; } = string.Empty;
+}
+
+public class ApiPackingSummaryDto
+{
+    public int TotalInStockBins { get; set; }
+    public int TotalToBePurchasedBins { get; set; }
+    public int TotalPieces { get; set; }
+    public double TotalMaterialInches { get; set; }
+    public string TotalMaterialFormatted { get; set; } = string.Empty;
+    public double TotalUsedInches { get; set; }
+    public string TotalUsedFormatted { get; set; } = string.Empty;
+    public double TotalWasteInches { get; set; }
+    public string TotalWasteFormatted { get; set; } = string.Empty;
+    public double Efficiency { get; set; }
+    public int TotalItemsNotPlaced { get; set; }
+    public List<ApiMaterialPackingSummaryDto> MaterialSummaries { get; set; } = new();
+}
+
+public class ApiMaterialPackingSummaryDto
+{
+    public int MaterialId { get; set; }
+    public string MaterialName { get; set; } = string.Empty;
+    public int InStockBins { get; set; }
+    public int ToBePurchasedBins { get; set; }
+    public int TotalPieces { get; set; }
+    public double TotalMaterialInches { get; set; }
+    public double TotalUsedInches { get; set; }
+    public double TotalWasteInches { get; set; }
+    public double Efficiency { get; set; }
+    public int ItemsNotPlaced { get; set; }
+}
+
+#endregion
+
+#region API Response DTOs — Inventory
 
 public class ApiSupplierDto
 {
