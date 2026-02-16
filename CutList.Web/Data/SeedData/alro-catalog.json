@@ -1,0 +1,31 @@
+{
+  "exportedAt": "2026-02-16T17:09:52.843008+00:00",
+  "suppliers": [
+    {
+      "name": "Alro Steel"
+    }
+  ],
+  "cuttingTools": [
+    {
+      "name": "Bandsaw",
+      "kerfInches": 0.0625,
+      "isDefault": true
+    },
+    {
+      "name": "Chop Saw",
+      "kerfInches": 0.125,
+      "isDefault": false
+    },
+    {
+      "name": "Cold Cut Saw",
+      "kerfInches": 0.0625,
+      "isDefault": false
+    },
+    {
+      "name": "Hacksaw",
+      "kerfInches": 0.0625,
+      "isDefault": false
+    }
+  ],
+  "materials": []
+}

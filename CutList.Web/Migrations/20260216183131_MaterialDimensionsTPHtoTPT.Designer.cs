@@ -4,6 +4,7 @@ using CutList.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CutList.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260216183131_MaterialDimensionsTPHtoTPT")]
+    partial class MaterialDimensionsTPHtoTPT
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,8 +24,6 @@ namespace CutList.Web.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.HasSequence("MaterialDimensionsSequence");
 
             modelBuilder.Entity("CutList.Web.Data.Entities.CuttingTool", b =>
                 {
@@ -276,10 +277,9 @@ namespace CutList.Web.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValueSql("NEXT VALUE FOR [MaterialDimensionsSequence]");
+                        .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseSequence(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("MaterialId")
                         .HasColumnType("int");
@@ -289,9 +289,9 @@ namespace CutList.Web.Migrations
                     b.HasIndex("MaterialId")
                         .IsUnique();
 
-                    b.ToTable((string)null);
+                    b.ToTable("MaterialDimensions");
 
-                    b.UseTpcMappingStrategy();
+                    b.UseTptMappingStrategy();
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.PurchaseItem", b =>
@@ -528,7 +528,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("Leg1");
 
-                    b.ToTable("DimAngle", (string)null);
+                    b.ToTable("AngleDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.ChannelDimensions", b =>
@@ -549,7 +549,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("Height");
 
-                    b.ToTable("DimChannel", (string)null);
+                    b.ToTable("ChannelDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.FlatBarDimensions", b =>
@@ -566,7 +566,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("Width");
 
-                    b.ToTable("DimFlatBar", (string)null);
+                    b.ToTable("FlatBarDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.IBeamDimensions", b =>
@@ -583,7 +583,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("Height");
 
-                    b.ToTable("DimIBeam", (string)null);
+                    b.ToTable("IBeamDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.PipeDimensions", b =>
@@ -604,7 +604,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("NominalSize");
 
-                    b.ToTable("DimPipe", (string)null);
+                    b.ToTable("PipeDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.RectangularTubeDimensions", b =>
@@ -625,7 +625,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("Width");
 
-                    b.ToTable("DimRectangularTube", (string)null);
+                    b.ToTable("RectangularTubeDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.RoundBarDimensions", b =>
@@ -638,7 +638,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("Diameter");
 
-                    b.ToTable("DimRoundBar", (string)null);
+                    b.ToTable("RoundBarDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.RoundTubeDimensions", b =>
@@ -655,7 +655,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("OuterDiameter");
 
-                    b.ToTable("DimRoundTube", (string)null);
+                    b.ToTable("RoundTubeDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.SquareBarDimensions", b =>
@@ -668,7 +668,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("Size");
 
-                    b.ToTable("DimSquareBar", (string)null);
+                    b.ToTable("SquareBarDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.SquareTubeDimensions", b =>
@@ -685,7 +685,7 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("Size");
 
-                    b.ToTable("DimSquareTube", (string)null);
+                    b.ToTable("SquareTubeDimensions");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.Job", b =>
@@ -832,6 +832,96 @@ namespace CutList.Web.Migrations
                     b.Navigation("StockItem");
 
                     b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.AngleDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.AngleDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.ChannelDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.ChannelDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.FlatBarDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.FlatBarDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.IBeamDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.IBeamDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.PipeDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.PipeDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.RectangularTubeDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.RectangularTubeDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.RoundBarDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.RoundBarDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.RoundTubeDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.RoundTubeDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.SquareBarDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.SquareBarDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.SquareTubeDimensions", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.MaterialDimensions", null)
+                        .WithOne()
+                        .HasForeignKey("CutList.Web.Data.Entities.SquareTubeDimensions", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.CuttingTool", b =>

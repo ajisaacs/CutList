@@ -47,84 +47,80 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         });
 
-        // MaterialDimensions - TPH inheritance
+        // MaterialDimensions - TPC inheritance (each shape gets its own table, no base table)
         modelBuilder.Entity<MaterialDimensions>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.UseTpcMappingStrategy();
 
             // 1:1 relationship with Material
             entity.HasOne(e => e.Material)
                 .WithOne(m => m.Dimensions)
                 .HasForeignKey<MaterialDimensions>(e => e.MaterialId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            // TPH discriminator
-            entity.HasDiscriminator<string>("DimensionType")
-                .HasValue<RoundBarDimensions>("RoundBar")
-                .HasValue<RoundTubeDimensions>("RoundTube")
-                .HasValue<FlatBarDimensions>("FlatBar")
-                .HasValue<SquareBarDimensions>("SquareBar")
-                .HasValue<SquareTubeDimensions>("SquareTube")
-                .HasValue<RectangularTubeDimensions>("RectangularTube")
-                .HasValue<AngleDimensions>("Angle")
-                .HasValue<ChannelDimensions>("Channel")
-                .HasValue<IBeamDimensions>("IBeam")
-                .HasValue<PipeDimensions>("Pipe");
         });
 
         // Configure each dimension type's properties
         modelBuilder.Entity<RoundBarDimensions>(entity =>
         {
+            entity.ToTable("DimRoundBar");
             entity.Property(e => e.Diameter).HasPrecision(10, 4);
             entity.HasIndex(e => e.Diameter);
         });
 
         modelBuilder.Entity<RoundTubeDimensions>(entity =>
         {
+            entity.ToTable("DimRoundTube");
             entity.Property(e => e.OuterDiameter).HasPrecision(10, 4);
-            entity.Property(e => e.Wall).HasColumnName("Wall").HasPrecision(10, 4);
+            entity.Property(e => e.Wall).HasPrecision(10, 4);
             entity.HasIndex(e => e.OuterDiameter);
         });
 
         modelBuilder.Entity<FlatBarDimensions>(entity =>
         {
-            entity.Property(e => e.Width).HasColumnName("Width").HasPrecision(10, 4);
-            entity.Property(e => e.Thickness).HasColumnName("Thickness").HasPrecision(10, 4);
+            entity.ToTable("DimFlatBar");
+            entity.Property(e => e.Width).HasPrecision(10, 4);
+            entity.Property(e => e.Thickness).HasPrecision(10, 4);
             entity.HasIndex(e => e.Width);
         });
 
         modelBuilder.Entity<SquareBarDimensions>(entity =>
         {
-            entity.Property(e => e.Size).HasColumnName("Size").HasPrecision(10, 4);
+            entity.ToTable("DimSquareBar");
+            entity.Property(e => e.Size).HasPrecision(10, 4);
             entity.HasIndex(e => e.Size);
         });
 
         modelBuilder.Entity<SquareTubeDimensions>(entity =>
         {
-            entity.Property(e => e.Size).HasColumnName("Size").HasPrecision(10, 4);
-            entity.Property(e => e.Wall).HasColumnName("Wall").HasPrecision(10, 4);
+            entity.ToTable("DimSquareTube");
+            entity.Property(e => e.Size).HasPrecision(10, 4);
+            entity.Property(e => e.Wall).HasPrecision(10, 4);
             entity.HasIndex(e => e.Size);
         });
 
         modelBuilder.Entity<RectangularTubeDimensions>(entity =>
         {
-            entity.Property(e => e.Width).HasColumnName("Width").HasPrecision(10, 4);
-            entity.Property(e => e.Height).HasColumnName("Height").HasPrecision(10, 4);
-            entity.Property(e => e.Wall).HasColumnName("Wall").HasPrecision(10, 4);
+            entity.ToTable("DimRectangularTube");
+            entity.Property(e => e.Width).HasPrecision(10, 4);
+            entity.Property(e => e.Height).HasPrecision(10, 4);
+            entity.Property(e => e.Wall).HasPrecision(10, 4);
             entity.HasIndex(e => e.Width);
         });
 
         modelBuilder.Entity<AngleDimensions>(entity =>
         {
+            entity.ToTable("DimAngle");
             entity.Property(e => e.Leg1).HasPrecision(10, 4);
             entity.Property(e => e.Leg2).HasPrecision(10, 4);
-            entity.Property(e => e.Thickness).HasColumnName("Thickness").HasPrecision(10, 4);
+            entity.Property(e => e.Thickness).HasPrecision(10, 4);
             entity.HasIndex(e => e.Leg1);
         });
 
         modelBuilder.Entity<ChannelDimensions>(entity =>
         {
-            entity.Property(e => e.Height).HasColumnName("Height").HasPrecision(10, 4);
+            entity.ToTable("DimChannel");
+            entity.Property(e => e.Height).HasPrecision(10, 4);
             entity.Property(e => e.Flange).HasPrecision(10, 4);
             entity.Property(e => e.Web).HasPrecision(10, 4);
             entity.HasIndex(e => e.Height);
@@ -132,15 +128,17 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<IBeamDimensions>(entity =>
         {
-            entity.Property(e => e.Height).HasColumnName("Height").HasPrecision(10, 4);
+            entity.ToTable("DimIBeam");
+            entity.Property(e => e.Height).HasPrecision(10, 4);
             entity.Property(e => e.WeightPerFoot).HasPrecision(10, 4);
             entity.HasIndex(e => e.Height);
         });
 
         modelBuilder.Entity<PipeDimensions>(entity =>
         {
+            entity.ToTable("DimPipe");
             entity.Property(e => e.NominalSize).HasPrecision(10, 4);
-            entity.Property(e => e.Wall).HasColumnName("Wall").HasPrecision(10, 4);
+            entity.Property(e => e.Wall).HasPrecision(10, 4);
             entity.Property(e => e.Schedule).HasMaxLength(20);
             entity.HasIndex(e => e.NominalSize);
         });

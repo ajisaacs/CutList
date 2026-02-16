@@ -88,8 +88,8 @@ dotnet clean CutList.sln
 - **DisplayName**: "{Shape} - {Size}"
 - **Relationships**: `Dimensions` (1:1 MaterialDimensions), `StockItems` (1:many), `JobParts` (1:many)
 
-### MaterialDimensions (TPH Inheritance)
-Abstract base; derived types per shape: `RoundBarDimensions`, `RoundTubeDimensions`, `FlatBarDimensions`, `SquareBarDimensions`, `SquareTubeDimensions`, `RectangularTubeDimensions`, `AngleDimensions`, `ChannelDimensions`, `IBeamDimensions`, `PipeDimensions`. Each generates its own `SizeString` and `SortOrder`.
+### MaterialDimensions (TPC Inheritance)
+Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its own standalone table (`DimAngle`, `DimChannel`, `DimFlatBar`, `DimIBeam`, `DimPipe`, `DimRectangularTube`, `DimRoundBar`, `DimRoundTube`, `DimSquareBar`, `DimSquareTube`) with no base table. Each table has its own `Id` (shared sequence) and `MaterialId` FK. Each generates its own `SizeString` and `SortOrder`.
 
 ### StockItem
 - `MaterialId`, `LengthInches` (decimal), `QuantityOnHand` (int), `IsActive`
