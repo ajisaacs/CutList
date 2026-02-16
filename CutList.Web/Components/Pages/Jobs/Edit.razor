@@ -118,14 +118,15 @@ else
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(editingPart == null ? "Add Part" : "Edit Part")</h5>
+                    <h5 class="modal-title">@(editingPart == null ? "Add Parts" : "Edit Part")</h5>
                     <button type="button" class="btn-close" @onclick="CancelPartForm"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row g-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Shape</label>
-                            <select class="form-select" @bind="selectedShape" @bind:after="OnShapeChanged">
+                            <select class="form-select" @bind="selectedShape" @bind:after="OnShapeChanged"
+                                    disabled="@(editingPart != null)">
                                 <option value="">-- Select --</option>
                                 @foreach (var shape in DistinctShapes)
                                 {
@@ -135,7 +136,7 @@ else
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Size</label>
-                            <select class="form-select" @bind="newPart.MaterialId" disabled="@(!selectedShape.HasValue)">
+                            <select class="form-select" @bind="partSelectedMaterialId" disabled="@(!selectedShape.HasValue || editingPart != null)">
                                 <option value="0">-- Select --</option>
                                 @foreach (var material in FilteredMaterials)
                                 {
@@ -143,19 +144,63 @@ else
                                 }
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Length</label>
-                            <LengthInput @bind-Value="newPart.LengthInches" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" class="form-control" @bind="newPart.Quantity" min="1" />
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Name <span class="text-muted fw-normal">(optional)</span></label>
-                            <input type="text" class="form-control" @bind="newPart.Name" placeholder="Part name" />
-                        </div>
                     </div>
+
+                    @if (editingPart != null)
+                    {
+                        @* Edit mode: single row *@
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Length</label>
+                                <LengthInput @bind-Value="newPart.LengthInches" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" class="form-control" @bind="newPart.Quantity" min="1" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Name <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="text" class="form-control" @bind="newPart.Name" placeholder="Part name" />
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        @* Add mode: multi-row table *@
+                        <table class="table table-sm align-middle mb-2">
+                            <thead>
+                                <tr>
+                                    <th>Length</th>
+                                    <th style="width: 100px;">Qty</th>
+                                    <th>Name <span class="text-muted fw-normal">(optional)</span></th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (var i = 0; i < partRows.Count; i++)
+                                {
+                                    var row = partRows[i];
+                                    <tr>
+                                        <td><LengthInput @bind-Value="row.LengthInches" /></td>
+                                        <td><input type="number" class="form-control form-control-sm" @bind="row.Quantity" @bind:event="oninput" min="1" /></td>
+                                        <td><input type="text" class="form-control form-control-sm" @bind="row.Name" @bind:event="oninput" placeholder="Part name" /></td>
+                                        <td>
+                                            @if (partRows.Count > 1)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemovePartRow(row)" title="Remove">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AddPartRow">
+                            <i class="bi bi-plus-lg me-1"></i>Add Row
+                        </button>
+                    }
+
                     @if (!string.IsNullOrEmpty(partErrorMessage))
                     {
                         <div class="alert alert-danger mt-3 mb-0">@partErrorMessage</div>
@@ -164,7 +209,14 @@ else
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CancelPartForm">Cancel</button>
                     <button type="button" class="btn btn-primary" @onclick="SavePartAsync">
-                        @(editingPart == null ? "Add Part" : "Save Changes")
+                        @if (editingPart != null)
+                        {
+                            <text>Save Changes</text>
+                        }
+                        else
+                        {
+                            <text>Add @partRows.Count Part@(partRows.Count != 1 ? "s" : "")</text>
+                        }
                     </button>
                 </div>
             </div>
@@ -291,6 +343,8 @@ else
     private JobPart? editingPart;
     private string? partErrorMessage;
     private MaterialShape? selectedShape;
+    private int partSelectedMaterialId;
+    private List<PartRow> partRows = new();
 
     // Stock form
     private bool showStockForm;
@@ -541,13 +595,26 @@ else
         editingPart = null;
         newPart = new JobPart { JobId = Id!.Value, Quantity = 1 };
         selectedShape = null;
+        partSelectedMaterialId = 0;
+        partRows = new List<PartRow> { new PartRow() };
         showPartForm = true;
         partErrorMessage = null;
     }
 
     private void OnShapeChanged()
     {
+        partSelectedMaterialId = 0;
         newPart.MaterialId = 0;
+    }
+
+    private void AddPartRow()
+    {
+        partRows.Add(new PartRow());
+    }
+
+    private void RemovePartRow(PartRow row)
+    {
+        partRows.Remove(row);
     }
 
     private void EditPart(JobPart part)
@@ -564,6 +631,8 @@ else
             SortOrder = part.SortOrder
         };
         selectedShape = part.Material?.Shape;
+        partSelectedMaterialId = part.MaterialId;
+        partRows.Clear();
         showPartForm = true;
         partErrorMessage = null;
     }
@@ -584,31 +653,59 @@ else
             return;
         }
 
-        if (newPart.MaterialId == 0)
+        if (partSelectedMaterialId == 0)
         {
             partErrorMessage = "Please select a size";
             return;
         }
 
-        if (newPart.LengthInches <= 0)
+        if (editingPart != null)
         {
-            partErrorMessage = "Length must be greater than zero";
-            return;
-        }
+            // Edit mode: single part
+            if (newPart.LengthInches <= 0)
+            {
+                partErrorMessage = "Length must be greater than zero";
+                return;
+            }
+            if (newPart.Quantity < 1)
+            {
+                partErrorMessage = "Quantity must be at least 1";
+                return;
+            }
 
-        if (newPart.Quantity < 1)
-        {
-            partErrorMessage = "Quantity must be at least 1";
-            return;
-        }
-
-        if (editingPart == null)
-        {
-            await JobService.AddPartAsync(newPart);
+            newPart.MaterialId = partSelectedMaterialId;
+            await JobService.UpdatePartAsync(newPart);
         }
         else
         {
-            await JobService.UpdatePartAsync(newPart);
+            // Add mode: multiple rows
+            for (int i = 0; i < partRows.Count; i++)
+            {
+                var row = partRows[i];
+                if (row.LengthInches <= 0)
+                {
+                    partErrorMessage = $"Row {i + 1}: Length must be greater than zero";
+                    return;
+                }
+                if (row.Quantity < 1)
+                {
+                    partErrorMessage = $"Row {i + 1}: Quantity must be at least 1";
+                    return;
+                }
+            }
+
+            foreach (var row in partRows)
+            {
+                var part = new JobPart
+                {
+                    JobId = Id!.Value,
+                    MaterialId = partSelectedMaterialId,
+                    LengthInches = row.LengthInches,
+                    Quantity = row.Quantity,
+                    Name = row.Name ?? string.Empty
+                };
+                await JobService.AddPartAsync(part);
+            }
         }
 
         job = (await JobService.GetByIdAsync(Id!.Value))!;
@@ -931,113 +1028,158 @@ else
                     </div>
                 </div>
 
-                <!-- Stock Summary -->
-                <div class="row mb-4 print-stock-summary">
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-success">
-                            <div class="card-header bg-success text-white">
-                                <h5 class="mb-0">In Stock</h5>
-                            </div>
-                            <div class="card-body">
-                                <h3>@summary.TotalInStockBins bars</h3>
-                                <p class="text-muted mb-0">Ready to cut from existing inventory</p>
-                            </div>
-                        </div>
+                <!-- Purchase List -->
+                <div class="card mb-4 print-purchase-list">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Purchase List</h5>
+                        @if (summary.TotalToBePurchasedBins > 0)
+                        {
+                            @if (addedToOrderList)
+                            {
+                                <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Added to orders</span>
+                            }
+                            else
+                            {
+                                <button class="btn btn-warning btn-sm" @onclick="AddToOrderList" disabled="@addingToOrderList">
+                                    @if (addingToOrderList)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    <i class="bi bi-cart-plus me-1"></i>Add to Order List
+                                </button>
+                            }
+                        }
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-warning">
-                            <div class="card-header bg-warning">
-                                <h5 class="mb-0">To Be Purchased</h5>
-                            </div>
-                            <div class="card-body">
-                                <h3>@summary.TotalToBePurchasedBins bars</h3>
-                                @if (summary.TotalToBePurchasedBins > 0)
-                                {
-                                    @if (addedToOrderList)
-                                    {
-                                        <div class="alert alert-success mb-0 mt-2 py-2">
-                                            Added to order list. <a href="orders">View Orders</a>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-warning btn-sm mt-2" @onclick="AddToOrderList" disabled="@addingToOrderList">
-                                            @if (addingToOrderList)
+                    <div class="card-body">
+                        @if (summary.TotalToBePurchasedBins == 0)
+                        {
+                            <p class="text-muted mb-0">Everything is available in stock. No purchases needed.</p>
+                        }
+                        else
+                        {
+                            @if (addedToOrderList)
+                            {
+                                <div class="alert alert-success py-2 mb-3">
+                                    Items added to order list. <a href="orders">View Orders</a>
+                                </div>
+                            }
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Material</th>
+                                            <th>Length</th>
+                                            <th class="text-end">Qty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var materialResult in packResult.MaterialResults.Where(mr => mr.ToBePurchasedBins.Count > 0))
+                                        {
+                                            @foreach (var group in materialResult.ToBePurchasedBins.GroupBy(b => b.Length).OrderByDescending(g => g.Key))
                                             {
-                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                                <tr>
+                                                    <td>@materialResult.Material.DisplayName</td>
+                                                    <td>@ArchUnits.FormatFromInches(group.Key)</td>
+                                                    <td class="text-end">@group.Count()</td>
+                                                </tr>
                                             }
-                                            <i class="bi bi-cart-plus"></i> Add to Order List
-                                        </button>
-                                    }
-                                }
-                                else
-                                {
-                                    <p class="text-muted mb-0">Everything available in stock</p>
-                                }
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="fw-bold">
+                                            <td colspan="2">Total</td>
+                                            <td class="text-end">@summary.TotalToBePurchasedBins bars</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
-                        </div>
+                        }
                     </div>
                 </div>
 
-                <!-- Results by Material -->
+                <!-- Cut Lists by Material -->
                 @foreach (var materialResult in packResult.MaterialResults)
                 {
                     var materialSummary = summary.MaterialSummaries.First(s => s.Material.Id == materialResult.Material.Id);
+                    var allBins = materialResult.InStockBins
+                        .Select(b => new { Bin = b, Source = "Stock" })
+                        .Concat(materialResult.ToBePurchasedBins
+                            .Select(b => new { Bin = b, Source = "Purchase" }))
+                        .ToList();
 
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h4 class="mb-0">@materialResult.Material.DisplayName</h4>
+                    <div class="card mb-4 cutlist-material-card">
+                        <div class="card-header cutlist-material-screen-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">@materialResult.Material.DisplayName</h5>
+                                <span class="text-muted">
+                                    @(materialSummary.InStockBins + materialSummary.ToBePurchasedBins) bars
+                                    &middot; @materialSummary.TotalPieces pieces
+                                    &middot; @materialSummary.Efficiency.ToString("F1")% efficiency
+                                </span>
+                            </div>
                         </div>
                         <div class="card-body">
-                            <!-- Material Summary -->
-                            <div class="row mb-3">
-                                <div class="col-md-2 col-4">
-                                    <strong>@(materialSummary.InStockBins + materialSummary.ToBePurchasedBins)</strong> bars
-                                </div>
-                                <div class="col-md-2 col-4">
-                                    <strong>@materialSummary.TotalPieces</strong> pieces
-                                </div>
-                                <div class="col-md-2 col-4">
-                                    <strong>@materialSummary.Efficiency.ToString("F1")%</strong> efficiency
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-success">@materialSummary.InStockBins in stock</span>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <span class="text-warning">@materialSummary.ToBePurchasedBins to purchase</span>
-                                </div>
-                            </div>
-
                             @if (materialResult.PackResult.ItemsNotUsed.Count > 0)
                             {
                                 <div class="alert alert-danger">
-                                    <strong>@materialResult.PackResult.ItemsNotUsed.Count items not placed</strong> -
+                                    <strong>@materialResult.PackResult.ItemsNotUsed.Count items not placed</strong> —
                                     No stock lengths available or parts too long.
                                 </div>
                             }
 
-                            @if (materialResult.InStockBins.Count > 0)
-                            {
-                                <h5 class="text-success mt-3">In Stock (@materialResult.InStockBins.Count bars)</h5>
-                                @RenderBinList(materialResult.InStockBins)
-                            }
-
-                            @if (materialResult.ToBePurchasedBins.Count > 0)
-                            {
-                                <h5 class="text-warning mt-3">To Be Purchased (@materialResult.ToBePurchasedBins.Count bars)</h5>
-                                @RenderBinList(materialResult.ToBePurchasedBins)
-
-                                <!-- Purchase Summary -->
-                                <div class="mt-3 p-3 bg-light rounded">
-                                    <strong>Order Summary:</strong>
-                                    <ul class="mb-0 mt-2">
-                                        @foreach (var group in materialResult.ToBePurchasedBins.GroupBy(b => b.Length).OrderByDescending(g => g.Key))
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped mb-0">
+                                    <thead>
+                                        <tr class="cutlist-material-print-header">
+                                            <th colspan="5">
+                                                <span class="cutlist-material-name">@materialResult.Material.DisplayName</span>
+                                                <span class="cutlist-material-stats">
+                                                    @(materialSummary.InStockBins + materialSummary.ToBePurchasedBins) bars
+                                                    &middot; @materialSummary.TotalPieces pieces
+                                                    &middot; @materialSummary.Efficiency.ToString("F1")% efficiency
+                                                </span>
+                                            </th>
+                                        </tr>
+                                        <tr>
+                                            <th style="width: 50px;">#</th>
+                                            <th style="width: 90px;">Source</th>
+                                            <th style="white-space: nowrap;">Stock Length</th>
+                                            <th>Cuts</th>
+                                            <th style="width: 120px; white-space: nowrap;">Waste</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{ var binNum = 1; }
+                                        @foreach (var entry in allBins)
                                         {
-                                            <li>@group.Count() x @ArchUnits.FormatFromInches(group.Key)</li>
+                                            <tr>
+                                                <td>@binNum</td>
+                                                <td>
+                                                    @if (entry.Source == "Stock")
+                                                    {
+                                                        <span class="badge bg-success">Stock</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning text-dark">Purchase</span>
+                                                    }
+                                                </td>
+                                                <td style="white-space: nowrap;">@ArchUnits.FormatFromInches(entry.Bin.Length)</td>
+                                                <td>
+                                                    @foreach (var item in entry.Bin.Items)
+                                                    {
+                                                        <span class="badge bg-primary me-1">
+                                                            @(string.IsNullOrWhiteSpace(item.Name) ? ArchUnits.FormatFromInches(item.Length) : $"{item.Name} ({ArchUnits.FormatFromInches(item.Length)})")
+                                                        </span>
+                                                    }
+                                                </td>
+                                                <td style="white-space: nowrap;">@ArchUnits.FormatFromInches(entry.Bin.RemainingLength)</td>
+                                            </tr>
+                                            binNum++;
                                         }
-                                    </ul>
-                                </div>
-                            }
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 }
@@ -1052,41 +1194,6 @@ else
         }
     };
 
-    private RenderFragment RenderBinList(List<Bin> bins) => __builder =>
-    {
-        <div class="table-responsive">
-            <table class="table table-sm table-striped">
-                <thead>
-                    <tr>
-                        <th style="width: 80px;">#</th>
-                        <th>Stock Length</th>
-                        <th>Cuts</th>
-                        <th>Waste</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @{ var binNumber = 1; }
-                    @foreach (var bin in bins)
-                    {
-                        <tr>
-                            <td>@binNumber</td>
-                            <td>@ArchUnits.FormatFromInches(bin.Length)</td>
-                            <td>
-                                @foreach (var item in bin.Items)
-                                {
-                                    <span class="badge bg-primary me-1">
-                                        @(string.IsNullOrWhiteSpace(item.Name) ? ArchUnits.FormatFromInches(item.Length) : $"{item.Name} ({ArchUnits.FormatFromInches(item.Length)})")
-                                    </span>
-                                }
-                            </td>
-                            <td>@ArchUnits.FormatFromInches(bin.RemainingLength)</td>
-                        </tr>
-                        binNumber++;
-                    }
-                </tbody>
-            </table>
-        </div>
-    };
 
     private async Task RunOptimization()
     {
@@ -1441,6 +1548,13 @@ else
         {
             importErrorMessage = $"Error importing stock: {ex.Message}";
         }
+    }
+
+    private class PartRow
+    {
+        public decimal LengthInches { get; set; }
+        public int Quantity { get; set; } = 1;
+        public string? Name { get; set; }
     }
 
     private class ImportStockCandidate
