@@ -22,6 +22,7 @@ builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<CutListPackingService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<PurchaseItemService>();
+builder.Services.AddScoped<CatalogService>();
 
 var app = builder.Build();
 
