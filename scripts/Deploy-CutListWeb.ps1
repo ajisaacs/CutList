@@ -17,7 +17,6 @@ Param(
     [string]$InstallDir = "C:\Services\CutListWeb",
     [string]$Urls = "http://*:5270",
     [switch]$OpenFirewall,
-    [int]$PublishTimeoutSeconds = 180,
     [int]$ServiceStopTimeoutSeconds = 30,
     [int]$ServiceStartTimeoutSeconds = 30
 )
@@ -103,6 +102,7 @@ function Create-Service($name, $bin, $urls) {
     sc.exe create $name binPath= "$binPath" start= auto DisplayName= "$name" | Out-Null
     # Set recovery to restart on failure
     sc.exe failure $name reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
+    sc.exe description $name 'CutList bin packing web application' | Out-Null
 }
 
 function Start-ServiceSafe($name) {
