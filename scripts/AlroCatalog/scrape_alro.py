@@ -5,10 +5,10 @@ Scrapes myalro.com's SmartGrid for Carbon Steel materials and outputs
 a catalog JSON matching the O'Neal catalog format.
 
 Usage:
-    python scrape_alro.py              # Scrape filtered grades (edit GRADE_FILTER below)
+    python scrape_alro.py              # Scrape filtered grades (resumes from saved progress)
     python scrape_alro.py --all-grades # Scrape ALL grades (slow)
     python scrape_alro.py --discover   # Scrape first item only, dump HTML/screenshots
-    python scrape_alro.py --resume     # Resume from saved progress
+    python scrape_alro.py --fresh      # Start fresh, ignoring saved progress
 """
 
 import asyncio
@@ -342,8 +342,14 @@ async def get_select_options(page: Page, sel_id: str):
 
 
 async def scrape_dims_panel(page: Page, grade: str, shape_alro: str,
-                             shape_mapped: str, *, save_discovery: bool = False):
-    """Main Level 3 extraction. Returns list of raw item dicts."""
+                             shape_mapped: str, *, save_discovery: bool = False,
+                             on_item=None, scraped_dim_a: set[str] | None = None):
+    """Main Level 3 extraction. Returns list of raw item dicts.
+
+    If on_item callback is provided, it is called with each item dict
+    as soon as it is discovered (for incremental saving).
+    If scraped_dim_a is provided, DimA values in that set are skipped (resume).
+    """
     items: list[dict] = []
 
     if save_discovery:
@@ -368,9 +374,18 @@ async def scrape_dims_panel(page: Page, grade: str, shape_alro: str,
             log.warning(f"    Could not dump dims panel: {e}")
         return []
 
-    log.info(f"    DimA: {len(dim_a_opts)} sizes")
+    already_done = scraped_dim_a or set()
+    remaining = [(v, t) for v, t in dim_a_opts if v not in already_done]
+    if already_done:
+        log.info(f"    DimA: {len(dim_a_opts)} sizes ({len(dim_a_opts) - len(remaining)} already scraped, {len(remaining)} remaining)")
+    else:
+        log.info(f"    DimA: {len(dim_a_opts)} sizes")
 
-    for a_val, a_text in dim_a_opts:
+    # All DimA values already scraped — combo is complete
+    if not remaining:
+        return []
+
+    for a_val, a_text in remaining:
         # Select DimA → triggers postback → DimB/Length populate
         await page.select_option(f"#{ID['dim_a']}", a_val)
         await asyncio.sleep(DELAY)
@@ -394,29 +409,38 @@ async def scrape_dims_panel(page: Page, grade: str, shape_alro: str,
 
                         lengths = await get_select_options(page, ID["dim_length"])
                         for l_val, l_text in lengths:
-                            items.append(_make_item(
+                            item = _make_item(
                                 grade, shape_mapped,
                                 a_val, a_text, b_val, b_text, c_val, c_text,
                                 l_text,
-                            ))
+                            )
+                            items.append(item)
+                            if on_item:
+                                on_item(item)
                 else:
                     # No DimC — read lengths
                     lengths = await get_select_options(page, ID["dim_length"])
                     for l_val, l_text in lengths:
-                        items.append(_make_item(
+                        item = _make_item(
                             grade, shape_mapped,
                             a_val, a_text, b_val, b_text, None, None,
                             l_text,
-                        ))
+                        )
+                        items.append(item)
+                        if on_item:
+                            on_item(item)
         else:
             # No DimB — just DimA + Length
             lengths = await get_select_options(page, ID["dim_length"])
             for l_val, l_text in lengths:
-                items.append(_make_item(
+                item = _make_item(
                     grade, shape_mapped,
                     a_val, a_text, None, None, None, None,
                     l_text,
-                ))
+                )
+                items.append(item)
+                if on_item:
+                    on_item(item)
 
     return items
 
@@ -467,7 +491,7 @@ def build_size_and_dims(shape: str, item: dict):
             return f'{a_txt}"', {"width": round(a, 4), "thickness": 0}
 
     if shape == "SquareBar" and a is not None:
-        return f'{a_txt}"', {"size": round(a, 4)}
+        return f'{a_txt}"', {"sideLength": round(a, 4)}
 
     if shape == "Angle":
         if a is not None and b is not None:
@@ -495,9 +519,9 @@ def build_size_and_dims(shape: str, item: dict):
     if shape == "SquareTube":
         if a is not None and b is not None:
             return (f'{a_txt}" x {b_txt}" wall',
-                    {"size": round(a, 4), "wall": round(b, 4)})
+                    {"sideLength": round(a, 4), "wall": round(b, 4)})
         if a is not None:
-            return f'{a_txt}"', {"size": round(a, 4), "wall": 0}
+            return f'{a_txt}"', {"sideLength": round(a, 4), "wall": 0}
 
     if shape == "RectangularTube":
         if a is not None and b is not None and c is not None:
@@ -524,6 +548,20 @@ def build_size_and_dims(shape: str, item: dict):
     return a_txt or "", {}
 
 
+SHAPE_GROUP_KEY = {
+    "Angle":            "angles",
+    "Channel":          "channels",
+    "FlatBar":          "flatBars",
+    "IBeam":            "iBeams",
+    "Pipe":             "pipes",
+    "RectangularTube":  "rectangularTubes",
+    "RoundBar":         "roundBars",
+    "RoundTube":        "roundTubes",
+    "SquareBar":        "squareBars",
+    "SquareTube":       "squareTubes",
+}
+
+
 def build_catalog(scraped: list[dict]) -> dict:
     """Assemble the final catalog JSON from scraped item dicts."""
     materials: dict[tuple, dict] = {}
@@ -538,14 +576,14 @@ def build_catalog(scraped: list[dict]) -> dict:
         key = (shape, grade, size_str)
 
         if key not in materials:
-            materials[key] = {
-                "shape": shape,
+            mat = {
                 "type": "Steel",
                 "grade": grade,
                 "size": size_str,
-                "dimensions": dims,
                 "stockItems": [],
             }
+            mat.update(dims)
+            materials[key] = mat
 
         length = item.get("length_inches")
         if length and length > 0:
@@ -561,7 +599,12 @@ def build_catalog(scraped: list[dict]) -> dict:
                     }],
                 })
 
-    sorted_mats = sorted(materials.values(), key=lambda m: (m["shape"], m["grade"], m["size"]))
+    # Group by shape key
+    grouped: dict[str, list] = {v: [] for v in SHAPE_GROUP_KEY.values()}
+    for (shape, _, _), mat in sorted(materials.items(), key=lambda kv: (kv[0][0], kv[0][1], kv[0][2])):
+        group_key = SHAPE_GROUP_KEY.get(shape)
+        if group_key:
+            grouped[group_key].append(mat)
 
     return {
         "exportedAt": datetime.now(timezone.utc).isoformat(),
@@ -572,7 +615,7 @@ def build_catalog(scraped: list[dict]) -> dict:
             {"name": "Cold Cut Saw", "kerfInches": 0.0625, "isDefault": False},
             {"name": "Hacksaw", "kerfInches": 0.0625, "isDefault": False},
         ],
-        "materials": sorted_mats,
+        "materials": grouped,
     }
 
 
@@ -596,20 +639,29 @@ def save_progress(progress: dict):
 
 async def main():
     discover = "--discover" in sys.argv
-    resume = "--resume" in sys.argv
+    fresh = "--fresh" in sys.argv
     all_grades = "--all-grades" in sys.argv
 
-    progress = load_progress() if resume else {"completed": [], "items": []}
+    progress = {"completed": [], "items": []} if fresh else load_progress()
     all_items: list[dict] = progress.get("items", [])
     done_keys: set[tuple] = {tuple(k) for k in progress.get("completed", [])}
+
+    # Build index of saved DimA values per (grade, shape) for partial resume
+    saved_dim_a: dict[tuple[str, str], set[str]] = {}
+    if all_items and not fresh:
+        for item in all_items:
+            key = (item.get("grade", ""), item.get("shape", ""))
+            saved_dim_a.setdefault(key, set()).add(item.get("dim_a_val", ""))
 
     log.info("Alro Steel SmartGrid Scraper")
     if all_grades:
         log.info("  Mode: ALL grades")
     else:
         log.info(f"  Filtering to {len(GRADE_FILTER)} grades: {', '.join(sorted(GRADE_FILTER))}")
-    if resume:
-        log.info(f"  Resuming: {len(done_keys)} combos done, {len(all_items)} items")
+    if fresh:
+        log.info("  Fresh start — ignoring saved progress")
+    elif done_keys:
+        log.info(f"  Resuming: {len(done_keys)} combos done, {len(all_items)} items saved")
     if discover:
         log.info("  Discovery mode — will scrape first item then stop")
 
@@ -677,19 +729,30 @@ async def main():
 
                 await asyncio.sleep(DELAY)
 
+                combo_count = 0
+                def on_item_discovered(item):
+                    nonlocal total_scraped, combo_count
+                    all_items.append(item)
+                    total_scraped += 1
+                    combo_count += 1
+                    progress["items"] = all_items
+                    save_progress(progress)
+
+                # Pass already-scraped DimA values so partial combos resume correctly
+                already = saved_dim_a.get((grade_name, shape_mapped), set())
+
                 items = await scrape_dims_panel(
                     page, grade_name, shape_name, shape_mapped,
                     save_discovery=first_item or discover,
+                    on_item=on_item_discovered,
+                    scraped_dim_a=already,
                 )
                 first_item = False
 
-                all_items.extend(items)
-                total_scraped += len(items)
-                log.info(f"  -> {len(items)} items  (total {total_scraped})")
+                log.info(f"  -> {combo_count} items  (total {total_scraped})")
 
                 done_keys.add(combo_key)
                 progress["completed"] = [list(k) for k in done_keys]
-                progress["items"] = all_items
                 save_progress(progress)
 
                 await click_back(page)
@@ -714,14 +777,13 @@ async def main():
     OUTPUT_PATH.write_text(json.dumps(catalog, indent=2, ensure_ascii=False), encoding="utf-8")
 
     log.info(f"Written: {OUTPUT_PATH}")
-    log.info(f"Materials: {len(catalog['materials'])}")
-    total_stock = sum(len(m["stockItems"]) for m in catalog["materials"])
+    total_mats = sum(len(v) for v in catalog["materials"].values())
+    total_stock = sum(len(m["stockItems"]) for v in catalog["materials"].values() for m in v)
+    log.info(f"Materials: {total_mats}")
     log.info(f"Stock items: {total_stock}")
-    by_shape: dict[str, int] = {}
-    for m in catalog["materials"]:
-        by_shape[m["shape"]] = by_shape.get(m["shape"], 0) + 1
-    for s, n in sorted(by_shape.items()):
-        log.info(f"  {s}: {n}")
+    for shape_key, mats in sorted(catalog["materials"].items()):
+        if mats:
+            log.info(f"  {shape_key}: {len(mats)}")
 
 
 if __name__ == "__main__":

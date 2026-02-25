@@ -27,5 +27,16 @@
       "isDefault": false
     }
   ],
-  "materials": []
+  "materials": {
+    "angles": [],
+    "channels": [],
+    "flatBars": [],
+    "iBeams": [],
+    "pipes": [],
+    "rectangularTubes": [],
+    "roundBars": [],
+    "roundTubes": [],
+    "squareBars": [],
+    "squareTubes": []
+  }
 }
