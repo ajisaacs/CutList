@@ -16,7 +16,7 @@ Param(
     [string]$PublishConfiguration = "Release",
     [string]$InstallDir = "C:\Services\CutListWeb",
     [string]$Urls = "http://*:5270",
-    [switch]$OpenFirewall,
+    [bool]$OpenFirewall = $true,
     [int]$ServiceStopTimeoutSeconds = 30,
     [int]$ServiceStartTimeoutSeconds = 30
 )
