@@ -32,7 +32,14 @@
     </div>
 }
 
-@if (loading)
+@if (!string.IsNullOrEmpty(loadError))
+{
+    <div class="alert alert-danger">
+        <h5>Error loading job</h5>
+        <pre class="mb-0">@loadError</pre>
+    </div>
+}
+else if (loading)
 {
     <p><em>Loading...</em></p>
 }
@@ -331,6 +338,7 @@ else
     private List<CuttingTool> cuttingTools = new();
 
     private bool loading = true;
+    private string? loadError;
     private bool savingJob;
     private string? jobErrorMessage;
     private Tab activeTab = Tab.Details;
@@ -388,43 +396,50 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        materials = await MaterialService.GetAllAsync();
-        cuttingTools = await JobService.GetCuttingToolsAsync();
-
-        if (Id.HasValue)
+        try
         {
-            var existing = await JobService.GetByIdAsync(Id.Value);
-            if (existing == null)
-            {
-                Navigation.NavigateTo("jobs");
-                return;
-            }
-            job = existing;
+            materials = await MaterialService.GetAllAsync();
+            cuttingTools = await JobService.GetCuttingToolsAsync();
 
-            // Load saved optimization results if available
-            if (job.OptimizationResultJson != null)
+            if (Id.HasValue)
             {
-                LoadSavedResults();
+                var existing = await JobService.GetByIdAsync(Id.Value);
+                if (existing == null)
+                {
+                    Navigation.NavigateTo("jobs");
+                    return;
+                }
+                job = existing;
+
+                // Load saved optimization results if available
+                if (job.OptimizationResultJson != null)
+                {
+                    await LoadSavedResultsAsync();
+                }
+            }
+            else
+            {
+                // Set default cutting tool for new jobs
+                var defaultTool = await JobService.GetDefaultCuttingToolAsync();
+                if (defaultTool != null)
+                {
+                    job.CuttingToolId = defaultTool.Id;
+                }
             }
         }
-        else
+        catch (Exception ex)
         {
-            // Set default cutting tool for new jobs
-            var defaultTool = await JobService.GetDefaultCuttingToolAsync();
-            if (defaultTool != null)
-            {
-                job.CuttingToolId = defaultTool.Id;
-            }
+            loadError = ex.ToString();
         }
 
         loading = false;
     }
 
-    private void LoadSavedResults()
+    private async Task LoadSavedResultsAsync()
     {
         try
         {
-            packResult = PackingService.LoadSavedResult(job.OptimizationResultJson!);
+            packResult = await PackingService.LoadSavedResultAsync(job.OptimizationResultJson!);
             if (packResult != null)
             {
                 summary = PackingService.GetSummary(packResult);
