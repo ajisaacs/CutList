@@ -554,7 +554,7 @@ else
                                 {
                                     <tr>
                                         <td>@part.Material.DisplayName</td>
-                                        <td>@ArchUnits.FormatFromInches((double)part.LengthInches)</td>
+                                        <td>@ArchUnits.FormatFromInches((double)part.LengthInches) <span class="text-muted">(@(part.LengthInches)")</span></td>
                                         <td>@part.Quantity</td>
                                         <td>@(string.IsNullOrWhiteSpace(part.Name) ? "-" : part.Name)</td>
                                         <td>
@@ -917,7 +917,7 @@ else
                     {
                         <tr>
                             <td>@stock.Material?.DisplayName</td>
-                            <td>@ArchUnits.FormatFromInches((double)stock.LengthInches)</td>
+                            <td>@ArchUnits.FormatFromInches((double)stock.LengthInches) <span class="text-muted">(@(stock.LengthInches)")</span></td>
                             <td>@(stock.Quantity == -1 ? "Unlimited" : stock.Quantity.ToString())</td>
                             <td>@stock.Priority</td>
                             <td>
