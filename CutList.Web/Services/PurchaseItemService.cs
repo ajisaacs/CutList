@@ -6,16 +6,18 @@ namespace CutList.Web.Services;
 
 public class PurchaseItemService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _factory;
 
-    public PurchaseItemService(ApplicationDbContext context)
+    public PurchaseItemService(IDbContextFactory<ApplicationDbContext> factory)
     {
-        _context = context;
+        _factory = factory;
     }
 
     public async Task<List<PurchaseItem>> GetAllAsync(PurchaseItemStatus? status = null)
     {
-        var query = _context.PurchaseItems
+        await using var context = _factory.CreateDbContext();
+
+        var query = context.PurchaseItems
             .Include(p => p.StockItem)
                 .ThenInclude(s => s.Material)
             .Include(p => p.Supplier)
@@ -35,7 +37,9 @@ public class PurchaseItemService
 
     public async Task<PurchaseItem?> GetByIdAsync(int id)
     {
-        return await _context.PurchaseItems
+        await using var context = _factory.CreateDbContext();
+
+        return await context.PurchaseItems
             .Include(p => p.StockItem)
                 .ThenInclude(s => s.Material)
             .Include(p => p.Supplier)
@@ -45,59 +49,71 @@ public class PurchaseItemService
 
     public async Task<PurchaseItem> CreateAsync(PurchaseItem item)
     {
+        await using var context = _factory.CreateDbContext();
+
         item.CreatedAt = DateTime.UtcNow;
-        _context.PurchaseItems.Add(item);
-        await _context.SaveChangesAsync();
+        context.PurchaseItems.Add(item);
+        await context.SaveChangesAsync();
         return item;
     }
 
     public async Task CreateBulkAsync(List<PurchaseItem> items)
     {
+        await using var context = _factory.CreateDbContext();
+
         var now = DateTime.UtcNow;
         foreach (var item in items)
         {
             item.CreatedAt = now;
         }
-        _context.PurchaseItems.AddRange(items);
-        await _context.SaveChangesAsync();
+        context.PurchaseItems.AddRange(items);
+        await context.SaveChangesAsync();
     }
 
     public async Task UpdateAsync(PurchaseItem item)
     {
+        await using var context = _factory.CreateDbContext();
+
         item.UpdatedAt = DateTime.UtcNow;
-        _context.PurchaseItems.Update(item);
-        await _context.SaveChangesAsync();
+        context.PurchaseItems.Update(item);
+        await context.SaveChangesAsync();
     }
 
     public async Task UpdateStatusAsync(int id, PurchaseItemStatus status)
     {
-        var item = await _context.PurchaseItems.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+
+        var item = await context.PurchaseItems.FindAsync(id);
         if (item != null)
         {
             item.Status = status;
             item.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task UpdateSupplierAsync(int id, int? supplierId)
     {
-        var item = await _context.PurchaseItems.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+
+        var item = await context.PurchaseItems.FindAsync(id);
         if (item != null)
         {
             item.SupplierId = supplierId;
             item.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task DeleteAsync(int id)
     {
-        var item = await _context.PurchaseItems.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+
+        var item = await context.PurchaseItems.FindAsync(id);
         if (item != null)
         {
-            _context.PurchaseItems.Remove(item);
-            await _context.SaveChangesAsync();
+            context.PurchaseItems.Remove(item);
+            await context.SaveChangesAsync();
         }
     }
 }

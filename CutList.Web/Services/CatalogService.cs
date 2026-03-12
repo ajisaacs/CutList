@@ -7,30 +7,32 @@ namespace CutList.Web.Services;
 
 public class CatalogService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _factory;
     private readonly MaterialService _materialService;
 
-    public CatalogService(ApplicationDbContext context, MaterialService materialService)
+    public CatalogService(IDbContextFactory<ApplicationDbContext> factory, MaterialService materialService)
     {
-        _context = context;
+        _factory = factory;
         _materialService = materialService;
     }
 
     public async Task<CatalogData> ExportAsync()
     {
-        var suppliers = await _context.Suppliers
+        await using var context = _factory.CreateDbContext();
+
+        var suppliers = await context.Suppliers
             .Where(s => s.IsActive)
             .OrderBy(s => s.Name)
             .AsNoTracking()
             .ToListAsync();
 
-        var cuttingTools = await _context.CuttingTools
+        var cuttingTools = await context.CuttingTools
             .Where(t => t.IsActive)
             .OrderBy(t => t.Name)
             .AsNoTracking()
             .ToListAsync();
 
-        var materials = await _context.Materials
+        var materials = await context.Materials
             .Include(m => m.Dimensions)
             .Include(m => m.StockItems.Where(s => s.IsActive))
                 .ThenInclude(s => s.SupplierOfferings.Where(o => o.IsActive))
@@ -157,18 +159,19 @@ public class CatalogService
     {
         var result = new ImportResultDto();
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var context = _factory.CreateDbContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
 
         try
         {
             // 1. Suppliers - upsert by name
-            var supplierMap = await ImportSuppliersAsync(data.Suppliers, result);
+            var supplierMap = await ImportSuppliersAsync(context, data.Suppliers, result);
 
             // 2. Cutting tools - upsert by name
-            await ImportCuttingToolsAsync(data.CuttingTools, result);
+            await ImportCuttingToolsAsync(context, data.CuttingTools, result);
 
             // 3. Materials + stock items + offerings
-            await ImportAllMaterialsAsync(data.Materials, supplierMap, result);
+            await ImportAllMaterialsAsync(context, data.Materials, supplierMap, result);
 
             await transaction.CommitAsync();
         }
@@ -182,11 +185,11 @@ public class CatalogService
     }
 
     private async Task<Dictionary<string, int>> ImportSuppliersAsync(
-        List<CatalogSupplierDto> suppliers, ImportResultDto result)
+        ApplicationDbContext context, List<CatalogSupplierDto> suppliers, ImportResultDto result)
     {
         var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        var existingSuppliers = await _context.Suppliers.ToListAsync();
+        var existingSuppliers = await context.Suppliers.ToListAsync();
 
         foreach (var dto in suppliers)
         {
@@ -212,8 +215,8 @@ public class CatalogService
                         Notes = dto.Notes,
                         CreatedAt = DateTime.UtcNow
                     };
-                    _context.Suppliers.Add(supplier);
-                    await _context.SaveChangesAsync();
+                    context.Suppliers.Add(supplier);
+                    await context.SaveChangesAsync();
                     existingSuppliers.Add(supplier);
                     map[dto.Name] = supplier.Id;
                     result.SuppliersCreated++;
@@ -225,14 +228,14 @@ public class CatalogService
             }
         }
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return map;
     }
 
     private async Task ImportCuttingToolsAsync(
-        List<CatalogCuttingToolDto> tools, ImportResultDto result)
+        ApplicationDbContext context, List<CatalogCuttingToolDto> tools, ImportResultDto result)
     {
-        var existingTools = await _context.CuttingTools.ToListAsync();
+        var existingTools = await context.CuttingTools.ToListAsync();
 
         foreach (var dto in tools)
         {
@@ -255,7 +258,7 @@ public class CatalogService
                         KerfInches = dto.KerfInches,
                         IsDefault = false
                     };
-                    _context.CuttingTools.Add(tool);
+                    context.CuttingTools.Add(tool);
                     existingTools.Add(tool);
                     result.CuttingToolsCreated++;
                 }
@@ -266,71 +269,71 @@ public class CatalogService
             }
         }
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     private async Task ImportAllMaterialsAsync(
-        CatalogMaterialsDto materials, Dictionary<string, int> supplierMap, ImportResultDto result)
+        ApplicationDbContext context, CatalogMaterialsDto materials, Dictionary<string, int> supplierMap, ImportResultDto result)
     {
-        var existingMaterials = await _context.Materials
+        var existingMaterials = await context.Materials
             .Include(m => m.Dimensions)
             .Include(m => m.StockItems)
                 .ThenInclude(s => s.SupplierOfferings)
             .ToListAsync();
 
         foreach (var dto in materials.Angles)
-            await ImportMaterialAsync(dto, MaterialShape.Angle, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.Angle, existingMaterials, supplierMap, result,
                 () => new AngleDimensions { Leg1 = dto.Leg1, Leg2 = dto.Leg2, Thickness = dto.Thickness },
                 dim => { var d = (AngleDimensions)dim; d.Leg1 = dto.Leg1; d.Leg2 = dto.Leg2; d.Thickness = dto.Thickness; });
 
         foreach (var dto in materials.Channels)
-            await ImportMaterialAsync(dto, MaterialShape.Channel, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.Channel, existingMaterials, supplierMap, result,
                 () => new ChannelDimensions { Height = dto.Height, Flange = dto.Flange, Web = dto.Web },
                 dim => { var d = (ChannelDimensions)dim; d.Height = dto.Height; d.Flange = dto.Flange; d.Web = dto.Web; });
 
         foreach (var dto in materials.FlatBars)
-            await ImportMaterialAsync(dto, MaterialShape.FlatBar, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.FlatBar, existingMaterials, supplierMap, result,
                 () => new FlatBarDimensions { Width = dto.Width, Thickness = dto.Thickness },
                 dim => { var d = (FlatBarDimensions)dim; d.Width = dto.Width; d.Thickness = dto.Thickness; });
 
         foreach (var dto in materials.IBeams)
-            await ImportMaterialAsync(dto, MaterialShape.IBeam, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.IBeam, existingMaterials, supplierMap, result,
                 () => new IBeamDimensions { Height = dto.Height, WeightPerFoot = dto.WeightPerFoot },
                 dim => { var d = (IBeamDimensions)dim; d.Height = dto.Height; d.WeightPerFoot = dto.WeightPerFoot; });
 
         foreach (var dto in materials.Pipes)
-            await ImportMaterialAsync(dto, MaterialShape.Pipe, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.Pipe, existingMaterials, supplierMap, result,
                 () => new PipeDimensions { NominalSize = dto.NominalSize, Wall = dto.Wall, Schedule = dto.Schedule },
                 dim => { var d = (PipeDimensions)dim; d.NominalSize = dto.NominalSize; d.Wall = (decimal?)dto.Wall; d.Schedule = dto.Schedule; });
 
         foreach (var dto in materials.RectangularTubes)
-            await ImportMaterialAsync(dto, MaterialShape.RectangularTube, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.RectangularTube, existingMaterials, supplierMap, result,
                 () => new RectangularTubeDimensions { Width = dto.Width, Height = dto.Height, Wall = dto.Wall },
                 dim => { var d = (RectangularTubeDimensions)dim; d.Width = dto.Width; d.Height = dto.Height; d.Wall = dto.Wall; });
 
         foreach (var dto in materials.RoundBars)
-            await ImportMaterialAsync(dto, MaterialShape.RoundBar, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.RoundBar, existingMaterials, supplierMap, result,
                 () => new RoundBarDimensions { Diameter = dto.Diameter },
                 dim => { var d = (RoundBarDimensions)dim; d.Diameter = dto.Diameter; });
 
         foreach (var dto in materials.RoundTubes)
-            await ImportMaterialAsync(dto, MaterialShape.RoundTube, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.RoundTube, existingMaterials, supplierMap, result,
                 () => new RoundTubeDimensions { OuterDiameter = dto.OuterDiameter, Wall = dto.Wall },
                 dim => { var d = (RoundTubeDimensions)dim; d.OuterDiameter = dto.OuterDiameter; d.Wall = dto.Wall; });
 
         foreach (var dto in materials.SquareBars)
-            await ImportMaterialAsync(dto, MaterialShape.SquareBar, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.SquareBar, existingMaterials, supplierMap, result,
                 () => new SquareBarDimensions { Size = dto.SideLength },
                 dim => { var d = (SquareBarDimensions)dim; d.Size = dto.SideLength; });
 
         foreach (var dto in materials.SquareTubes)
-            await ImportMaterialAsync(dto, MaterialShape.SquareTube, existingMaterials, supplierMap, result,
+            await ImportMaterialAsync(context, dto, MaterialShape.SquareTube, existingMaterials, supplierMap, result,
                 () => new SquareTubeDimensions { Size = dto.SideLength, Wall = dto.Wall },
                 dim => { var d = (SquareTubeDimensions)dim; d.Size = dto.SideLength; d.Wall = dto.Wall; });
     }
 
     private async Task ImportMaterialAsync(
-        CatalogMaterialBaseDto dto, MaterialShape shape,
+        ApplicationDbContext context, CatalogMaterialBaseDto dto, MaterialShape shape,
         List<Material> existingMaterials, Dictionary<string, int> supplierMap,
         ImportResultDto result,
         Func<MaterialDimensions> createDimensions,
@@ -384,9 +387,9 @@ public class CatalogService
                 result.MaterialsCreated++;
             }
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
 
-            await ImportStockItemsAsync(material, dto.StockItems, supplierMap, result);
+            await ImportStockItemsAsync(context, material, dto.StockItems, supplierMap, result);
         }
         catch (Exception ex)
         {
@@ -395,10 +398,10 @@ public class CatalogService
     }
 
     private async Task ImportStockItemsAsync(
-        Material material, List<CatalogStockItemDto> stockItems,
+        ApplicationDbContext context, Material material, List<CatalogStockItemDto> stockItems,
         Dictionary<string, int> supplierMap, ImportResultDto result)
     {
-        var existingStockItems = await _context.StockItems
+        var existingStockItems = await context.StockItems
             .Include(s => s.SupplierOfferings)
             .Where(s => s.MaterialId == material.Id)
             .ToListAsync();
@@ -432,8 +435,8 @@ public class CatalogService
                         Notes = dto.Notes,
                         CreatedAt = DateTime.UtcNow
                     };
-                    _context.StockItems.Add(stockItem);
-                    await _context.SaveChangesAsync();
+                    context.StockItems.Add(stockItem);
+                    await context.SaveChangesAsync();
                     existingStockItems.Add(stockItem);
                     result.StockItemsCreated++;
                 }
@@ -473,7 +476,7 @@ public class CatalogService
                                 Price = offeringDto.Price,
                                 Notes = offeringDto.Notes
                             };
-                            _context.SupplierOfferings.Add(offering);
+                            context.SupplierOfferings.Add(offering);
                             stockItem.SupplierOfferings.Add(offering);
                             result.OfferingsCreated++;
                         }
@@ -486,7 +489,7 @@ public class CatalogService
                     }
                 }
 
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (Exception ex)
             {

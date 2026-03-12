@@ -6,16 +6,17 @@ namespace CutList.Web.Services;
 
 public class JobService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _factory;
 
-    public JobService(ApplicationDbContext context)
+    public JobService(IDbContextFactory<ApplicationDbContext> factory)
     {
-        _context = context;
+        _factory = factory;
     }
 
     public async Task<List<Job>> GetAllAsync()
     {
-        return await _context.Jobs
+        await using var context = _factory.CreateDbContext();
+        return await context.Jobs
             .Include(p => p.CuttingTool)
             .Include(p => p.Parts)
                 .ThenInclude(pt => pt.Material)
@@ -25,7 +26,8 @@ public class JobService
 
     public async Task<Job?> GetByIdAsync(int id)
     {
-        return await _context.Jobs
+        await using var context = _factory.CreateDbContext();
+        return await context.Jobs
             .Include(p => p.CuttingTool)
             .Include(p => p.Parts.OrderBy(pt => pt.SortOrder))
                 .ThenInclude(pt => pt.Material)
@@ -38,17 +40,24 @@ public class JobService
 
     public async Task<Job> CreateAsync(Job? job = null)
     {
+        await using var context = _factory.CreateDbContext();
         job ??= new Job();
-        job.JobNumber = await GenerateJobNumberAsync();
+        job.JobNumber = await GenerateJobNumberAsync(context);
         job.CreatedAt = DateTime.UtcNow;
-        _context.Jobs.Add(job);
-        await _context.SaveChangesAsync();
+        context.Jobs.Add(job);
+        await context.SaveChangesAsync();
         return job;
     }
 
     public async Task<string> GenerateJobNumberAsync()
     {
-        var maxNumber = await _context.Jobs
+        await using var context = _factory.CreateDbContext();
+        return await GenerateJobNumberAsync(context);
+    }
+
+    private static async Task<string> GenerateJobNumberAsync(ApplicationDbContext context)
+    {
+        var maxNumber = await context.Jobs
             .Where(j => j.JobNumber.StartsWith("JOB-"))
             .Select(j => j.JobNumber)
             .MaxAsync() as string;
@@ -71,46 +80,61 @@ public class JobService
 
     public async Task UpdateAsync(Job job)
     {
+        await using var context = _factory.CreateDbContext();
         job.UpdatedAt = DateTime.UtcNow;
         job.OptimizationResultJson = null;
         job.OptimizedAt = null;
-        _context.Jobs.Update(job);
-        await _context.SaveChangesAsync();
+        context.Jobs.Update(job);
+        await context.SaveChangesAsync();
     }
 
     public async Task LockAsync(int id)
     {
-        var job = await _context.Jobs.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        var job = await context.Jobs.FindAsync(id);
         if (job != null)
         {
             job.LockedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task UnlockAsync(int id)
     {
-        var job = await _context.Jobs.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        var job = await context.Jobs.FindAsync(id);
         if (job != null)
         {
             job.LockedAt = null;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task DeleteAsync(int id)
     {
-        var job = await _context.Jobs.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        var job = await context.Jobs.FindAsync(id);
         if (job != null)
         {
-            _context.Jobs.Remove(job);
-            await _context.SaveChangesAsync();
+            context.Jobs.Remove(job);
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<Job> DuplicateAsync(int id)
     {
-        var original = await GetByIdAsync(id);
+        await using var context = _factory.CreateDbContext();
+
+        var original = await context.Jobs
+            .Include(p => p.CuttingTool)
+            .Include(p => p.Parts.OrderBy(pt => pt.SortOrder))
+                .ThenInclude(pt => pt.Material)
+            .Include(p => p.Stock.OrderBy(s => s.SortOrder))
+                .ThenInclude(s => s.Material)
+            .Include(p => p.Stock)
+                .ThenInclude(s => s.StockItem)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
         if (original == null)
         {
             throw new ArgumentException("Job not found", nameof(id));
@@ -118,7 +142,7 @@ public class JobService
 
         var duplicate = new Job
         {
-            JobNumber = await GenerateJobNumberAsync(),
+            JobNumber = await GenerateJobNumberAsync(context),
             Name = string.IsNullOrWhiteSpace(original.Name) ? null : $"{original.Name} (Copy)",
             Customer = original.Customer,
             CuttingToolId = original.CuttingToolId,
@@ -126,13 +150,13 @@ public class JobService
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.Jobs.Add(duplicate);
-        await _context.SaveChangesAsync();
+        context.Jobs.Add(duplicate);
+        await context.SaveChangesAsync();
 
         // Copy parts
         foreach (var part in original.Parts)
         {
-            _context.JobParts.Add(new JobPart
+            context.JobParts.Add(new JobPart
             {
                 JobId = duplicate.Id,
                 MaterialId = part.MaterialId,
@@ -146,7 +170,7 @@ public class JobService
         // Copy stock selections
         foreach (var stock in original.Stock)
         {
-            _context.JobStocks.Add(new JobStock
+            context.JobStocks.Add(new JobStock
             {
                 JobId = duplicate.Id,
                 MaterialId = stock.MaterialId,
@@ -159,52 +183,55 @@ public class JobService
             });
         }
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return duplicate;
     }
 
     // Optimization result persistence
     public async Task SaveOptimizationResultAsync(int jobId, string resultJson, DateTime optimizedAt)
     {
-        var job = await _context.Jobs.FindAsync(jobId);
+        await using var context = _factory.CreateDbContext();
+        var job = await context.Jobs.FindAsync(jobId);
         if (job != null)
         {
             job.OptimizationResultJson = resultJson;
             job.OptimizedAt = optimizedAt;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task ClearOptimizationResultAsync(int jobId)
     {
-        var job = await _context.Jobs.FindAsync(jobId);
+        await using var context = _factory.CreateDbContext();
+        var job = await context.Jobs.FindAsync(jobId);
         if (job != null && job.OptimizationResultJson != null)
         {
             job.OptimizationResultJson = null;
             job.OptimizedAt = null;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     // Parts management
     public async Task<JobPart> AddPartAsync(JobPart part)
     {
-        var maxOrder = await _context.JobParts
+        await using var context = _factory.CreateDbContext();
+        var maxOrder = await context.JobParts
             .Where(p => p.JobId == part.JobId)
             .MaxAsync(p => (int?)p.SortOrder) ?? -1;
         part.SortOrder = maxOrder + 1;
 
-        _context.JobParts.Add(part);
-        await _context.SaveChangesAsync();
+        context.JobParts.Add(part);
+        await context.SaveChangesAsync();
 
         // Update job timestamp and clear stale results
-        var job = await _context.Jobs.FindAsync(part.JobId);
+        var job = await context.Jobs.FindAsync(part.JobId);
         if (job != null)
         {
             job.UpdatedAt = DateTime.UtcNow;
             job.OptimizationResultJson = null;
             job.OptimizedAt = null;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         return part;
@@ -212,35 +239,37 @@ public class JobService
 
     public async Task UpdatePartAsync(JobPart part)
     {
-        _context.JobParts.Update(part);
-        await _context.SaveChangesAsync();
+        await using var context = _factory.CreateDbContext();
+        context.JobParts.Update(part);
+        await context.SaveChangesAsync();
 
-        var job = await _context.Jobs.FindAsync(part.JobId);
+        var job = await context.Jobs.FindAsync(part.JobId);
         if (job != null)
         {
             job.UpdatedAt = DateTime.UtcNow;
             job.OptimizationResultJson = null;
             job.OptimizedAt = null;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task DeletePartAsync(int id)
     {
-        var part = await _context.JobParts.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        var part = await context.JobParts.FindAsync(id);
         if (part != null)
         {
             var jobId = part.JobId;
-            _context.JobParts.Remove(part);
-            await _context.SaveChangesAsync();
+            context.JobParts.Remove(part);
+            await context.SaveChangesAsync();
 
-            var job = await _context.Jobs.FindAsync(jobId);
+            var job = await context.Jobs.FindAsync(jobId);
             if (job != null)
             {
                 job.UpdatedAt = DateTime.UtcNow;
                 job.OptimizationResultJson = null;
                 job.OptimizedAt = null;
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
         }
     }
@@ -248,21 +277,22 @@ public class JobService
     // Stock management
     public async Task<JobStock> AddStockAsync(JobStock stock)
     {
-        var maxOrder = await _context.JobStocks
+        await using var context = _factory.CreateDbContext();
+        var maxOrder = await context.JobStocks
             .Where(s => s.JobId == stock.JobId)
             .MaxAsync(s => (int?)s.SortOrder) ?? -1;
         stock.SortOrder = maxOrder + 1;
 
-        _context.JobStocks.Add(stock);
-        await _context.SaveChangesAsync();
+        context.JobStocks.Add(stock);
+        await context.SaveChangesAsync();
 
-        var job = await _context.Jobs.FindAsync(stock.JobId);
+        var job = await context.Jobs.FindAsync(stock.JobId);
         if (job != null)
         {
             job.UpdatedAt = DateTime.UtcNow;
             job.OptimizationResultJson = null;
             job.OptimizedAt = null;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         return stock;
@@ -270,42 +300,45 @@ public class JobService
 
     public async Task UpdateStockAsync(JobStock stock)
     {
-        _context.JobStocks.Update(stock);
-        await _context.SaveChangesAsync();
+        await using var context = _factory.CreateDbContext();
+        context.JobStocks.Update(stock);
+        await context.SaveChangesAsync();
 
-        var job = await _context.Jobs.FindAsync(stock.JobId);
+        var job = await context.Jobs.FindAsync(stock.JobId);
         if (job != null)
         {
             job.UpdatedAt = DateTime.UtcNow;
             job.OptimizationResultJson = null;
             job.OptimizedAt = null;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task DeleteStockAsync(int id)
     {
-        var stock = await _context.JobStocks.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        var stock = await context.JobStocks.FindAsync(id);
         if (stock != null)
         {
             var jobId = stock.JobId;
-            _context.JobStocks.Remove(stock);
-            await _context.SaveChangesAsync();
+            context.JobStocks.Remove(stock);
+            await context.SaveChangesAsync();
 
-            var job = await _context.Jobs.FindAsync(jobId);
+            var job = await context.Jobs.FindAsync(jobId);
             if (job != null)
             {
                 job.UpdatedAt = DateTime.UtcNow;
                 job.OptimizationResultJson = null;
                 job.OptimizedAt = null;
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
         }
     }
 
     public async Task<List<StockItem>> GetAvailableStockForMaterialAsync(int materialId)
     {
-        return await _context.StockItems
+        await using var context = _factory.CreateDbContext();
+        return await context.StockItems
             .Include(s => s.Material)
             .Where(s => s.MaterialId == materialId && s.IsActive)
             .OrderBy(s => s.LengthInches)
@@ -315,7 +348,8 @@ public class JobService
     // Cutting tools
     public async Task<List<CuttingTool>> GetCuttingToolsAsync(bool includeInactive = false)
     {
-        var query = _context.CuttingTools.AsQueryable();
+        await using var context = _factory.CreateDbContext();
+        var query = context.CuttingTools.AsQueryable();
         if (!includeInactive)
         {
             query = query.Where(t => t.IsActive);
@@ -325,53 +359,58 @@ public class JobService
 
     public async Task<CuttingTool?> GetCuttingToolByIdAsync(int id)
     {
-        return await _context.CuttingTools.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        return await context.CuttingTools.FindAsync(id);
     }
 
     public async Task<CuttingTool?> GetDefaultCuttingToolAsync()
     {
-        return await _context.CuttingTools.FirstOrDefaultAsync(t => t.IsDefault && t.IsActive);
+        await using var context = _factory.CreateDbContext();
+        return await context.CuttingTools.FirstOrDefaultAsync(t => t.IsDefault && t.IsActive);
     }
 
     public async Task<CuttingTool> CreateCuttingToolAsync(CuttingTool tool)
     {
+        await using var context = _factory.CreateDbContext();
         if (tool.IsDefault)
         {
             // Clear other defaults
-            var others = await _context.CuttingTools.Where(t => t.IsDefault).ToListAsync();
+            var others = await context.CuttingTools.Where(t => t.IsDefault).ToListAsync();
             foreach (var other in others)
             {
                 other.IsDefault = false;
             }
         }
 
-        _context.CuttingTools.Add(tool);
-        await _context.SaveChangesAsync();
+        context.CuttingTools.Add(tool);
+        await context.SaveChangesAsync();
         return tool;
     }
 
     public async Task UpdateCuttingToolAsync(CuttingTool tool)
     {
+        await using var context = _factory.CreateDbContext();
         if (tool.IsDefault)
         {
-            var others = await _context.CuttingTools.Where(t => t.IsDefault && t.Id != tool.Id).ToListAsync();
+            var others = await context.CuttingTools.Where(t => t.IsDefault && t.Id != tool.Id).ToListAsync();
             foreach (var other in others)
             {
                 other.IsDefault = false;
             }
         }
 
-        _context.CuttingTools.Update(tool);
-        await _context.SaveChangesAsync();
+        context.CuttingTools.Update(tool);
+        await context.SaveChangesAsync();
     }
 
     public async Task DeleteCuttingToolAsync(int id)
     {
-        var tool = await _context.CuttingTools.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        var tool = await context.CuttingTools.FindAsync(id);
         if (tool != null)
         {
             tool.IsActive = false;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 }

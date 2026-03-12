@@ -6,16 +6,17 @@ namespace CutList.Web.Services;
 
 public class MaterialService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _factory;
 
-    public MaterialService(ApplicationDbContext context)
+    public MaterialService(IDbContextFactory<ApplicationDbContext> factory)
     {
-        _context = context;
+        _factory = factory;
     }
 
     public async Task<List<Material>> GetAllAsync(bool includeInactive = false)
     {
-        var query = _context.Materials
+        await using var context = _factory.CreateDbContext();
+        var query = context.Materials
             .Include(m => m.Dimensions)
             .AsQueryable();
         if (!includeInactive)
@@ -27,16 +28,18 @@ public class MaterialService
 
     public async Task<Material?> GetByIdAsync(int id)
     {
-        return await _context.Materials
+        await using var context = _factory.CreateDbContext();
+        return await context.Materials
             .Include(m => m.Dimensions)
             .FirstOrDefaultAsync(m => m.Id == id);
     }
 
     public async Task<Material> CreateAsync(Material material)
     {
+        await using var context = _factory.CreateDbContext();
         material.CreatedAt = DateTime.UtcNow;
-        _context.Materials.Add(material);
-        await _context.SaveChangesAsync();
+        context.Materials.Add(material);
+        await context.SaveChangesAsync();
         return material;
     }
 
@@ -45,6 +48,7 @@ public class MaterialService
     /// </summary>
     public async Task<Material> CreateWithDimensionsAsync(Material material, MaterialDimensions dimensions)
     {
+        await using var context = _factory.CreateDbContext();
         material.CreatedAt = DateTime.UtcNow;
 
         // Auto-generate Size string from dimensions if not provided
@@ -56,13 +60,13 @@ public class MaterialService
         // Set sort order from primary dimension
         material.SortOrder = dimensions.GetSortOrder();
 
-        _context.Materials.Add(material);
-        await _context.SaveChangesAsync();
+        context.Materials.Add(material);
+        await context.SaveChangesAsync();
 
         // Link dimensions to the created material
         dimensions.MaterialId = material.Id;
-        _context.MaterialDimensions.Add(dimensions);
-        await _context.SaveChangesAsync();
+        context.MaterialDimensions.Add(dimensions);
+        await context.SaveChangesAsync();
 
         material.Dimensions = dimensions;
         return material;
@@ -70,9 +74,10 @@ public class MaterialService
 
     public async Task UpdateAsync(Material material)
     {
+        await using var context = _factory.CreateDbContext();
         material.UpdatedAt = DateTime.UtcNow;
-        _context.Materials.Update(material);
-        await _context.SaveChangesAsync();
+        context.Materials.Update(material);
+        await context.SaveChangesAsync();
     }
 
     /// <summary>
@@ -80,6 +85,7 @@ public class MaterialService
     /// </summary>
     public async Task UpdateWithDimensionsAsync(Material material, MaterialDimensions dimensions, bool regenerateSize = false)
     {
+        await using var context = _factory.CreateDbContext();
         material.UpdatedAt = DateTime.UtcNow;
 
         if (regenerateSize)
@@ -98,14 +104,14 @@ public class MaterialService
         if (dimensions.Id > 0)
         {
             // Already tracked, just save
-            _context.Entry(material).State = EntityState.Modified;
+            context.Entry(material).State = EntityState.Modified;
         }
         else
         {
-            _context.Materials.Update(material);
+            context.Materials.Update(material);
 
             // Check if dimensions already exist for this material
-            var existingDimensions = await _context.MaterialDimensions
+            var existingDimensions = await context.MaterialDimensions
                 .AsNoTracking()
                 .FirstOrDefaultAsync(d => d.MaterialId == material.Id);
 
@@ -113,30 +119,32 @@ public class MaterialService
             {
                 // Copy the existing Id to update in place
                 dimensions.Id = existingDimensions.Id;
-                _context.MaterialDimensions.Update(dimensions);
+                context.MaterialDimensions.Update(dimensions);
             }
             else
             {
-                _context.MaterialDimensions.Add(dimensions);
+                context.MaterialDimensions.Add(dimensions);
             }
         }
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(int id)
     {
-        var material = await _context.Materials.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        var material = await context.Materials.FindAsync(id);
         if (material != null)
         {
             material.IsActive = false;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<bool> ExistsAsync(MaterialShape shape, string size, int? excludeId = null)
     {
-        var query = _context.Materials.Where(m => m.Shape == shape && m.Size == size && m.IsActive);
+        await using var context = _factory.CreateDbContext();
+        var query = context.Materials.Where(m => m.Shape == shape && m.Size == size && m.IsActive);
         if (excludeId.HasValue)
         {
             query = query.Where(m => m.Id != excludeId.Value);
@@ -149,10 +157,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchRoundBarByDiameterAsync(decimal targetDiameter, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetDiameter - tolerance;
         var maxValue = targetDiameter + tolerance;
 
-        return await _context.Set<RoundBarDimensions>()
+        return await context.Set<RoundBarDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.Diameter >= minValue && d.Diameter <= maxValue)
@@ -166,10 +175,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchRoundTubeByODAsync(decimal targetOD, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetOD - tolerance;
         var maxValue = targetOD + tolerance;
 
-        return await _context.Set<RoundTubeDimensions>()
+        return await context.Set<RoundTubeDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.OuterDiameter >= minValue && d.OuterDiameter <= maxValue)
@@ -183,10 +193,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchFlatBarByWidthAsync(decimal targetWidth, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetWidth - tolerance;
         var maxValue = targetWidth + tolerance;
 
-        return await _context.Set<FlatBarDimensions>()
+        return await context.Set<FlatBarDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.Width >= minValue && d.Width <= maxValue)
@@ -200,10 +211,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchSquareBarBySizeAsync(decimal targetSize, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetSize - tolerance;
         var maxValue = targetSize + tolerance;
 
-        return await _context.Set<SquareBarDimensions>()
+        return await context.Set<SquareBarDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.Size >= minValue && d.Size <= maxValue)
@@ -217,10 +229,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchSquareTubeBySizeAsync(decimal targetSize, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetSize - tolerance;
         var maxValue = targetSize + tolerance;
 
-        return await _context.Set<SquareTubeDimensions>()
+        return await context.Set<SquareTubeDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.Size >= minValue && d.Size <= maxValue)
@@ -234,10 +247,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchRectangularTubeByWidthAsync(decimal targetWidth, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetWidth - tolerance;
         var maxValue = targetWidth + tolerance;
 
-        return await _context.Set<RectangularTubeDimensions>()
+        return await context.Set<RectangularTubeDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.Width >= minValue && d.Width <= maxValue)
@@ -251,10 +265,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchAngleByLegAsync(decimal targetLeg, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetLeg - tolerance;
         var maxValue = targetLeg + tolerance;
 
-        return await _context.Set<AngleDimensions>()
+        return await context.Set<AngleDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.Leg1 >= minValue && d.Leg1 <= maxValue)
@@ -268,10 +283,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchChannelByHeightAsync(decimal targetHeight, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetHeight - tolerance;
         var maxValue = targetHeight + tolerance;
 
-        return await _context.Set<ChannelDimensions>()
+        return await context.Set<ChannelDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.Height >= minValue && d.Height <= maxValue)
@@ -285,10 +301,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchIBeamByHeightAsync(decimal targetHeight, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetHeight - tolerance;
         var maxValue = targetHeight + tolerance;
 
-        return await _context.Set<IBeamDimensions>()
+        return await context.Set<IBeamDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.Height >= minValue && d.Height <= maxValue)
@@ -302,10 +319,11 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> SearchPipeByNominalSizeAsync(decimal targetNPS, decimal tolerance)
     {
+        await using var context = _factory.CreateDbContext();
         var minValue = targetNPS - tolerance;
         var maxValue = targetNPS + tolerance;
 
-        return await _context.Set<PipeDimensions>()
+        return await context.Set<PipeDimensions>()
             .Include(d => d.Material)
             .Where(d => d.Material.IsActive)
             .Where(d => d.NominalSize >= minValue && d.NominalSize <= maxValue)
@@ -319,7 +337,8 @@ public class MaterialService
     /// </summary>
     public async Task<List<Material>> GetByShapeAsync(MaterialShape shape, bool includeInactive = false)
     {
-        var query = _context.Materials
+        await using var context = _factory.CreateDbContext();
+        var query = context.Materials
             .Include(m => m.Dimensions)
             .Where(m => m.Shape == shape);
 

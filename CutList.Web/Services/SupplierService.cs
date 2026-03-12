@@ -6,16 +6,17 @@ namespace CutList.Web.Services;
 
 public class SupplierService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _factory;
 
-    public SupplierService(ApplicationDbContext context)
+    public SupplierService(IDbContextFactory<ApplicationDbContext> factory)
     {
-        _context = context;
+        _factory = factory;
     }
 
     public async Task<List<Supplier>> GetAllAsync(bool includeInactive = false)
     {
-        var query = _context.Suppliers.AsQueryable();
+        await using var context = _factory.CreateDbContext();
+        var query = context.Suppliers.AsQueryable();
         if (!includeInactive)
         {
             query = query.Where(s => s.IsActive);
@@ -25,7 +26,8 @@ public class SupplierService
 
     public async Task<Supplier?> GetByIdAsync(int id)
     {
-        return await _context.Suppliers
+        await using var context = _factory.CreateDbContext();
+        return await context.Suppliers
             .Include(s => s.Offerings)
             .ThenInclude(o => o.StockItem)
             .ThenInclude(si => si.Material)
@@ -34,32 +36,36 @@ public class SupplierService
 
     public async Task<Supplier> CreateAsync(Supplier supplier)
     {
+        await using var context = _factory.CreateDbContext();
         supplier.CreatedAt = DateTime.UtcNow;
-        _context.Suppliers.Add(supplier);
-        await _context.SaveChangesAsync();
+        context.Suppliers.Add(supplier);
+        await context.SaveChangesAsync();
         return supplier;
     }
 
     public async Task UpdateAsync(Supplier supplier)
     {
-        _context.Suppliers.Update(supplier);
-        await _context.SaveChangesAsync();
+        await using var context = _factory.CreateDbContext();
+        context.Suppliers.Update(supplier);
+        await context.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(int id)
     {
-        var supplier = await _context.Suppliers.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        var supplier = await context.Suppliers.FindAsync(id);
         if (supplier != null)
         {
             supplier.IsActive = false;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     // Offering management
     public async Task<List<SupplierOffering>> GetOfferingsForSupplierAsync(int supplierId)
     {
-        return await _context.SupplierOfferings
+        await using var context = _factory.CreateDbContext();
+        return await context.SupplierOfferings
             .Include(o => o.StockItem)
             .ThenInclude(si => si.Material)
             .Where(o => o.SupplierId == supplierId && o.IsActive)
@@ -71,7 +77,8 @@ public class SupplierService
 
     public async Task<List<SupplierOffering>> GetOfferingsForStockItemAsync(int stockItemId)
     {
-        return await _context.SupplierOfferings
+        await using var context = _factory.CreateDbContext();
+        return await context.SupplierOfferings
             .Include(o => o.Supplier)
             .Where(o => o.StockItemId == stockItemId && o.IsActive && o.Supplier.IsActive)
             .OrderBy(o => o.Supplier.Name)
@@ -80,7 +87,8 @@ public class SupplierService
 
     public async Task<SupplierOffering?> GetOfferingByIdAsync(int id)
     {
-        return await _context.SupplierOfferings
+        await using var context = _factory.CreateDbContext();
+        return await context.SupplierOfferings
             .Include(o => o.StockItem)
             .ThenInclude(si => si.Material)
             .Include(o => o.Supplier)
@@ -89,30 +97,34 @@ public class SupplierService
 
     public async Task<SupplierOffering> AddOfferingAsync(SupplierOffering offering)
     {
-        _context.SupplierOfferings.Add(offering);
-        await _context.SaveChangesAsync();
+        await using var context = _factory.CreateDbContext();
+        context.SupplierOfferings.Add(offering);
+        await context.SaveChangesAsync();
         return offering;
     }
 
     public async Task UpdateOfferingAsync(SupplierOffering offering)
     {
-        _context.SupplierOfferings.Update(offering);
-        await _context.SaveChangesAsync();
+        await using var context = _factory.CreateDbContext();
+        context.SupplierOfferings.Update(offering);
+        await context.SaveChangesAsync();
     }
 
     public async Task DeleteOfferingAsync(int id)
     {
-        var offering = await _context.SupplierOfferings.FindAsync(id);
+        await using var context = _factory.CreateDbContext();
+        var offering = await context.SupplierOfferings.FindAsync(id);
         if (offering != null)
         {
             offering.IsActive = false;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<bool> OfferingExistsAsync(int supplierId, int stockItemId, int? excludeId = null)
     {
-        var query = _context.SupplierOfferings.Where(o =>
+        await using var context = _factory.CreateDbContext();
+        var query = context.SupplierOfferings.Where(o =>
             o.SupplierId == supplierId &&
             o.StockItemId == stockItemId &&
             o.IsActive);

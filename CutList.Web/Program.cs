@@ -3,7 +3,13 @@ using CutList.Web.Data;
 using CutList.Web.Services;
 using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory
+});
+
+builder.Host.UseWindowsService();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -13,8 +19,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add Entity Framework
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// Add Entity Framework (factory pattern for Blazor Server circuit safety)
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add application services
@@ -38,10 +44,8 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    app.UseHsts();
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 

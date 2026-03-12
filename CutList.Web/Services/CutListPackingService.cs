@@ -8,11 +8,11 @@ namespace CutList.Web.Services;
 
 public class CutListPackingService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _factory;
 
-    public CutListPackingService(ApplicationDbContext context)
+    public CutListPackingService(IDbContextFactory<ApplicationDbContext> factory)
     {
-        _context = context;
+        _factory = factory;
     }
 
     public async Task<MultiMaterialPackResult> PackAsync(IEnumerable<JobPart> parts, decimal kerfInches)
@@ -22,6 +22,7 @@ public class CutListPackingService
 
     public async Task<MultiMaterialPackResult> PackAsync(IEnumerable<JobPart> parts, decimal kerfInches, IEnumerable<JobStock>? jobStock)
     {
+        await using var context = _factory.CreateDbContext();
         var result = new MultiMaterialPackResult();
 
         // Group parts by material
@@ -37,7 +38,7 @@ public class CutListPackingService
             var materialParts = group.ToList();
 
             // Get the material
-            var material = await _context.Materials
+            var material = await context.Materials
                 .FirstOrDefaultAsync(m => m.Id == materialId);
 
             if (material == null) continue;
@@ -63,7 +64,7 @@ public class CutListPackingService
             else
             {
                 // No job-specific stock - use all available stock items for this material
-                var stockItems = await _context.StockItems
+                var stockItems = await context.StockItems
                     .Where(s => s.MaterialId == materialId && s.IsActive)
                     .ToListAsync();
 
@@ -172,10 +173,12 @@ public class CutListPackingService
         return result;
     }
 
-    public MultiMaterialPackResult? LoadSavedResult(string json)
+    public async Task<MultiMaterialPackResult?> LoadSavedResultAsync(string json)
     {
         var saved = System.Text.Json.JsonSerializer.Deserialize<SavedOptimizationResult>(json);
-        return saved?.ToPackResult(_context);
+        if (saved == null) return null;
+        await using var context = _factory.CreateDbContext();
+        return await saved.ToPackResultAsync(context);
     }
 
     public string SerializeResult(MultiMaterialPackResult result)
@@ -344,13 +347,13 @@ public class SavedOptimizationResult
         return saved;
     }
 
-    public MultiMaterialPackResult ToPackResult(ApplicationDbContext context)
+    public async Task<MultiMaterialPackResult> ToPackResultAsync(ApplicationDbContext context)
     {
         var result = new MultiMaterialPackResult();
 
         foreach (var savedMr in MaterialResults)
         {
-            var material = context.Materials.Find(savedMr.MaterialId);
+            var material = await context.Materials.FindAsync(savedMr.MaterialId);
             if (material == null) continue;
 
             var packResult = new PackResult();
