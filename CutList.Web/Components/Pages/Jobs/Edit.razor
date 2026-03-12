@@ -1146,7 +1146,7 @@ else
                                 <table class="table table-sm table-striped mb-0">
                                     <thead>
                                         <tr class="cutlist-material-print-header">
-                                            <th colspan="5">
+                                            <th colspan="4">
                                                 <span class="cutlist-material-name">@materialResult.Material.DisplayName</span>
                                                 <span class="cutlist-material-stats">
                                                     @(materialSummary.InStockBins + materialSummary.ToBePurchasedBins) bars
@@ -1157,7 +1157,6 @@ else
                                         </tr>
                                         <tr>
                                             <th style="width: 50px;">#</th>
-                                            <th style="width: 90px;">Source</th>
                                             <th style="white-space: nowrap;">Stock Length</th>
                                             <th>Cuts</th>
                                             <th style="width: 120px; white-space: nowrap;">Waste</th>
@@ -1169,21 +1168,11 @@ else
                                         {
                                             <tr>
                                                 <td>@binNum</td>
-                                                <td>
-                                                    @if (entry.Source == "Stock")
-                                                    {
-                                                        <span class="badge bg-success">Stock</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="badge bg-warning text-dark">Purchase</span>
-                                                    }
-                                                </td>
                                                 <td style="white-space: nowrap;">@ArchUnits.FormatFromInches(entry.Bin.Length)</td>
                                                 <td>
                                                     @foreach (var item in entry.Bin.Items)
                                                     {
-                                                        <span class="badge bg-primary me-1">
+                                                        <span class="badge bg-primary me-1 fs-6">
                                                             @(string.IsNullOrWhiteSpace(item.Name) ? ArchUnits.FormatFromInches(item.Length) : $"{item.Name} ({ArchUnits.FormatFromInches(item.Length)})")
                                                         </span>
                                                     }
