@@ -8,15 +8,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CutList is a 1D bin packing optimization application that helps users optimize material cutting. It calculates efficient bin packing solutions to minimize waste when cutting stock materials into required parts.
 
-The solution contains three projects:
+The solution contains four projects:
 
 | Project | Framework | Purpose |
 |---------|-----------|---------|
 | **CutList** | .NET 8.0 Windows Forms | Original desktop UI (MVP pattern) |
 | **CutList.Core** | .NET 8.0 Class Library | Domain models and packing algorithms (platform-agnostic) |
-| **CutList.Web** | .NET 8.0 Blazor Server | Web-based UI with EF Core + SQL Server |
+| **CutList.Web** | .NET 8.0 Blazor Server | Web-based UI + REST API, EF Core + SQL Server |
+| **CutList.Mcp** | .NET 10.0 Console (stdio) | MCP server exposing CutList.Web's REST API as tools for Claude |
 
-**Key Dependencies**: Math-Expression-Evaluator (input parsing), Newtonsoft.Json (serialization), Entity Framework Core (data access), Bootstrap 5 + Bootstrap Icons (UI)
+**Key Dependencies**: Math-Expression-Evaluator (input parsing), Newtonsoft.Json (serialization), Entity Framework Core (data access), Bootstrap 5 + Bootstrap Icons (UI), ModelContextProtocol SDK (CutList.Mcp)
 
 ## Build Commands
 
@@ -28,10 +29,11 @@ dotnet build CutList.sln
 dotnet build CutList/CutList.csproj
 dotnet build CutList.Core/CutList.Core.csproj
 dotnet build CutList.Web/CutList.Web.csproj
+dotnet build CutList.Mcp/CutList.Mcp.csproj
 
 # Run applications
 dotnet run --project CutList/CutList.csproj        # WinForms
-dotnet run --project CutList.Web/CutList.Web.csproj # Blazor
+dotnet run --project CutList.Web/CutList.Web.csproj # Blazor + REST API (default http://localhost:5270)
 
 # EF Core migrations (always apply immediately after creating)
 dotnet ef migrations add <Name> --project CutList.Web
@@ -40,6 +42,18 @@ dotnet ef database update --project CutList.Web
 # Clean build
 dotnet clean CutList.sln
 ```
+
+### Deploying CutList.Web as a Windows Service
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/Deploy-CutListWeb.ps1 -ServiceName CutListWeb -InstallDir C:\Services\CutListWeb -Urls "http://*:5270" -OpenFirewall
+```
+
+Publishes, (re)creates the `CutListWeb` Windows service with auto-restart recovery, and optionally opens the firewall port. See `docs/deploy-script-guide.md` (global docs) for the template this follows.
+
+### Publishing CutList.Mcp
+
+CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `~/.claude/mcp/CutList.Mcp/` and registered in `~/.claude/settings.local.json` (see global `CLAUDE.md` MCP Server Publishing table). It talks to CutList.Web's REST API at `http://localhost:5270`, so CutList.Web must be running (dev `dotnet run` or the deployed Windows service) for the MCP tools to work.
 
 ## Architecture
 
@@ -73,11 +87,25 @@ dotnet clean CutList.sln
 - `CutListService` bridges UI models to core packing algorithms
 - `DocumentService` handles JSON file persistence
 
-### CutList.Web (Blazor Server) — Web UI
+### CutList.Web (Blazor Server) — Web UI + REST API
 
 **Database**: SQL Server via Entity Framework Core (connection string: `DefaultConnection`)
 
-**Service Registration** (Program.cs): All services registered as Scoped — MaterialService, SupplierService, StockItemService, JobService, CutListPackingService, ReportService, PurchaseItemService
+**Service Registration** (Program.cs): All services registered as Scoped — MaterialService, SupplierService, StockItemService, JobService, CutListPackingService, ReportService, PurchaseItemService, CatalogService. `IDbContextFactory<ApplicationDbContext>` is used (not a scoped `DbContext` directly) for Blazor Server circuit safety.
+
+**REST API** (`Controllers/`): `JobsController`, `MaterialsController`, `StockItemsController`, `SuppliersController`, `CuttingToolsController`, `PackingController`, `CatalogController` — Swagger/OpenAPI enabled in Development. This API is the integration surface `CutList.Mcp` calls into; the Blazor UI talks to the services directly and does not go through it.
+
+**Error handling**: `UseExceptionHandler("/Error", ...)` in non-Development environments routes to `Components/Pages/Error.razor`.
+
+### CutList.Mcp — MCP Server
+
+Stdio-transport MCP server (`ModelContextProtocol` SDK) exposing CutList.Web's REST API as tools for Claude Code. Registers tools via `WithToolsFromAssembly`; logging is disabled entirely so it doesn't interfere with the stdio transport.
+
+- `ApiClient.cs` — typed `HttpClient` wrapper for CutList.Web's REST API (`BaseAddress` hardcoded to `http://localhost:5270`)
+- `JobTools.cs` — job CRUD, parts/stock, optimization (`OptimizeJob`), cutting tools
+- `InventoryTools.cs` — suppliers, materials, stock items, supplier offerings
+- `CutListTools.cs` — static helpers shared across tool classes
+- `Models.cs` — shared DTOs distinct from CutList.Web's own DTOs (kept intentionally thin for MCP tool responses)
 
 ## CutList.Web Entities
 
@@ -166,6 +194,10 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 ### ReportService
 - `FormatLength(inches)`, `GroupItems(items)` for print report formatting
 
+### CatalogService
+- `ExportAsync()` — dumps active suppliers, cutting tools, and materials (with dimensions + stock items + supplier offerings) into a shape-grouped `CatalogData` DTO for bulk export/import tooling
+- Backs the `CatalogController` REST endpoint and the `scripts/ExportData` / `scripts/AlroCatalog` data-loading workflows
+
 ## CutList.Web Pages
 
 | Route | Page | Purpose |
@@ -183,6 +215,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | `/suppliers` | Suppliers/Index | Supplier list with CRUD |
 | `/suppliers/{Id}` | Suppliers/Edit | Supplier + offerings management |
 | `/tools` | Tools/Index | Cutting tools CRUD |
+| `/Error` | Error | Unhandled exception page (registered via `UseExceptionHandler`) |
 
 ## Shared Components
 
@@ -208,6 +241,13 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - **Timestamps** — `CreatedAt` defaults to `GETUTCDATE()`; `UpdatedAt` set on modifications
 - **Collections** — Encapsulated in Core; use `AsReadOnly()`, access via `Add*` methods
 - **Priority system** — Lower priority bins used first in packing algorithm
+- **UI ↔ MCP split** — The Blazor UI calls services directly (in-process); CutList.Mcp and any other external integration go through the REST API in `Controllers/`. Keep both paths in sync when changing service method signatures used by controllers.
+
+## Supporting Scripts (`scripts/`)
+
+- `Deploy-CutListWeb.ps1` — publishes and installs CutList.Web as a Windows Service (see Build Commands above)
+- `ExportData/` — standalone console project that exercises `CutList.Web`'s data layer to import/export catalog seed data (e.g. `Data/SeedData/oneals-catalog.json`)
+- `AlroCatalog/` — Python scraper (`scrape_alro.py`) for pulling material/size/grade data from the Alro Steel SmartGrid site into a JSON catalog for import; see `SCRAPE_PLAN.md` for scraper status and cascading-dropdown navigation notes. Not part of the .NET build.
 
 ## Key Files
 
@@ -221,4 +261,6 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | `CutList.Web/Services/JobService.cs` | Job orchestration (CRUD, parts, stock, tools, lock/unlock) |
 | `CutList.Web/Services/CutListPackingService.cs` | Bridges web entities to Core packing engine |
 | `CutList.Web/Components/Pages/Jobs/Edit.razor` | Job editor (tabbed: Details, Parts, Stock, Results) |
+| `CutList.Mcp/ApiClient.cs` | HTTP client the MCP server uses to call CutList.Web's REST API |
+| `CutList.Mcp/Program.cs` | MCP server entrypoint (stdio transport, tool registration) |
 | `CutList/Presenters/MainFormPresenter.cs` | WinForms business logic orchestrator |
