@@ -5,7 +5,7 @@ using ModelContextProtocol.Server;
 namespace CutList.Mcp;
 
 /// <summary>
-/// MCP tools for inventory management - suppliers, materials, stock items, and offerings.
+/// MCP tools for inventory management - materials and stock items.
 /// All calls go through the CutList.Web REST API via ApiClient.
 /// </summary>
 [McpServerToolType]
@@ -17,56 +17,6 @@ public class InventoryTools
     {
         _api = api;
     }
-
-    #region Suppliers
-
-    [McpServerTool(Name = "list_suppliers"), Description("Lists all suppliers in the system.")]
-    public async Task<SupplierListResult> ListSuppliers(
-        [Description("Include inactive suppliers (default false)")]
-        bool includeInactive = false)
-    {
-        var suppliers = await _api.GetSuppliersAsync(includeInactive);
-
-        return new SupplierListResult
-        {
-            Success = true,
-            Suppliers = suppliers.Select(s => new SupplierDto
-            {
-                Id = s.Id,
-                Name = s.Name,
-                ContactInfo = s.ContactInfo,
-                Notes = s.Notes,
-                IsActive = s.IsActive
-            }).ToList()
-        };
-    }
-
-    [McpServerTool(Name = "add_supplier"), Description("Adds a new supplier to the system.")]
-    public async Task<SupplierResult> AddSupplier(
-        [Description("Supplier name (e.g., 'O'Neal Steel')")]
-        string name,
-        [Description("Contact info - website, phone, email, etc.")]
-        string? contactInfo = null,
-        [Description("Notes about the supplier")]
-        string? notes = null)
-    {
-        var supplier = await _api.CreateSupplierAsync(name, contactInfo, notes);
-
-        return new SupplierResult
-        {
-            Success = true,
-            Supplier = supplier != null ? new SupplierDto
-            {
-                Id = supplier.Id,
-                Name = supplier.Name,
-                ContactInfo = supplier.ContactInfo,
-                Notes = supplier.Notes,
-                IsActive = supplier.IsActive
-            } : null
-        };
-    }
-
-    #endregion
 
     #region Materials
 
@@ -285,151 +235,22 @@ public class InventoryTools
 
     #endregion
 
-    #region Supplier Offerings
+    #region Convenience
 
-    [McpServerTool(Name = "list_supplier_offerings"), Description("Lists supplier offerings (what suppliers sell for each stock item).")]
-    public async Task<SupplierOfferingListResult> ListSupplierOfferings(
-        [Description("Filter by supplier ID")]
-        int? supplierId = null,
-        [Description("Filter by stock item ID")]
-        int? stockItemId = null,
-        [Description("Filter by material ID")]
-        int? materialId = null)
-    {
-        List<ApiOfferingDto> offerings;
-
-        if (supplierId.HasValue)
-        {
-            offerings = await _api.GetOfferingsForSupplierAsync(supplierId.Value);
-            // Apply additional filters client-side
-            if (stockItemId.HasValue)
-                offerings = offerings.Where(o => o.StockItemId == stockItemId.Value).ToList();
-            if (materialId.HasValue)
-            {
-                // Need to get stock items for this material to filter
-                var stockItems = await _api.GetStockItemsAsync(materialId);
-                var stockItemIds = stockItems.Select(s => s.Id).ToHashSet();
-                offerings = offerings.Where(o => stockItemIds.Contains(o.StockItemId)).ToList();
-            }
-        }
-        else if (stockItemId.HasValue)
-        {
-            offerings = await _api.GetOfferingsForStockItemAsync(stockItemId.Value);
-        }
-        else if (materialId.HasValue)
-        {
-            // Get stock items for this material, then aggregate offerings
-            var stockItems = await _api.GetStockItemsAsync(materialId);
-            var allOfferings = new List<ApiOfferingDto>();
-            foreach (var si in stockItems)
-            {
-                var siOfferings = await _api.GetOfferingsForStockItemAsync(si.Id);
-                allOfferings.AddRange(siOfferings);
-            }
-            offerings = allOfferings;
-        }
-        else
-        {
-            // No filter - get all suppliers then aggregate
-            var suppliers = await _api.GetSuppliersAsync();
-            var allOfferings = new List<ApiOfferingDto>();
-            foreach (var s in suppliers)
-            {
-                var sOfferings = await _api.GetOfferingsForSupplierAsync(s.Id);
-                allOfferings.AddRange(sOfferings);
-            }
-            offerings = allOfferings;
-        }
-
-        return new SupplierOfferingListResult
-        {
-            Success = true,
-            Offerings = offerings.Select(o => new SupplierOfferingDto
-            {
-                Id = o.Id,
-                SupplierId = o.SupplierId,
-                SupplierName = o.SupplierName ?? string.Empty,
-                StockItemId = o.StockItemId,
-                MaterialName = o.MaterialName ?? string.Empty,
-                LengthFormatted = o.LengthFormatted ?? string.Empty,
-                PartNumber = o.PartNumber,
-                SupplierDescription = o.SupplierDescription,
-                Price = o.Price,
-                Notes = o.Notes
-            }).ToList()
-        };
-    }
-
-    [McpServerTool(Name = "add_supplier_offering"), Description("Adds a supplier offering - links a supplier to a stock item with their part number and pricing.")]
-    public async Task<SupplierOfferingResult> AddSupplierOffering(
-        [Description("Supplier ID (use list_suppliers to find)")]
-        int supplierId,
-        [Description("Stock item ID (use list_stock_items to find)")]
-        int stockItemId,
-        [Description("Supplier's part number")]
-        string? partNumber = null,
-        [Description("Supplier's description of the item")]
-        string? supplierDescription = null,
-        [Description("Price per unit")]
-        decimal? price = null,
-        [Description("Notes")]
-        string? notes = null)
-    {
-        try
-        {
-            var offering = await _api.CreateOfferingAsync(supplierId, stockItemId, partNumber, supplierDescription, price, notes);
-
-            if (offering == null)
-                return new SupplierOfferingResult { Success = false, Error = "Failed to create offering" };
-
-            return new SupplierOfferingResult
-            {
-                Success = true,
-                Offering = new SupplierOfferingDto
-                {
-                    Id = offering.Id,
-                    SupplierId = offering.SupplierId,
-                    SupplierName = offering.SupplierName ?? string.Empty,
-                    StockItemId = offering.StockItemId,
-                    MaterialName = offering.MaterialName ?? string.Empty,
-                    LengthFormatted = offering.LengthFormatted ?? string.Empty,
-                    PartNumber = offering.PartNumber,
-                    SupplierDescription = offering.SupplierDescription,
-                    Price = offering.Price,
-                    Notes = offering.Notes
-                }
-            };
-        }
-        catch (ApiConflictException ex)
-        {
-            return new SupplierOfferingResult { Success = false, Error = ex.Message };
-        }
-        catch (HttpRequestException ex)
-        {
-            return new SupplierOfferingResult { Success = false, Error = ex.Message };
-        }
-    }
-
-    [McpServerTool(Name = "add_stock_with_offering"), Description("Convenience method: adds a material (if needed), stock item (if needed), and supplier offering all at once.")]
-    public async Task<AddStockWithOfferingResult> AddStockWithOffering(
-        [Description("Supplier ID (use list_suppliers or add_supplier first)")]
-        int supplierId,
+    [McpServerTool(Name = "add_stock"), Description("Convenience method: adds a material (if needed) and a stock item (if needed) with an initial quantity, all in one call.")]
+    public async Task<AddStockResult> AddStock(
         [Description("Material shape (e.g., 'Angle', 'FlatBar')")]
         string shape,
         [Description("Material size (e.g., '2 x 2 x 1/4')")]
         string size,
         [Description("Stock length (e.g., '20'', '240')")]
         string length,
+        [Description("Quantity on hand (default 0)")]
+        int quantityOnHand = 0,
         [Description("Material type: Steel, Aluminum, Stainless, Brass, Copper (default: Steel)")]
         string type = "Steel",
         [Description("Grade or specification (e.g., 'A36', 'Hot Roll', '304', '6061-T6')")]
-        string? grade = null,
-        [Description("Supplier's part number")]
-        string? partNumber = null,
-        [Description("Supplier's description")]
-        string? supplierDescription = null,
-        [Description("Price per unit")]
-        decimal? price = null)
+        string? grade = null)
     {
         // Parse length for formatted display
         double lengthInches;
@@ -441,7 +262,7 @@ public class InventoryTools
         }
         catch
         {
-            return new AddStockWithOfferingResult
+            return new AddStockResult
             {
                 Success = false,
                 Error = $"Could not parse length: {length}"
@@ -478,12 +299,12 @@ public class InventoryTools
             }
             catch (HttpRequestException ex)
             {
-                return new AddStockWithOfferingResult { Success = false, Error = $"Failed to create material: {ex.Message}" };
+                return new AddStockResult { Success = false, Error = $"Failed to create material: {ex.Message}" };
             }
         }
 
         if (material == null)
-            return new AddStockWithOfferingResult { Success = false, Error = "Failed to find or create material" };
+            return new AddStockResult { Success = false, Error = "Failed to find or create material" };
 
         // Step 2: Find or create stock item
         bool stockItemCreated = false;
@@ -494,7 +315,7 @@ public class InventoryTools
         {
             try
             {
-                stockItem = await _api.CreateStockItemAsync(material.Id, length, null, 0, null);
+                stockItem = await _api.CreateStockItemAsync(material.Id, length, null, quantityOnHand, null);
                 stockItemCreated = true;
             }
             catch (ApiConflictException)
@@ -505,7 +326,7 @@ public class InventoryTools
             }
             catch (HttpRequestException ex)
             {
-                return new AddStockWithOfferingResult
+                return new AddStockResult
                 {
                     Success = false,
                     Error = $"Failed to create stock item: {ex.Message}",
@@ -515,53 +336,24 @@ public class InventoryTools
         }
 
         if (stockItem == null)
-            return new AddStockWithOfferingResult
+            return new AddStockResult
             {
                 Success = false,
                 Error = "Failed to find or create stock item",
                 MaterialCreated = materialCreated
             };
 
-        // Step 3: Create offering
-        try
+        return new AddStockResult
         {
-            var offering = await _api.CreateOfferingAsync(supplierId, stockItem.Id, partNumber, supplierDescription, price, null);
-
-            return new AddStockWithOfferingResult
-            {
-                Success = true,
-                MaterialId = material.Id,
-                MaterialName = $"{material.Shape} - {material.Size}",
-                MaterialCreated = materialCreated,
-                StockItemId = stockItem.Id,
-                StockItemCreated = stockItemCreated,
-                LengthFormatted = ArchUnits.FormatFromInches(lengthInches),
-                OfferingId = offering?.Id ?? 0,
-                PartNumber = partNumber,
-                SupplierDescription = supplierDescription,
-                Price = price
-            };
-        }
-        catch (ApiConflictException)
-        {
-            return new AddStockWithOfferingResult
-            {
-                Success = false,
-                Error = $"Offering for this supplier and stock item already exists",
-                MaterialCreated = materialCreated,
-                StockItemCreated = stockItemCreated
-            };
-        }
-        catch (HttpRequestException ex)
-        {
-            return new AddStockWithOfferingResult
-            {
-                Success = false,
-                Error = $"Failed to create offering: {ex.Message}",
-                MaterialCreated = materialCreated,
-                StockItemCreated = stockItemCreated
-            };
-        }
+            Success = true,
+            MaterialId = material.Id,
+            MaterialName = $"{material.Shape} - {material.Size}",
+            MaterialCreated = materialCreated,
+            StockItemId = stockItem.Id,
+            StockItemCreated = stockItemCreated,
+            LengthFormatted = ArchUnits.FormatFromInches(lengthInches),
+            QuantityOnHand = stockItem.QuantityOnHand
+        };
     }
 
     #endregion
@@ -676,29 +468,6 @@ public class InventoryTools
 
 #region DTOs
 
-public class SupplierDto
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? ContactInfo { get; set; }
-    public string? Notes { get; set; }
-    public bool IsActive { get; set; }
-}
-
-public class SupplierListResult
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public List<SupplierDto> Suppliers { get; set; } = new();
-}
-
-public class SupplierResult
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public SupplierDto? Supplier { get; set; }
-}
-
 public class MaterialDimensionsDto
 {
     public double? Diameter { get; set; }
@@ -769,35 +538,7 @@ public class StockItemResult
     public StockItemDto? StockItem { get; set; }
 }
 
-public class SupplierOfferingDto
-{
-    public int Id { get; set; }
-    public int SupplierId { get; set; }
-    public string SupplierName { get; set; } = string.Empty;
-    public int StockItemId { get; set; }
-    public string MaterialName { get; set; } = string.Empty;
-    public string LengthFormatted { get; set; } = string.Empty;
-    public string? PartNumber { get; set; }
-    public string? SupplierDescription { get; set; }
-    public decimal? Price { get; set; }
-    public string? Notes { get; set; }
-}
-
-public class SupplierOfferingListResult
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public List<SupplierOfferingDto> Offerings { get; set; } = new();
-}
-
-public class SupplierOfferingResult
-{
-    public bool Success { get; set; }
-    public string? Error { get; set; }
-    public SupplierOfferingDto? Offering { get; set; }
-}
-
-public class AddStockWithOfferingResult
+public class AddStockResult
 {
     public bool Success { get; set; }
     public string? Error { get; set; }
@@ -807,10 +548,7 @@ public class AddStockWithOfferingResult
     public int StockItemId { get; set; }
     public bool StockItemCreated { get; set; }
     public string LengthFormatted { get; set; } = string.Empty;
-    public int OfferingId { get; set; }
-    public string? PartNumber { get; set; }
-    public string? SupplierDescription { get; set; }
-    public decimal? Price { get; set; }
+    public int QuantityOnHand { get; set; }
 }
 
 #endregion

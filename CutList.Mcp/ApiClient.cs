@@ -14,23 +14,6 @@ public class ApiClient
         _http = http;
     }
 
-    #region Suppliers
-
-    public async Task<List<ApiSupplierDto>> GetSuppliersAsync(bool includeInactive = false)
-    {
-        var url = $"api/suppliers?includeInactive={includeInactive}";
-        return await _http.GetFromJsonAsync<List<ApiSupplierDto>>(url) ?? [];
-    }
-
-    public async Task<ApiSupplierDto?> CreateSupplierAsync(string name, string? contactInfo, string? notes)
-    {
-        var response = await _http.PostAsJsonAsync("api/suppliers", new { Name = name, ContactInfo = contactInfo, Notes = notes });
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ApiSupplierDto>();
-    }
-
-    #endregion
-
     #region Materials
 
     public async Task<List<ApiMaterialDto>> GetMaterialsAsync(string? shape = null, bool includeInactive = false)
@@ -212,40 +195,6 @@ public class ApiClient
 
     #endregion
 
-    #region Offerings
-
-    public async Task<List<ApiOfferingDto>> GetOfferingsForSupplierAsync(int supplierId)
-    {
-        return await _http.GetFromJsonAsync<List<ApiOfferingDto>>($"api/suppliers/{supplierId}/offerings") ?? [];
-    }
-
-    public async Task<List<ApiOfferingDto>> GetOfferingsForStockItemAsync(int stockItemId)
-    {
-        return await _http.GetFromJsonAsync<List<ApiOfferingDto>>($"api/stock-items/{stockItemId}/offerings") ?? [];
-    }
-
-    public async Task<ApiOfferingDto?> CreateOfferingAsync(int supplierId, int stockItemId,
-        string? partNumber, string? supplierDescription, decimal? price, string? notes)
-    {
-        var body = new
-        {
-            StockItemId = stockItemId,
-            PartNumber = partNumber,
-            SupplierDescription = supplierDescription,
-            Price = price,
-            Notes = notes
-        };
-        var response = await _http.PostAsJsonAsync($"api/suppliers/{supplierId}/offerings", body);
-        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
-        {
-            var error = await response.Content.ReadAsStringAsync();
-            throw new ApiConflictException(error);
-        }
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ApiOfferingDto>();
-    }
-
-    #endregion
 }
 
 /// <summary>
@@ -385,15 +334,6 @@ public class ApiMaterialPackingSummaryDto
 
 #region API Response DTOs — Inventory
 
-public class ApiSupplierDto
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? ContactInfo { get; set; }
-    public string? Notes { get; set; }
-    public bool IsActive { get; set; }
-}
-
 public class ApiMaterialDto
 {
     public int Id { get; set; }
@@ -421,22 +361,6 @@ public class ApiStockItemDto
     public string LengthFormatted { get; set; } = string.Empty;
     public string? Name { get; set; }
     public int QuantityOnHand { get; set; }
-    public string? Notes { get; set; }
-    public bool IsActive { get; set; }
-}
-
-public class ApiOfferingDto
-{
-    public int Id { get; set; }
-    public int SupplierId { get; set; }
-    public string? SupplierName { get; set; }
-    public int StockItemId { get; set; }
-    public string? MaterialName { get; set; }
-    public decimal? LengthInches { get; set; }
-    public string? LengthFormatted { get; set; }
-    public string? PartNumber { get; set; }
-    public string? SupplierDescription { get; set; }
-    public decimal? Price { get; set; }
     public string? Notes { get; set; }
     public bool IsActive { get; set; }
 }
