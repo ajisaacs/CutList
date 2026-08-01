@@ -7,13 +7,13 @@
 <PageTitle>Stock Items</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Stock Items</h1>
+    <h1>Stock Items TEST123</h1>
     <a href="stock/new" class="btn btn-primary">Add Stock Item</a>
 </div>
 
 <p class="text-muted mb-4">
-    Stock items represent the specific lengths of material you have available for cutting. Each stock item links
-    a material to a length and tracks how many pieces you have on hand.
+    Stock items represent the specific lengths of material you can cut from. Add the lengths you typically
+    work with here, then pick from them when adding stock to a job.
 </p>
 
 @if (loading)
@@ -46,7 +46,6 @@ else
                     <th>Grade</th>
                     <th>Size</th>
                     <th>Length</th>
-                    <th>On Hand</th>
                     <th style="width: 100px;">Actions</th>
                 </tr>
             </thead>
@@ -59,16 +58,6 @@ else
                         <td>@item.Material.Grade</td>
                         <td>@item.Material.Size</td>
                         <td>@ArchUnits.FormatFromInches((double)item.LengthInches)</td>
-                        <td>
-                            @if (item.QuantityOnHand > 0)
-                            {
-                                <span class="badge bg-success">@item.QuantityOnHand</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">0</span>
-                            }
-                        </td>
                         <td>
                             <div class="d-flex gap-1">
                                 <a href="stock/@item.Id" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>

@@ -276,7 +276,6 @@ else
                                     <tr>
                                         <th style="width: 40px;"></th>
                                         <th>Length</th>
-                                        <th>On Hand</th>
                                         <th style="width: 120px;">Qty to Use</th>
                                         <th style="width: 100px;">Priority</th>
                                     </tr>
@@ -289,7 +288,6 @@ else
                                                 <input type="checkbox" class="form-check-input" @bind="candidate.Selected" />
                                             </td>
                                             <td>@ArchUnits.FormatFromInches((double)candidate.StockItem.LengthInches)</td>
-                                            <td>@candidate.StockItem.QuantityOnHand</td>
                                             <td>
                                                 <input type="number" class="form-control form-control-sm" @bind="candidate.Quantity"
                                                        min="-1" disabled="@(!candidate.Selected)" />
@@ -810,7 +808,7 @@ else
                         <option value="">-- Select --</option>
                         @foreach (var stock in availableStockItems)
                         {
-                            <option value="@stock.Id">@ArchUnits.FormatFromInches((double)stock.LengthInches) (@stock.QuantityOnHand available)</option>
+                            <option value="@stock.Id">@ArchUnits.FormatFromInches((double)stock.LengthInches)</option>
                         }
                     </select>
                 </div>
