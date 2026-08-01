@@ -302,14 +302,21 @@ else
                 return;
             }
 
-            if (IsNew)
+            try
             {
-                var created = await StockItemService.CreateAsync(stockItem);
-                Navigation.NavigateTo($"stock/{created.Id}");
+                if (IsNew)
+                {
+                    var created = await StockItemService.CreateAsync(stockItem);
+                    Navigation.NavigateTo($"stock/{created.Id}");
+                }
+                else
+                {
+                    await StockItemService.UpdateAsync(stockItem);
+                }
             }
-            else
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException)
             {
-                await StockItemService.UpdateAsync(stockItem);
+                errorMessage = "A stock item with this material and length already exists (it may have been previously deleted).";
             }
         }
         finally

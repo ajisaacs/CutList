@@ -91,9 +91,9 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Database**: SQL Server via Entity Framework Core (connection string: `DefaultConnection`)
 
-**Service Registration** (Program.cs): All services registered as Scoped — MaterialService, SupplierService, StockItemService, JobService, CutListPackingService, ReportService, PurchaseItemService, CatalogService. `IDbContextFactory<ApplicationDbContext>` is used (not a scoped `DbContext` directly) for Blazor Server circuit safety.
+**Service Registration** (Program.cs): All services registered as Scoped — MaterialService, StockItemService, JobService, CutListPackingService, ReportService, CatalogService. `IDbContextFactory<ApplicationDbContext>` is used (not a scoped `DbContext` directly) for Blazor Server circuit safety.
 
-**REST API** (`Controllers/`): `JobsController`, `MaterialsController`, `StockItemsController`, `SuppliersController`, `CuttingToolsController`, `PackingController`, `CatalogController` — Swagger/OpenAPI enabled in Development. This API is the integration surface `CutList.Mcp` calls into; the Blazor UI talks to the services directly and does not go through it.
+**REST API** (`Controllers/`): `JobsController`, `MaterialsController`, `StockItemsController`, `CuttingToolsController`, `PackingController`, `CatalogController` — Swagger/OpenAPI enabled in Development. This API is the integration surface `CutList.Mcp` calls into; the Blazor UI talks to the services directly and does not go through it.
 
 **Error handling**: `UseExceptionHandler("/Error", ...)` in non-Development environments routes to `Components/Pages/Error.razor`.
 
@@ -103,7 +103,7 @@ Stdio-transport MCP server (`ModelContextProtocol` SDK) exposing CutList.Web's R
 
 - `ApiClient.cs` — typed `HttpClient` wrapper for CutList.Web's REST API (`BaseAddress` hardcoded to `http://localhost:5270`)
 - `JobTools.cs` — job CRUD, parts/stock, optimization (`OptimizeJob`), cutting tools
-- `InventoryTools.cs` — suppliers, materials, stock items, supplier offerings
+- `InventoryTools.cs` — materials, stock items (`add_stock`, etc.)
 - `CutListTools.cs` — static helpers shared across tool classes
 - `Models.cs` — shared DTOs distinct from CutList.Web's own DTOs (kept intentionally thin for MCP tool responses)
 
@@ -122,19 +122,11 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 ### StockItem
 - `MaterialId`, `LengthInches` (decimal), `QuantityOnHand` (int), `IsActive`
 - **Unique constraint**: (MaterialId, LengthInches)
-- **Relationships**: `Material`, `SupplierOfferings` (1:many), `Transactions` (1:many StockTransaction)
+- **Relationships**: `Material`, `Transactions` (1:many StockTransaction)
 
 ### StockTransaction
 - `StockItemId`, `Quantity` (signed delta), `Type` (Received/Used/Adjustment/Scrapped/Returned)
-- Optional: `JobId`, `SupplierId`, `UnitPrice`
-
-### Supplier
-- `Name` (required), `ContactInfo`, `Notes`, `IsActive`
-- **Relationships**: `Offerings` (1:many SupplierOffering)
-
-### SupplierOffering
-- Links Supplier to StockItem with optional `PartNumber`, `Price`, `Notes`
-- **Unique constraint**: (SupplierId, StockItemId)
+- Optional: `JobId`
 
 ### CuttingTool
 - `Name`, `KerfInches` (decimal), `IsDefault` (bool), `IsActive`
@@ -153,9 +145,6 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 ### JobStock
 - `JobId`, `MaterialId`, `StockItemId?`, `LengthInches`, `Quantity` (-1 = unlimited), `IsCustomLength`, `Priority` (lower = used first), `SortOrder`
 
-### PurchaseItem
-- `StockItemId`, `SupplierId?`, `JobId?`, `Quantity`, `Status` (Pending/Ordered/Received), `Notes`
-
 ## CutList.Web Services
 
 ### MaterialService
@@ -168,10 +157,6 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - Stock transactions: `AddStockAsync`, `UseStockAsync`, `AdjustStockAsync`, `ScrapStockAsync`
 - `GetTransactionHistoryAsync`, `RecalculateQuantityAsync`
 - Pricing: `GetAverageCostAsync`, `GetLastPurchasePriceAsync`
-
-### SupplierService
-- CRUD for suppliers and offerings
-- `GetOfferingsForStockItemAsync` — all supplier options for a stock item
 
 ### JobService
 - Job CRUD: `CreateAsync` (auto-generates JobNumber), `DuplicateAsync` (deep copy), `QuickCreateAsync`
@@ -187,15 +172,11 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - `GetSummary(result)` — calculates total bins, pieces, waste, efficiency %
 - `SerializeResult(result)` / `LoadSavedResult(json)` — JSON round-trip via DTO layer (`SavedOptimizationResult` etc.)
 
-### PurchaseItemService
-- CRUD + `CreateBulkAsync` for batch creation from optimization results
-- `UpdateStatusAsync(id, status)`, `UpdateSupplierAsync(id, supplierId)`
-
 ### ReportService
 - `FormatLength(inches)`, `GroupItems(items)` for print report formatting
 
 ### CatalogService
-- `ExportAsync()` — dumps active suppliers, cutting tools, and materials (with dimensions + stock items + supplier offerings) into a shape-grouped `CatalogData` DTO for bulk export/import tooling
+- `ExportAsync()` — dumps cutting tools and materials (with dimensions + stock items) into a shape-grouped `CatalogData` DTO for bulk export/import tooling
 - Backs the `CatalogController` REST endpoint and the `scripts/ExportData` / `scripts/AlroCatalog` data-loading workflows
 
 ## CutList.Web Pages
@@ -210,10 +191,6 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | `/materials/new`, `/materials/{Id}` | Materials/Edit | Material + dimension form (varies by shape) |
 | `/stock` | Stock/Index | Stock items with MaterialFilter, quantity badges |
 | `/stock/new`, `/stock/{Id}` | Stock/Edit | Stock item form |
-| `/orders` | Orders/Index | Tabbed (Pending/Ordered/All), supplier assignment, status transitions |
-| `/orders/add` | Orders/Add | Manual purchase item creation |
-| `/suppliers` | Suppliers/Index | Supplier list with CRUD |
-| `/suppliers/{Id}` | Suppliers/Edit | Supplier + offerings management |
 | `/tools` | Tools/Index | Cutting tools CRUD |
 | `/Error` | Error | Unhandled exception page (registered via `UseExceptionHandler`) |
 
@@ -224,20 +201,20 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | `ConfirmDialog` | Modal confirmation for destructive actions (Show/Hide methods, OnConfirm callback) |
 | `LengthInput` | Architectural unit input — parses "12'", "6\"", "12 1/2\""; reformats on blur; two-way binding via `Value` or `NullableValue` |
 | `Pager` | Pagination with "Showing X-Y of Z", prev/next, smart page window with ellipsis |
-| `MaterialFilter` | Reusable filter: Shape, Type, Grade dropdowns + search text; used on Materials, Stock, Orders pages |
+| `MaterialFilter` | Reusable filter: Shape, Type, Grade dropdowns + search text; used on Materials, Stock pages |
 
 ## Key Patterns & Conventions
 
 - **Nullable reference types enabled** — handle nulls explicitly
-- **Soft deletes** — Materials, Suppliers, StockItems, CuttingTools use `IsActive` flag
-- **Job locking** — `LockedAt` timestamp set when materials ordered; Edit page disables all modification via `<fieldset disabled>`, hides add/edit/delete buttons; Unlock button to re-enable editing
+- **Soft deletes** — Materials, StockItems, CuttingTools use `IsActive` flag
+- **Job locking** — `LockedAt` timestamp set via a manual Lock Job action (always available, regardless of whether the job needs purchases); Edit page disables all modification via `<fieldset disabled>`, hides add/edit/delete buttons; Unlock button to re-enable editing
 - **Pagination** — All list pages use `Pager` with `pageSize = 25`
 - **ConfirmDialog** — All destructive actions use the shared `ConfirmDialog` component
 - **Material selection flow** — Shape dropdown -> Size dropdown -> Length input -> Quantity (conditional dropdowns)
 - **Stock priority** — Lower number = used first; `-1` quantity = unlimited
 - **Job stock** — Jobs can use auto-discovered inventory OR define custom stock lengths
 - **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
-- **Purchase flow** — Optimize job -> "Add to Order List" creates PurchaseItems + locks job -> Orders page manages status (Pending -> Ordered -> Received)
+- **Job lock flow** — Optimize job -> Lock Job (manual action, available whether or not purchases are needed) -> job becomes read-only until Unlock
 - **Timestamps** — `CreatedAt` defaults to `GETUTCDATE()`; `UpdatedAt` set on modifications
 - **Collections** — Encapsulated in Core; use `AsReadOnly()`, access via `Add*` methods
 - **Priority system** — Lower priority bins used first in packing algorithm

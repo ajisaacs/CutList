@@ -2,7 +2,6 @@
 @page "/jobs/{Id:int}"
 @inject JobService JobService
 @inject MaterialService MaterialService
-@inject StockItemService StockItemService
 @inject CutListPackingService PackingService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -23,7 +22,7 @@
     <div class="alert alert-warning d-flex justify-content-between align-items-center mb-3">
         <div>
             <i class="bi bi-lock-fill me-2"></i>
-            <strong>This job is locked</strong> — materials ordered on @job.LockedAt!.Value.ToLocalTime().ToString("g"). Unlock to make changes.
+            <strong>This job is locked</strong> — locked on @job.LockedAt!.Value.ToLocalTime().ToString("g"). Unlock to make changes.
         </div>
         <button class="btn btn-outline-warning btn-sm" @onclick="UnlockJob">
             <i class="bi bi-unlock"></i> Unlock Job
@@ -374,7 +373,6 @@ else
     private MultiMaterialPackingSummary? summary;
     private bool optimizing;
     private bool lockingJob;
-    private bool jobLocked;
 
     private IEnumerable<MaterialShape> DistinctShapes => materials.Select(m => m.Shape).Distinct().OrderBy(s => s);
     private IEnumerable<Material> FilteredMaterials => !selectedShape.HasValue
@@ -442,7 +440,6 @@ else
             if (packResult != null)
             {
                 summary = PackingService.GetSummary(packResult);
-                jobLocked = job.IsLocked;
             }
         }
         catch
@@ -1046,22 +1043,19 @@ else
                 <div class="card mb-4 print-purchase-list">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Purchase List</h5>
-                        @if (summary.TotalToBePurchasedBins > 0)
+                        @if (job.IsLocked)
                         {
-                            @if (jobLocked)
-                            {
-                                <span class="badge bg-success"><i class="bi bi-lock-fill me-1"></i>Job Locked</span>
-                            }
-                            else
-                            {
-                                <button class="btn btn-warning btn-sm" @onclick="LockJob" disabled="@lockingJob">
-                                    @if (lockingJob)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-1"></span>
-                                    }
-                                    <i class="bi bi-lock me-1"></i>Lock Job
-                                </button>
-                            }
+                            <span class="badge bg-success"><i class="bi bi-lock-fill me-1"></i>Job Locked</span>
+                        }
+                        else
+                        {
+                            <button class="btn btn-warning btn-sm" @onclick="LockJob" disabled="@lockingJob">
+                                @if (lockingJob)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                <i class="bi bi-lock me-1"></i>Lock Job
+                            </button>
                         }
                     </div>
                     <div class="card-body">
@@ -1207,7 +1201,6 @@ else
 
             // Refresh job to get updated OptimizedAt
             job = (await JobService.GetByIdAsync(Id!.Value))!;
-            jobLocked = job.IsLocked;
         }
         finally
         {
@@ -1222,7 +1215,6 @@ else
         {
             await JobService.LockAsync(Id!.Value);
             job = (await JobService.GetByIdAsync(Id!.Value))!;
-            jobLocked = true;
         }
         finally
         {

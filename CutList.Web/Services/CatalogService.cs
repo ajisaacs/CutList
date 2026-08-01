@@ -347,20 +347,17 @@ public class CatalogService
                 var existing = existingStockItems.FirstOrDefault(
                     s => s.LengthInches == dto.LengthInches);
 
-                StockItem stockItem;
-
                 if (existing != null)
                 {
                     existing.Name = dto.Name ?? existing.Name;
                     existing.Notes = dto.Notes ?? existing.Notes;
                     existing.IsActive = true;
                     existing.UpdatedAt = DateTime.UtcNow;
-                    stockItem = existing;
                     result.StockItemsUpdated++;
                 }
                 else
                 {
-                    stockItem = new StockItem
+                    var stockItem = new StockItem
                     {
                         MaterialId = material.Id,
                         LengthInches = dto.LengthInches,
@@ -381,6 +378,8 @@ public class CatalogService
                     $"Stock item '{material.DisplayName} @ {dto.LengthInches}\"': {ex.Message}");
             }
         }
+
+        await context.SaveChangesAsync();
     }
 
     private static List<CatalogStockItemDto> MapStockItems(Material m)
