@@ -814,7 +814,8 @@ else
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Qty to Use</label>
-                    <input type="number" class="form-control" @bind="newStock.Quantity" min="1" />
+                    <input type="number" class="form-control" @bind="newStock.Quantity" min="-1" />
+                    <small class="text-muted">-1 = unlimited</small>
                 </div>
             </div>
             <div class="row g-3 mt-1">
@@ -1123,7 +1124,7 @@ else
                             {
                                 <div class="alert alert-danger">
                                     <strong>@materialResult.PackResult.ItemsNotUsed.Count items not placed</strong> —
-                                    No stock lengths available or parts too long.
+                                    not enough stock quantity entered for this job, no stock lengths configured, or parts too long.
                                 </div>
                             }
 
@@ -1319,9 +1320,9 @@ else
             return;
         }
 
-        if (newStock.Quantity < 1)
+        if (newStock.Quantity < -1 || newStock.Quantity == 0)
         {
-            stockErrorMessage = "Quantity must be at least 1";
+            stockErrorMessage = "Quantity must be at least 1 (or -1 for unlimited)";
             return;
         }
 
