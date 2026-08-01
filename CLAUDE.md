@@ -120,13 +120,10 @@ Stdio-transport MCP server (`ModelContextProtocol` SDK) exposing CutList.Web's R
 Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its own standalone table (`DimAngle`, `DimChannel`, `DimFlatBar`, `DimIBeam`, `DimPipe`, `DimRectangularTube`, `DimRoundBar`, `DimRoundTube`, `DimSquareBar`, `DimSquareTube`) with no base table. Each table has its own `Id` (shared sequence) and `MaterialId` FK. Each generates its own `SizeString` and `SortOrder`.
 
 ### StockItem
-- `MaterialId`, `LengthInches` (decimal), `QuantityOnHand` (int), `IsActive`
+- `MaterialId`, `LengthInches` (decimal), `IsActive`
 - **Unique constraint**: (MaterialId, LengthInches)
-- **Relationships**: `Material`, `Transactions` (1:many StockTransaction)
-
-### StockTransaction
-- `StockItemId`, `Quantity` (signed delta), `Type` (Received/Used/Adjustment/Scrapped/Returned)
-- Optional: `JobId`
+- **Relationships**: `Material`
+- No quantity tracking — a StockItem represents a length of material you can cut from, not a counted inventory record
 
 ### CuttingTool
 - `Name`, `KerfInches` (decimal), `IsDefault` (bool), `IsActive`
@@ -154,8 +151,6 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 ### StockItemService
 - CRUD with soft delete
-- Stock transactions: `AddStockAsync`, `UseStockAsync`, `AdjustStockAsync`, `ScrapStockAsync`
-- `GetTransactionHistoryAsync`, `RecalculateQuantityAsync`
 
 ### JobService
 - Job CRUD: `CreateAsync` (auto-generates JobNumber), `DuplicateAsync` (deep copy), `QuickCreateAsync`
@@ -188,7 +183,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | `/jobs/{Id}` | Jobs/Edit | Tabbed editor (Details, Parts, Stock, Results); locked jobs show banner + disable editing |
 | `/materials` | Materials/Index | Material list with MaterialFilter, pagination |
 | `/materials/new`, `/materials/{Id}` | Materials/Edit | Material + dimension form (varies by shape) |
-| `/stock` | Stock/Index | Stock items with MaterialFilter, quantity badges |
+| `/stock` | Stock/Index | Stock items with MaterialFilter, pagination |
 | `/stock/new`, `/stock/{Id}` | Stock/Edit | Stock item form |
 | `/tools` | Tools/Index | Cutting tools CRUD |
 | `/Error` | Error | Unhandled exception page (registered via `UseExceptionHandler`) |
@@ -211,7 +206,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - **ConfirmDialog** — All destructive actions use the shared `ConfirmDialog` component
 - **Material selection flow** — Shape dropdown -> Size dropdown -> Length input -> Quantity (conditional dropdowns)
 - **Stock priority** — Lower number = used first; `-1` quantity = unlimited
-- **Job stock** — Jobs can use auto-discovered inventory OR define custom stock lengths
+- **Job stock** — Jobs must have stock explicitly configured (catalog-sourced `StockItem` rows or custom-length rows); there is no fallback to auto-discovered inventory
 - **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
 - **Job lock flow** — Optimize job -> Lock Job (manual action, available whether or not purchases are needed) -> job becomes read-only until Unlock
 - **Timestamps** — `CreatedAt` defaults to `GETUTCDATE()`; `UpdatedAt` set on modifications
