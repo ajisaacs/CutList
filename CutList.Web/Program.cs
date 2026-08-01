@@ -25,12 +25,10 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 
 // Add application services
 builder.Services.AddScoped<MaterialService>();
-builder.Services.AddScoped<SupplierService>();
 builder.Services.AddScoped<StockItemService>();
 builder.Services.AddScoped<JobService>();
 builder.Services.AddScoped<CutListPackingService>();
 builder.Services.AddScoped<ReportService>();
-builder.Services.AddScoped<PurchaseItemService>();
 builder.Services.AddScoped<CatalogService>();
 
 var app = builder.Build();
