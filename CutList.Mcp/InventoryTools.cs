@@ -179,7 +179,6 @@ public class InventoryTools
                 LengthInches = s.LengthInches,
                 LengthFormatted = s.LengthFormatted,
                 Name = s.Name,
-                QuantityOnHand = s.QuantityOnHand,
                 Notes = s.Notes,
                 IsActive = s.IsActive
             }).ToList()
@@ -194,14 +193,12 @@ public class InventoryTools
         string length,
         [Description("Optional name/label for this stock item")]
         string? name = null,
-        [Description("Initial quantity on hand (default 0)")]
-        int quantityOnHand = 0,
         [Description("Notes")]
         string? notes = null)
     {
         try
         {
-            var stockItem = await _api.CreateStockItemAsync(materialId, length, name, quantityOnHand, notes);
+            var stockItem = await _api.CreateStockItemAsync(materialId, length, name, notes);
 
             if (stockItem == null)
                 return new StockItemResult { Success = false, Error = "Failed to create stock item" };
@@ -217,7 +214,6 @@ public class InventoryTools
                     LengthInches = stockItem.LengthInches,
                     LengthFormatted = stockItem.LengthFormatted,
                     Name = stockItem.Name,
-                    QuantityOnHand = stockItem.QuantityOnHand,
                     Notes = stockItem.Notes,
                     IsActive = stockItem.IsActive
                 }
@@ -237,7 +233,7 @@ public class InventoryTools
 
     #region Convenience
 
-    [McpServerTool(Name = "add_stock"), Description("Convenience method: adds a material (if needed) and a stock item (if needed) with an initial quantity, all in one call.")]
+    [McpServerTool(Name = "add_stock"), Description("Convenience method: adds a material (if needed) and a stock item (if needed), all in one call.")]
     public async Task<AddStockResult> AddStock(
         [Description("Material shape (e.g., 'Angle', 'FlatBar')")]
         string shape,
@@ -245,8 +241,6 @@ public class InventoryTools
         string size,
         [Description("Stock length (e.g., '20'', '240')")]
         string length,
-        [Description("Quantity on hand (default 0)")]
-        int quantityOnHand = 0,
         [Description("Material type: Steel, Aluminum, Stainless, Brass, Copper (default: Steel)")]
         string type = "Steel",
         [Description("Grade or specification (e.g., 'A36', 'Hot Roll', '304', '6061-T6')")]
@@ -315,7 +309,7 @@ public class InventoryTools
         {
             try
             {
-                stockItem = await _api.CreateStockItemAsync(material.Id, length, null, quantityOnHand, null);
+                stockItem = await _api.CreateStockItemAsync(material.Id, length, null, null);
                 stockItemCreated = true;
             }
             catch (ApiConflictException)
@@ -351,8 +345,7 @@ public class InventoryTools
             MaterialCreated = materialCreated,
             StockItemId = stockItem.Id,
             StockItemCreated = stockItemCreated,
-            LengthFormatted = ArchUnits.FormatFromInches(lengthInches),
-            QuantityOnHand = stockItem.QuantityOnHand
+            LengthFormatted = ArchUnits.FormatFromInches(lengthInches)
         };
     }
 
@@ -519,7 +512,6 @@ public class StockItemDto
     public decimal LengthInches { get; set; }
     public string LengthFormatted { get; set; } = string.Empty;
     public string? Name { get; set; }
-    public int QuantityOnHand { get; set; }
     public string? Notes { get; set; }
     public bool IsActive { get; set; }
 }
@@ -548,7 +540,6 @@ public class AddStockResult
     public int StockItemId { get; set; }
     public bool StockItemCreated { get; set; }
     public string LengthFormatted { get; set; } = string.Empty;
-    public int QuantityOnHand { get; set; }
 }
 
 #endregion

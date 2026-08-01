@@ -70,14 +70,13 @@ public class ApiClient
         return await _http.GetFromJsonAsync<List<ApiStockItemDto>>(url) ?? [];
     }
 
-    public async Task<ApiStockItemDto?> CreateStockItemAsync(int materialId, string length, string? name, int quantityOnHand, string? notes)
+    public async Task<ApiStockItemDto?> CreateStockItemAsync(int materialId, string length, string? name, string? notes)
     {
         var body = new
         {
             MaterialId = materialId,
             Length = length,
             Name = name,
-            QuantityOnHand = quantityOnHand,
             Notes = notes
         };
         var response = await _http.PostAsJsonAsync("api/stock-items", body);
@@ -360,7 +359,6 @@ public class ApiStockItemDto
     public decimal LengthInches { get; set; }
     public string LengthFormatted { get; set; } = string.Empty;
     public string? Name { get; set; }
-    public int QuantityOnHand { get; set; }
     public string? Notes { get; set; }
     public bool IsActive { get; set; }
 }
