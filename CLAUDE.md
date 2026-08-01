@@ -156,11 +156,10 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - CRUD with soft delete
 - Stock transactions: `AddStockAsync`, `UseStockAsync`, `AdjustStockAsync`, `ScrapStockAsync`
 - `GetTransactionHistoryAsync`, `RecalculateQuantityAsync`
-- Pricing: `GetAverageCostAsync`, `GetLastPurchasePriceAsync`
 
 ### JobService
 - Job CRUD: `CreateAsync` (auto-generates JobNumber), `DuplicateAsync` (deep copy), `QuickCreateAsync`
-- Lock/Unlock: `LockAsync(id)`, `UnlockAsync(id)` — controls job editability after ordering
+- Lock/Unlock: `LockAsync(id)`, `UnlockAsync(id)` — controls job editability
 - Parts: `AddPartAsync`, `UpdatePartAsync`, `DeletePartAsync` (all update job timestamp + clear optimization results)
 - Stock: `AddStockAsync`, `UpdateStockAsync`, `DeleteStockAsync` (all clear optimization results)
 - Optimization: `SaveOptimizationResultAsync`, `ClearOptimizationResultAsync`
