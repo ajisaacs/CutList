@@ -46,10 +46,10 @@ public class CutListPackingService
             // Build stock bins
             var stockBins = new List<StockBinSource>();
 
-            // Check if job has specific stock configured for this material
-            if (jobStockByMaterial.TryGetValue(materialId, out var materialJobStock) && materialJobStock.Count > 0)
+            // Use job-specific stock configuration. Jobs must have stock explicitly configured -
+            // there is no fallback to "whatever's in inventory."
+            if (jobStockByMaterial.TryGetValue(materialId, out var materialJobStock))
             {
-                // Use job-specific stock configuration
                 foreach (var stock in materialJobStock.OrderBy(s => s.Priority))
                 {
                     stockBins.Add(new StockBinSource
@@ -58,37 +58,6 @@ public class CutListPackingService
                         Quantity = stock.Quantity,
                         Priority = stock.Priority,
                         IsInStock = !stock.IsCustomLength && stock.StockItemId.HasValue
-                    });
-                }
-            }
-            else
-            {
-                // No job-specific stock - use all available stock items for this material
-                var stockItems = await context.StockItems
-                    .Where(s => s.MaterialId == materialId && s.IsActive)
-                    .ToListAsync();
-
-                foreach (var stock in stockItems)
-                {
-                    if (stock.QuantityOnHand > 0)
-                    {
-                        // In-stock with finite quantity
-                        stockBins.Add(new StockBinSource
-                        {
-                            LengthInches = stock.LengthInches,
-                            Quantity = stock.QuantityOnHand,
-                            Priority = 1,
-                            IsInStock = true
-                        });
-                    }
-
-                    // Always add as purchasable (unlimited) - algorithm will use in-stock first due to priority
-                    stockBins.Add(new StockBinSource
-                    {
-                        LengthInches = stock.LengthInches,
-                        Quantity = -1, // unlimited
-                        Priority = 2,
-                        IsInStock = false
                     });
                 }
             }
