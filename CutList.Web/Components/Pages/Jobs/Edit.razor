@@ -882,7 +882,7 @@ else
                     <div class="text-center py-4 text-muted">
                         <p class="mb-2">No stock configured for this job.</p>
                         <p class="small">Add stock from your inventory or define custom lengths.</p>
-                        <p class="small">If no stock is selected, the optimizer will use all available stock for the materials in your parts list.</p>
+                        <p class="small">Stock must be explicitly added here before you can optimize — there is no automatic fallback to inventory.</p>
                     </div>
                 }
                 else
@@ -892,7 +892,6 @@ else
             </div>
         </div>
     };
-
 
     private RenderFragment RenderStockTable() => __builder =>
     {
@@ -1251,6 +1250,7 @@ else
     {
         showStockModal = false;
         editingStock = null;
+        newStock = new();
         importCandidates.Clear();
         stockErrorMessage = null;
         importErrorMessage = null;
@@ -1268,14 +1268,7 @@ else
     {
         newStock.MaterialId = stockSelectedMaterialId;
         newStock.StockItemId = null;
-        if (stockSelectedMaterialId > 0)
-        {
-            availableStockItems = await JobService.GetAvailableStockForMaterialAsync(stockSelectedMaterialId);
-        }
-        else
-        {
-            availableStockItems.Clear();
-        }
+        await LoadAvailableStockItemsAsync(stockSelectedMaterialId);
     }
 
     private async Task EditStock(JobStock stock)
