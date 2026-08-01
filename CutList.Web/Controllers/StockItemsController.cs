@@ -11,12 +11,10 @@ namespace CutList.Web.Controllers;
 public class StockItemsController : ControllerBase
 {
     private readonly StockItemService _stockItemService;
-    private readonly SupplierService _supplierService;
 
-    public StockItemsController(StockItemService stockItemService, SupplierService supplierService)
+    public StockItemsController(StockItemService stockItemService)
     {
         _stockItemService = stockItemService;
-        _supplierService = supplierService;
     }
 
     [HttpGet]
@@ -120,34 +118,6 @@ public class StockItemsController : ControllerBase
         return Ok(items.Select(MapToDto).ToList());
     }
 
-    [HttpGet("{id}/offerings")]
-    public async Task<ActionResult<List<OfferingDto>>> GetOfferings(int id)
-    {
-        var item = await _stockItemService.GetByIdAsync(id);
-        if (item == null)
-            return NotFound();
-
-        var offerings = await _supplierService.GetOfferingsForStockItemAsync(id);
-        return Ok(offerings.Select(MapOfferingToDto).ToList());
-    }
-
-    [HttpGet("{id}/pricing")]
-    public async Task<ActionResult<StockPricingDto>> GetPricing(int id)
-    {
-        var item = await _stockItemService.GetByIdAsync(id);
-        if (item == null)
-            return NotFound();
-
-        var avgCost = await _stockItemService.GetAverageCostAsync(id);
-        var lastPrice = await _stockItemService.GetLastPurchasePriceAsync(id);
-
-        return Ok(new StockPricingDto
-        {
-            AverageCost = avgCost,
-            LastPurchasePrice = lastPrice
-        });
-    }
-
     [HttpGet("{id}/transactions")]
     public async Task<ActionResult<List<StockTransactionDto>>> GetTransactions(int id, [FromQuery] int? limit = null)
     {
@@ -164,7 +134,7 @@ public class StockItemsController : ControllerBase
     {
         try
         {
-            var transaction = await _stockItemService.AddStockAsync(id, dto.Quantity, dto.SupplierId, dto.UnitPrice, dto.Notes);
+            var transaction = await _stockItemService.AddStockAsync(id, dto.Quantity, dto.Notes);
             return Ok(MapTransactionToDto(transaction));
         }
         catch (InvalidOperationException)
@@ -250,23 +220,7 @@ public class StockItemsController : ControllerBase
         Type = t.Type.ToString(),
         JobId = t.JobId,
         JobNumber = t.Job?.JobNumber,
-        SupplierId = t.SupplierId,
-        SupplierName = t.Supplier?.Name,
-        UnitPrice = t.UnitPrice,
         Notes = t.Notes,
         CreatedAt = t.CreatedAt
-    };
-
-    private static OfferingDto MapOfferingToDto(SupplierOffering o) => new()
-    {
-        Id = o.Id,
-        SupplierId = o.SupplierId,
-        SupplierName = o.Supplier?.Name,
-        StockItemId = o.StockItemId,
-        PartNumber = o.PartNumber,
-        SupplierDescription = o.SupplierDescription,
-        Price = o.Price,
-        Notes = o.Notes,
-        IsActive = o.IsActive
     };
 }

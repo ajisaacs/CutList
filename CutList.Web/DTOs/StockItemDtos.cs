@@ -37,9 +37,6 @@ public class StockTransactionDto
     public string Type { get; set; } = string.Empty;
     public int? JobId { get; set; }
     public string? JobNumber { get; set; }
-    public int? SupplierId { get; set; }
-    public string? SupplierName { get; set; }
-    public decimal? UnitPrice { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
 }
@@ -47,8 +44,6 @@ public class StockTransactionDto
 public class AddStockDto
 {
     public int Quantity { get; set; }
-    public int? SupplierId { get; set; }
-    public decimal? UnitPrice { get; set; }
     public string? Notes { get; set; }
 }
 
@@ -69,10 +64,4 @@ public class ScrapStockDto
 {
     public int Quantity { get; set; }
     public string? Notes { get; set; }
-}
-
-public class StockPricingDto
-{
-    public decimal? AverageCost { get; set; }
-    public decimal? LastPurchasePrice { get; set; }
 }

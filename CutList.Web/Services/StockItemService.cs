@@ -57,8 +57,6 @@ public class StockItemService
 
         return await context.StockItems
             .Include(s => s.Material)
-            .Include(s => s.SupplierOfferings)
-            .ThenInclude(o => o.Supplier)
             .FirstOrDefaultAsync(s => s.Id == id);
     }
 
@@ -112,7 +110,7 @@ public class StockItemService
     }
 
     // Stock transaction methods
-    public async Task<StockTransaction> AddStockAsync(int stockItemId, int quantity, int? supplierId = null, decimal? unitPrice = null, string? notes = null)
+    public async Task<StockTransaction> AddStockAsync(int stockItemId, int quantity, string? notes = null)
     {
         await using var context = _factory.CreateDbContext();
 
@@ -124,8 +122,6 @@ public class StockItemService
             StockItemId = stockItemId,
             Quantity = quantity,
             Type = StockTransactionType.Received,
-            SupplierId = supplierId,
-            UnitPrice = unitPrice,
             Notes = notes,
             CreatedAt = DateTime.UtcNow
         };
@@ -137,34 +133,6 @@ public class StockItemService
         await context.SaveChangesAsync();
 
         return transaction;
-    }
-
-    public async Task<decimal?> GetAverageCostAsync(int stockItemId)
-    {
-        await using var context = _factory.CreateDbContext();
-
-        var transactions = await context.StockTransactions
-            .Where(t => t.StockItemId == stockItemId && t.Type == StockTransactionType.Received && t.UnitPrice.HasValue)
-            .ToListAsync();
-
-        if (transactions.Count == 0)
-            return null;
-
-        var totalCost = transactions.Sum(t => t.Quantity * t.UnitPrice!.Value);
-        var totalQty = transactions.Sum(t => t.Quantity);
-
-        return totalQty > 0 ? totalCost / totalQty : null;
-    }
-
-    public async Task<decimal?> GetLastPurchasePriceAsync(int stockItemId)
-    {
-        await using var context = _factory.CreateDbContext();
-
-        return await context.StockTransactions
-            .Where(t => t.StockItemId == stockItemId && t.Type == StockTransactionType.Received && t.UnitPrice.HasValue)
-            .OrderByDescending(t => t.CreatedAt)
-            .Select(t => t.UnitPrice)
-            .FirstOrDefaultAsync();
     }
 
     public async Task<StockTransaction> UseStockAsync(int stockItemId, int quantity, int? jobId = null, string? notes = null)
@@ -251,7 +219,6 @@ public class StockItemService
 
         var query = context.StockTransactions
             .Include(t => t.Job)
-            .Include(t => t.Supplier)
             .Where(t => t.StockItemId == stockItemId)
             .OrderByDescending(t => t.CreatedAt)
             .AsQueryable();
