@@ -13,6 +13,5 @@ public class StockItem
     public DateTime? UpdatedAt { get; set; }
 
     public Material Material { get; set; } = null!;
-    public ICollection<SupplierOffering> SupplierOfferings { get; set; } = new List<SupplierOffering>();
     public ICollection<StockTransaction> Transactions { get; set; } = new List<StockTransaction>();
 }

@@ -12,15 +12,12 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Material> Materials => Set<Material>();
     public DbSet<MaterialDimensions> MaterialDimensions => Set<MaterialDimensions>();
-    public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<StockItem> StockItems => Set<StockItem>();
-    public DbSet<SupplierOffering> SupplierOfferings => Set<SupplierOffering>();
     public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
     public DbSet<CuttingTool> CuttingTools => Set<CuttingTool>();
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<JobPart> JobParts => Set<JobPart>();
     public DbSet<JobStock> JobStocks => Set<JobStock>();
-    public DbSet<PurchaseItem> PurchaseItems => Set<PurchaseItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -143,15 +140,6 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.NominalSize);
         });
 
-        // Supplier
-        modelBuilder.Entity<Supplier>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
-            entity.Property(e => e.ContactInfo).HasMaxLength(500);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-        });
-
         // StockItem
         modelBuilder.Entity<StockItem>(entity =>
         {
@@ -174,7 +162,6 @@ public class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Notes).HasMaxLength(500);
-            entity.Property(e => e.UnitPrice).HasPrecision(10, 2);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
 
             entity.HasOne(e => e.StockItem)
@@ -186,33 +173,6 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.JobId)
                 .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasOne(e => e.Supplier)
-                .WithMany()
-                .HasForeignKey(e => e.SupplierId)
-                .OnDelete(DeleteBehavior.SetNull);
-        });
-
-        // SupplierOffering
-        modelBuilder.Entity<SupplierOffering>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.PartNumber).HasMaxLength(100);
-            entity.Property(e => e.SupplierDescription).HasMaxLength(255);
-            entity.Property(e => e.Price).HasPrecision(10, 2);
-            entity.Property(e => e.Notes).HasMaxLength(255);
-
-            entity.HasOne(e => e.StockItem)
-                .WithMany(s => s.SupplierOfferings)
-                .HasForeignKey(e => e.StockItemId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(e => e.Supplier)
-                .WithMany(s => s.Offerings)
-                .HasForeignKey(e => e.SupplierId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasIndex(e => new { e.SupplierId, e.StockItemId }).IsUnique();
         });
 
         // CuttingTool
@@ -279,34 +239,6 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(e => e.StockItem)
                 .WithMany()
                 .HasForeignKey(e => e.StockItemId)
-                .OnDelete(DeleteBehavior.SetNull);
-        });
-
-        // PurchaseItem
-        modelBuilder.Entity<PurchaseItem>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Notes).HasMaxLength(500);
-            entity.Property(e => e.Status)
-                .HasMaxLength(20)
-                .HasConversion(
-                    v => v.ToString(),
-                    v => Enum.Parse<PurchaseItemStatus>(v));
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-
-            entity.HasOne(e => e.StockItem)
-                .WithMany()
-                .HasForeignKey(e => e.StockItemId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(e => e.Supplier)
-                .WithMany()
-                .HasForeignKey(e => e.SupplierId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasOne(e => e.Job)
-                .WithMany()
-                .HasForeignKey(e => e.JobId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
