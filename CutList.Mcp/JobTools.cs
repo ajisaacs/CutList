@@ -257,9 +257,9 @@ public class JobTools
         string length,
         [Description("Quantity available (-1 for unlimited, default -1)")]
         int quantity = -1,
-        [Description("Stock item ID from inventory (optional - links to tracked inventory)")]
+        [Description("Stock item ID from the stock catalog (optional - links to a specific catalog stock item)")]
         int? stockItemId = null,
-        [Description("True if this is a custom length not from inventory (default false)")]
+        [Description("True if this is a custom length not sourced from the stock catalog (default false)")]
         bool isCustomLength = false,
         [Description("Priority - lower number = used first (default 10)")]
         int priority = 10)
@@ -304,7 +304,7 @@ public class JobTools
 
     #region Optimization
 
-    [McpServerTool(Name = "optimize_job"), Description("Runs bin packing optimization on a job. The job must have parts defined. If stock is defined, it will be used; otherwise the optimizer uses available inventory. Returns optimized cut layouts per material with efficiency stats.")]
+    [McpServerTool(Name = "optimize_job"), Description("Runs bin packing optimization on a job. The job must have parts defined, and stock must be explicitly configured on the job (via add_job_stock) for each material used by its parts - there is no fallback to inventory; parts with no matching stock configured come back as items not placed. Returns optimized cut layouts per material with efficiency stats.")]
     public async Task<OptimizeJobResult> OptimizeJob(
         [Description("Job ID")]
         int jobId,

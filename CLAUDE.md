@@ -162,7 +162,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 ### CutListPackingService
 - `PackAsync(parts, kerfInches, jobStock?)` — runs optimization per material group
-- Separates results into `InStockBins` (from inventory) and `ToBePurchasedBins`
+- Separates results into `InStockBins` (from catalog-sourced job stock) and `ToBePurchasedBins`
 - `GetSummary(result)` — calculates total bins, pieces, waste, efficiency %
 - `SerializeResult(result)` / `LoadSavedResult(json)` — JSON round-trip via DTO layer (`SavedOptimizationResult` etc.)
 
