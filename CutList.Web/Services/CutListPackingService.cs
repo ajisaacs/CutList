@@ -108,7 +108,14 @@ public class CutListPackingService
             var inStockBins = new List<Bin>();
             var toBePurchasedBins = new List<Bin>();
 
-            // Track remaining in-stock quantities from the stock bins we configured
+            // Catalog-sourced stock rows with an unlimited (-1) quantity are always in-stock,
+            // regardless of how many bins of that length get packed.
+            var unlimitedInStockLengths = stockBins
+                .Where(s => s.IsInStock && s.Quantity == -1)
+                .Select(s => s.LengthInches)
+                .ToHashSet();
+
+            // Track remaining in-stock quantities from the finite-quantity catalog stock bins we configured
             var remainingStock = stockBins
                 .Where(s => s.IsInStock && s.Quantity > 0)
                 .GroupBy(s => s.LengthInches)
@@ -118,9 +125,14 @@ public class CutListPackingService
             {
                 var binLength = (decimal)bin.Length;
 
-                // Check if this can come from in-stock
-                if (remainingStock.TryGetValue(binLength, out var remaining) && remaining > 0)
+                if (unlimitedInStockLengths.Contains(binLength))
                 {
+                    // Unlimited catalog-sourced stock - always in-stock
+                    inStockBins.Add(bin);
+                }
+                else if (remainingStock.TryGetValue(binLength, out var remaining) && remaining > 0)
+                {
+                    // Check if this can come from in-stock
                     inStockBins.Add(bin);
                     remainingStock[binLength] = remaining - 1;
                 }
