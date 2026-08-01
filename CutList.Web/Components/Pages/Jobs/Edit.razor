@@ -1278,7 +1278,7 @@ else
         }
     }
 
-    private void EditStock(JobStock stock)
+    private async Task EditStock(JobStock stock)
     {
         editingStock = stock;
         newStock = new JobStock
@@ -1301,8 +1301,18 @@ else
 
         if (!stock.IsCustomLength)
         {
-            _ = OnStockMaterialChanged();
+            // Load the candidate stock lengths without going through OnStockMaterialChanged,
+            // which would reset newStock.StockItemId and blank the prefilled selection.
+            // Awaited (not fire-and-forget) so Blazor re-renders once the list arrives.
+            await LoadAvailableStockItemsAsync(stock.MaterialId);
         }
+    }
+
+    private async Task LoadAvailableStockItemsAsync(int materialId)
+    {
+        availableStockItems = materialId > 0
+            ? await JobService.GetAvailableStockForMaterialAsync(materialId)
+            : new List<StockItem>();
     }
 
     private async Task SaveStockFromInventoryAsync()
