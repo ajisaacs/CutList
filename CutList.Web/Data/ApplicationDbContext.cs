@@ -13,7 +13,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<Material> Materials => Set<Material>();
     public DbSet<MaterialDimensions> MaterialDimensions => Set<MaterialDimensions>();
     public DbSet<StockItem> StockItems => Set<StockItem>();
-    public DbSet<StockTransaction> StockTransactions => Set<StockTransaction>();
     public DbSet<CuttingTool> CuttingTools => Set<CuttingTool>();
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<JobPart> JobParts => Set<JobPart>();
@@ -155,24 +154,6 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(e => new { e.MaterialId, e.LengthInches }).IsUnique();
-        });
-
-        // StockTransaction
-        modelBuilder.Entity<StockTransaction>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Notes).HasMaxLength(500);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-
-            entity.HasOne(e => e.StockItem)
-                .WithMany(s => s.Transactions)
-                .HasForeignKey(e => e.StockItemId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(e => e.Job)
-                .WithMany()
-                .HasForeignKey(e => e.JobId)
-                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // CuttingTool
