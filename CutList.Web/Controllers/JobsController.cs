@@ -310,7 +310,6 @@ public class JobsController : ControllerBase
             LengthInches = s.LengthInches,
             LengthFormatted = ArchUnits.FormatFromInches((double)s.LengthInches),
             Name = s.Name,
-            QuantityOnHand = s.QuantityOnHand,
             IsActive = s.IsActive
         }).ToList());
     }

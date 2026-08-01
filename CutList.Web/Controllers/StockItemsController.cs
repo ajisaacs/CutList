@@ -63,7 +63,6 @@ public class StockItemsController : ControllerBase
             MaterialId = dto.MaterialId,
             LengthInches = (decimal)lengthInches,
             Name = dto.Name,
-            QuantityOnHand = dto.QuantityOnHand,
             Notes = dto.Notes
         };
 
@@ -118,87 +117,6 @@ public class StockItemsController : ControllerBase
         return Ok(items.Select(MapToDto).ToList());
     }
 
-    [HttpGet("{id}/transactions")]
-    public async Task<ActionResult<List<StockTransactionDto>>> GetTransactions(int id, [FromQuery] int? limit = null)
-    {
-        var item = await _stockItemService.GetByIdAsync(id);
-        if (item == null)
-            return NotFound();
-
-        var transactions = await _stockItemService.GetTransactionHistoryAsync(id, limit);
-        return Ok(transactions.Select(MapTransactionToDto).ToList());
-    }
-
-    [HttpPost("{id}/receive")]
-    public async Task<ActionResult<StockTransactionDto>> ReceiveStock(int id, AddStockDto dto)
-    {
-        try
-        {
-            var transaction = await _stockItemService.AddStockAsync(id, dto.Quantity, dto.Notes);
-            return Ok(MapTransactionToDto(transaction));
-        }
-        catch (InvalidOperationException)
-        {
-            return NotFound();
-        }
-    }
-
-    [HttpPost("{id}/use")]
-    public async Task<ActionResult<StockTransactionDto>> UseStock(int id, UseStockDto dto)
-    {
-        try
-        {
-            var transaction = await _stockItemService.UseStockAsync(id, dto.Quantity, dto.JobId, dto.Notes);
-            return Ok(MapTransactionToDto(transaction));
-        }
-        catch (InvalidOperationException)
-        {
-            return NotFound();
-        }
-    }
-
-    [HttpPost("{id}/adjust")]
-    public async Task<ActionResult<StockTransactionDto>> AdjustStock(int id, AdjustStockDto dto)
-    {
-        try
-        {
-            var transaction = await _stockItemService.AdjustStockAsync(id, dto.NewQuantity, dto.Notes);
-            return Ok(MapTransactionToDto(transaction));
-        }
-        catch (InvalidOperationException)
-        {
-            return NotFound();
-        }
-    }
-
-    [HttpPost("{id}/scrap")]
-    public async Task<ActionResult<StockTransactionDto>> ScrapStock(int id, ScrapStockDto dto)
-    {
-        try
-        {
-            var transaction = await _stockItemService.ScrapStockAsync(id, dto.Quantity, dto.Notes);
-            return Ok(MapTransactionToDto(transaction));
-        }
-        catch (InvalidOperationException)
-        {
-            return NotFound();
-        }
-    }
-
-    [HttpPost("{id}/recalculate")]
-    public async Task<ActionResult<object>> RecalculateStock(int id)
-    {
-        try
-        {
-            var newQuantity = await _stockItemService.RecalculateQuantityAsync(id);
-            return Ok(new { QuantityOnHand = newQuantity });
-        }
-        catch (InvalidOperationException)
-        {
-            return NotFound();
-        }
-    }
-
     private static StockItemDto MapToDto(StockItem s) => new()
     {
         Id = s.Id,
@@ -207,20 +125,7 @@ public class StockItemsController : ControllerBase
         LengthInches = s.LengthInches,
         LengthFormatted = ArchUnits.FormatFromInches((double)s.LengthInches),
         Name = s.Name,
-        QuantityOnHand = s.QuantityOnHand,
         Notes = s.Notes,
         IsActive = s.IsActive
-    };
-
-    private static StockTransactionDto MapTransactionToDto(StockTransaction t) => new()
-    {
-        Id = t.Id,
-        StockItemId = t.StockItemId,
-        Quantity = t.Quantity,
-        Type = t.Type.ToString(),
-        JobId = t.JobId,
-        JobNumber = t.Job?.JobNumber,
-        Notes = t.Notes,
-        CreatedAt = t.CreatedAt
     };
 }
