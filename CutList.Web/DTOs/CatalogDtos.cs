@@ -103,7 +103,6 @@ public class CatalogStockItemDto
 {
     public decimal LengthInches { get; set; }
     public string? Name { get; set; }
-    public int QuantityOnHand { get; set; }
     public string? Notes { get; set; }
 }
 

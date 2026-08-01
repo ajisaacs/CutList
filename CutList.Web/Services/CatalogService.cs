@@ -362,7 +362,6 @@ public class CatalogService
                         MaterialId = material.Id,
                         LengthInches = dto.LengthInches,
                         Name = dto.Name,
-                        QuantityOnHand = dto.QuantityOnHand,
                         Notes = dto.Notes,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -388,7 +387,6 @@ public class CatalogService
         {
             LengthInches = s.LengthInches,
             Name = s.Name,
-            QuantityOnHand = s.QuantityOnHand,
             Notes = s.Notes
         }).ToList();
     }
