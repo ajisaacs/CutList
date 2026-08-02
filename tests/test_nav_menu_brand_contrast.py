@@ -1,0 +1,49 @@
+"""Regression checks for the CutList navigation brand on its light header."""
+
+from __future__ import annotations
+
+import re
+import unittest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+NAV_MENU = REPO_ROOT / "CutList.Web/Components/Layout/NavMenu.razor"
+NAV_MENU_CSS = REPO_ROOT / "CutList.Web/Components/Layout/NavMenu.razor.css"
+APP_CSS = REPO_ROOT / "CutList.Web/wwwroot/css/app.css"
+
+
+def selector_color(css: str, selector: str) -> str:
+    match = re.search(rf"{re.escape(selector)}\s*\{{([^}}]*)\}}", css)
+    if match is None:
+        raise AssertionError(f"Missing CSS selector: {selector}")
+
+    color = re.search(r"\bcolor:\s*(#[0-9a-fA-F]{6})", match.group(1))
+    if color is None:
+        raise AssertionError(f"Missing hex color for selector: {selector}")
+    return color.group(1)
+
+
+def contrast_ratio(foreground: str, background: str) -> float:
+    def luminance(color: str) -> float:
+        channels = [int(color[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+        linear = [value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4 for value in channels]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    lighter, darker = sorted((luminance(foreground), luminance(background)), reverse=True)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+class NavMenuBrandContrastTests(unittest.TestCase):
+    def test_list_word_has_accessible_contrast_against_light_top_row(self) -> None:
+        list_color = selector_color(NAV_MENU_CSS.read_text(), ".navbar-brand .brand-list")
+        top_row_color = selector_color(APP_CSS.read_text(), ".top-row")
+
+        self.assertGreaterEqual(contrast_ratio(list_color, top_row_color), 4.5)
+
+    def test_brand_keeps_cut_and_list_as_adjacent_words(self) -> None:
+        markup = NAV_MENU.read_text()
+        self.assertIn('<span class="brand-cut">Cut</span><span class="brand-list">List</span>', markup)
+
+
+if __name__ == "__main__":
+    unittest.main()
