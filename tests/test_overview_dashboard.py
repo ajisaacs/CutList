@@ -20,7 +20,7 @@ class OverviewDashboardTests(unittest.TestCase):
         self.assertIn("context.Jobs", source)
         self.assertIn("context.JobStocks", source)
         self.assertIn("OrderByDescending(j => j.CreatedAt)", source)
-        self.assertIn("GroupBy(s => new { s.MaterialId, s.LengthInches })", source)
+        self.assertIn("GroupBy(s => new { s.MaterialId, s.LengthInches, s.Material.Shape, s.Material.Size })", source)
 
     def test_overview_renders_recent_jobs_and_frequently_specified_stock(self) -> None:
         markup = HOME_PAGE.read_text()
@@ -30,6 +30,14 @@ class OverviewDashboardTests(unittest.TestCase):
         self.assertIn("Based on stock configured on jobs", markup)
         self.assertIn("overview.RecentJobs", markup)
         self.assertIn("overview.FrequentStock", markup)
+
+    def test_overview_groups_stock_by_scalar_material_fields(self) -> None:
+        source = OVERVIEW_SERVICE.read_text()
+        self.assertIn(
+            "GroupBy(s => new { s.MaterialId, s.LengthInches, s.Material.Shape, s.Material.Size })",
+            source,
+        )
+        self.assertNotIn("Material = g.Select(s => s.Material).First()", source)
 
     def test_overview_service_is_registered_and_has_dashboard_layout_rules(self) -> None:
         self.assertIn("AddScoped<OverviewService>()", PROGRAM.read_text())

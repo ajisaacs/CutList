@@ -33,17 +33,18 @@ public class OverviewService
 
         var frequentStock = await context.JobStocks
             .AsNoTracking()
-            .GroupBy(s => new { s.MaterialId, s.LengthInches })
+            .GroupBy(s => new { s.MaterialId, s.LengthInches, s.Material.Shape, s.Material.Size })
             .Select(g => new
             {
                 g.Key.MaterialId,
                 g.Key.LengthInches,
-                JobCount = g.Select(s => s.JobId).Distinct().Count(),
-                Material = g.Select(s => s.Material).First()
+                g.Key.Shape,
+                g.Key.Size,
+                JobCount = g.Select(s => s.JobId).Distinct().Count()
             })
             .OrderByDescending(s => s.JobCount)
-            .ThenBy(s => s.Material.Shape)
-            .ThenBy(s => s.Material.Size)
+            .ThenBy(s => s.Shape)
+            .ThenBy(s => s.Size)
             .ThenBy(s => s.LengthInches)
             .Take(5)
             .ToListAsync();
@@ -61,7 +62,7 @@ public class OverviewService
             recentJobs,
             frequentStock.Select(s => new FrequentStockOverview(
                 s.MaterialId,
-                s.Material.DisplayName,
+                $"{s.Shape.GetDisplayName()} - {s.Size}",
                 s.LengthInches,
                 s.JobCount)).ToList());
     }
