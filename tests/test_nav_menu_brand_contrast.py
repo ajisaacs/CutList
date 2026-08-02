@@ -44,6 +44,20 @@ class NavMenuBrandContrastTests(unittest.TestCase):
         markup = NAV_MENU.read_text()
         self.assertIn('<span class="brand-cut">Cut</span><span class="brand-list">List</span>', markup)
 
+    def test_visual_system_uses_the_industrial_blue_accent(self) -> None:
+        css = APP_CSS.read_text()
+        self.assertIn("--accent: #2b75a8;", css)
+        self.assertIn("--navy: #203747;", css)
+        self.assertNotIn("--orange:", css)
+
+    def test_desktop_content_padding_does_not_push_the_nav_brand_right(self) -> None:
+        css = APP_CSS.read_text()
+        self.assertNotIn(".top-row, article {", css)
+
+    def test_nav_brand_is_left_aligned_with_the_navigation_items(self) -> None:
+        css = NAV_MENU_CSS.read_text()
+        self.assertIn(".top-row { justify-content: flex-start;", css)
+
 
 if __name__ == "__main__":
     unittest.main()
