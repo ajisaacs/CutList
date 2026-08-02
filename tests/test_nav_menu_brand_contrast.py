@@ -10,6 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 NAV_MENU = REPO_ROOT / "CutList.Web/Components/Layout/NavMenu.razor"
 NAV_MENU_CSS = REPO_ROOT / "CutList.Web/Components/Layout/NavMenu.razor.css"
 APP_CSS = REPO_ROOT / "CutList.Web/wwwroot/css/app.css"
+APP_SHELL = REPO_ROOT / "CutList.Web/Components/App.razor"
 
 
 def selector_color(css: str, selector: str) -> str:
@@ -57,6 +58,16 @@ class NavMenuBrandContrastTests(unittest.TestCase):
     def test_nav_brand_is_left_aligned_with_the_navigation_items(self) -> None:
         css = NAV_MENU_CSS.read_text()
         self.assertIn(".top-row { justify-content: flex-start;", css)
+
+    def test_typography_uses_a_sans_serif_face_and_compact_heading_scale(self) -> None:
+        shell = APP_SHELL.read_text()
+        css = APP_CSS.read_text()
+        self.assertIn("family=IBM+Plex+Sans", shell)
+        self.assertIn('font-family: "IBM Plex Sans",', css)
+        self.assertIn("h1 { font-size: clamp(1.85rem, 3.2vw, 3.15rem);", css)
+        self.assertIn("h2 { font-size: clamp(1.35rem, 2vw, 1.85rem);", css)
+        self.assertIn(".overview-panel-heading h2 { font-size: 1.25rem;", css)
+        self.assertIn('font-family: "IBM Plex Sans",', NAV_MENU_CSS.read_text())
 
 
 if __name__ == "__main__":

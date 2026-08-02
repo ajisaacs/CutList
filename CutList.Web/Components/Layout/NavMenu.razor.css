@@ -2,7 +2,7 @@
 .brand-lockup { display: flex; align-items: center; gap: .75rem; }
 .brand-mark { align-items: center; background: #2b75a8; border-radius: .45rem; color: #fff; display: flex; font-size: 1rem; height: 2.25rem; justify-content: center; text-decoration: none; transform: rotate(-8deg); width: 2.25rem; }
 .brand-mark i { transform: rotate(8deg); }
-.navbar-brand { color: #17212b; font-family: Georgia, 'Times New Roman', serif; font-size: 1.45rem; font-weight: 700; letter-spacing: -.06em; line-height: .9; text-decoration: none; }
+.navbar-brand { color: #17212b; font-family: "IBM Plex Sans", Inter, ui-sans-serif, system-ui, sans-serif; font-size: 1.25rem; font-weight: 700; letter-spacing: -.035em; line-height: .95; text-decoration: none; }
 .navbar-brand .brand-cut { color: #2b75a8; }
 .navbar-brand .brand-list { color: #17212b; }
 .navbar-brand small { color: #60778b; display: block; font-family: Arial, sans-serif; font-size: .48rem; font-weight: 700; letter-spacing: .14em; margin-top: .45rem; }
