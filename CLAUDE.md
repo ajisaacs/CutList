@@ -101,6 +101,8 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Job title**: The job-editor page uses the `job-title` class to keep long job names at a compact, readable heading size without changing the larger dashboard hero typography.
 
+**Overview**: The root page uses `OverviewService` to show recently created jobs, headline planning counts, and the five stock configurations most frequently specified across job stock. The stock ranking is a planning-demand signal (distinct jobs configured for a material/length), not a count of on-hand inventory.
+
 **Material list semantics**: The Results tab labels lengths not covered by the job's configured stock as a **Material List**, not a purchase list. It identifies required material; purchasing remains a separate decision outside the cut-list result.
 
 ### CutList.Mcp — MCP Server

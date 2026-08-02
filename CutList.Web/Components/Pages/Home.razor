@@ -1,49 +1,148 @@
 @page "/"
+@inject OverviewService OverviewService
+@using CutList.Core.Formatting
 
-<PageTitle>CutList - Home</PageTitle>
+<PageTitle>CutList - Overview</PageTitle>
 
-<section class="dashboard-hero">
-    <div>
-        <p class="eyebrow">Production planning</p>
-        <h1>Make every length count.</h1>
-        <p class="hero-copy">Build a cut plan, optimize the stock, and send a clear list to the shop floor.</p>
-        <div class="hero-actions">
-            <a href="jobs/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New job</a>
-            <a href="jobs" class="btn btn-quiet">View all jobs <i class="bi bi-arrow-up-right"></i></a>
+@if (loading)
+{
+    <p><em>Loading overview…</em></p>
+}
+else
+{
+    <section class="overview-header">
+        <div>
+            <p class="eyebrow">Production planning</p>
+            <h1>Cut planning at a glance.</h1>
+            <p>See what is moving through the shop and the stock configurations that recur across jobs.</p>
         </div>
-    </div>
-    <div class="hero-graphic" aria-hidden="true">
-        <span class="cut-line line-one"></span><span class="cut-line line-two"></span><span class="cut-line line-three"></span>
-        <b>01</b>
-    </div>
-</section>
+        <div class="overview-actions">
+            <a href="jobs/new" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> New job</a>
+            <a href="jobs" class="btn btn-outline-primary">All jobs <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+        </div>
+    </section>
 
-<section class="dashboard-section">
-    <div class="section-heading">
-        <div><p class="eyebrow">Start here</p><h2>Set up your workspace</h2></div>
-        <span class="section-note">Three things to keep production moving</span>
-    </div>
-    <div class="action-grid">
-        <a href="jobs" class="action-card action-card-featured">
-            <span class="card-number">01</span><i class="bi bi-layers"></i><h3>Plan a job</h3>
-            <p>Add required cuts, choose stock, then optimize the layout.</p><span class="card-link">Open jobs <i class="bi bi-arrow-right"></i></span>
-        </a>
-        <a href="materials" class="action-card">
-            <span class="card-number">02</span><i class="bi bi-box-seam"></i><h3>Material library</h3>
-            <p>Keep profiles, grades, and dimensions ready to reuse.</p><span class="card-link">Manage materials <i class="bi bi-arrow-right"></i></span>
-        </a>
-        <a href="tools" class="action-card">
-            <span class="card-number">03</span><i class="bi bi-tools"></i><h3>Cutting tools</h3>
-            <p>Set kerf values so the numbers match the real cut.</p><span class="card-link">Configure tools <i class="bi bi-arrow-right"></i></span>
-        </a>
-    </div>
-</section>
+    @if (loadError is not null)
+    {
+        <div class="alert alert-warning mt-4" role="alert">
+            <strong>Overview data is unavailable.</strong> @loadError
+        </div>
+    }
 
-<section class="workflow-panel">
-    <div><p class="eyebrow">From estimate to shop floor</p><h2>A simple, reliable run of work.</h2></div>
-    <ol class="workflow-list">
-        <li><span>1</span><div><strong>Define material</strong><small>Profile, size, and grade</small></div></li>
-        <li><span>2</span><div><strong>Add stock &amp; parts</strong><small>Lengths, quantities, and kerf</small></div></li>
-        <li><span>3</span><div><strong>Optimize &amp; print</strong><small>Efficient cuts, ready to run</small></div></li>
-    </ol>
-</section>
+    <section class="overview-stats" aria-label="CutList statistics">
+        <a href="jobs" class="overview-stat">
+            <span class="overview-stat-label">Jobs</span>
+            <strong>@overview.TotalJobs</strong>
+            <small>@overview.OpenJobs open for planning</small>
+        </a>
+        <a href="jobs" class="overview-stat">
+            <span class="overview-stat-label">Parts required</span>
+            <strong>@overview.TotalParts</strong>
+            <small>Across all current jobs</small>
+        </a>
+        <a href="stock" class="overview-stat">
+            <span class="overview-stat-label">Stock options</span>
+            <strong>@overview.ActiveStockItems</strong>
+            <small>Active catalog lengths</small>
+        </a>
+    </section>
+
+    <section class="overview-grid">
+        <article class="overview-panel overview-recent-jobs">
+            <div class="overview-panel-heading">
+                <div>
+                    <p class="eyebrow">Work queue</p>
+                    <h2>Recently created jobs</h2>
+                </div>
+                <a href="jobs">View all <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+            </div>
+            @if (overview.RecentJobs.Count == 0)
+            {
+                <div class="overview-empty">
+                    <i class="bi bi-layers" aria-hidden="true"></i>
+                    <p>No jobs yet. Create a job to begin building your planning history.</p>
+                    <a href="jobs/new" class="btn btn-primary">Create first job</a>
+                </div>
+            }
+            else
+            {
+                <div class="overview-job-list">
+                    @foreach (var job in overview.RecentJobs)
+                    {
+                        <a href="jobs/@job.Id" class="overview-job-row">
+                            <span class="overview-job-id">@job.JobNumber</span>
+                            <span class="overview-job-name">@(string.IsNullOrWhiteSpace(job.Name) ? "Untitled job" : job.Name)</span>
+                            <span class="overview-job-meta">@(string.IsNullOrWhiteSpace(job.Customer) ? "No customer" : job.Customer) · @job.PartCount @(job.PartCount == 1 ? "part" : "parts")</span>
+                            <time datetime="@job.CreatedAt.ToString("O")">@job.CreatedAt.ToLocalTime().ToString("MMM d")</time>
+                            @if (job.IsLocked)
+                            {
+                                <i class="bi bi-lock-fill overview-lock" title="Materials ordered" aria-label="Materials ordered"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-arrow-right overview-row-arrow" aria-hidden="true"></i>
+                            }
+                        </a>
+                    }
+                </div>
+            }
+        </article>
+
+        <article class="overview-panel overview-stock-panel">
+            <div class="overview-panel-heading">
+                <div>
+                    <p class="eyebrow">Planning signal</p>
+                    <h2>Frequently specified stock</h2>
+                </div>
+                <a href="stock">Manage stock <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+            </div>
+            <p class="overview-panel-note">Based on stock configured on jobs. This shows recurring planning demand, not on-hand inventory.</p>
+            @if (overview.FrequentStock.Count == 0)
+            {
+                <div class="overview-empty overview-empty-compact">
+                    <i class="bi bi-box-seam" aria-hidden="true"></i>
+                    <p>Add stock to jobs to reveal the configurations used most often.</p>
+                </div>
+            }
+            else
+            {
+                <ol class="overview-stock-list">
+                    @for (var stockIndex = 0; stockIndex < overview.FrequentStock.Count; stockIndex++)
+                    {
+                        var stock = overview.FrequentStock[stockIndex];
+                        <li>
+                            <span class="overview-stock-rank">@((stockIndex + 1).ToString("D2"))</span>
+                            <div>
+                                <strong>@stock.MaterialName</strong>
+                                <span>@ArchUnits.FormatFromInches((double)stock.LengthInches) stock length</span>
+                            </div>
+                            <span class="overview-stock-count">@stock.JobCount <small>@(stock.JobCount == 1 ? "job" : "jobs")</small></span>
+                        </li>
+                    }
+                </ol>
+            }
+        </article>
+    </section>
+}
+
+@code {
+    private OverviewSnapshot overview = new(0, 0, 0, 0, [], []);
+    private bool loading = true;
+    private string? loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            overview = await OverviewService.GetSnapshotAsync();
+        }
+        catch (Exception ex)
+        {
+            loadError = $"The dashboard could not connect to its database ({ex.GetType().Name}).";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}
