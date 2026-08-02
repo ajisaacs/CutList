@@ -42,35 +42,17 @@ public class JobService
     {
         await using var context = _factory.CreateDbContext();
         job ??= new Job();
-        job.JobNumber = await GenerateJobNumberAsync(context);
+        job.JobNumber = CreateTemporaryJobNumber();
         job.CreatedAt = DateTime.UtcNow;
         context.Jobs.Add(job);
+        await context.SaveChangesAsync();
+
+        job.JobNumber = $"JOB-{job.Id}";
         await context.SaveChangesAsync();
         return job;
     }
 
-    public async Task<string> GenerateJobNumberAsync()
-    {
-        await using var context = _factory.CreateDbContext();
-        return await GenerateJobNumberAsync(context);
-    }
-
-    private static async Task<string> GenerateJobNumberAsync(ApplicationDbContext context)
-    {
-        var maxNumber = await context.Jobs
-            .Where(j => j.JobNumber.StartsWith("JOB-"))
-            .Select(j => j.JobNumber)
-            .MaxAsync() as string;
-
-        if (maxNumber == null)
-            return "JOB-00001";
-
-        var numPart = maxNumber.Substring(4);
-        if (int.TryParse(numPart, out var num))
-            return $"JOB-{num + 1:D5}";
-
-        return $"JOB-{DateTime.UtcNow:yyyyMMddHHmmss}";
-    }
+    private static string CreateTemporaryJobNumber() => $"TMP-{Guid.NewGuid():N}"[..20];
 
     public async Task<Job> QuickCreateAsync(string? customer = null)
     {
@@ -142,7 +124,7 @@ public class JobService
 
         var duplicate = new Job
         {
-            JobNumber = await GenerateJobNumberAsync(context),
+            JobNumber = CreateTemporaryJobNumber(),
             Name = string.IsNullOrWhiteSpace(original.Name) ? null : $"{original.Name} (Copy)",
             Customer = original.Customer,
             CuttingToolId = original.CuttingToolId,
@@ -151,6 +133,9 @@ public class JobService
         };
 
         context.Jobs.Add(duplicate);
+        await context.SaveChangesAsync();
+
+        duplicate.JobNumber = $"JOB-{duplicate.Id}";
         await context.SaveChangesAsync();
 
         // Copy parts
