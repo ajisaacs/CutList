@@ -3,7 +3,8 @@
 .brand-mark { align-items: center; background: #f26b38; border-radius: .45rem; color: #161817; display: flex; font-size: 1rem; height: 2.25rem; justify-content: center; text-decoration: none; transform: rotate(-8deg); width: 2.25rem; }
 .brand-mark i { transform: rotate(8deg); }
 .navbar-brand { color: #f7f3eb; font-family: Georgia, 'Times New Roman', serif; font-size: 1.45rem; font-weight: 700; letter-spacing: -.06em; line-height: .9; text-decoration: none; }
-.navbar-brand span { color: #f26b38; }
+.navbar-brand .brand-cut { color: #f26b38; }
+.navbar-brand .brand-list { color: #fffaf0; }
 .navbar-brand small { color: #8f968d; display: block; font-family: Arial, sans-serif; font-size: .48rem; font-weight: 700; letter-spacing: .14em; margin-top: .45rem; }
 .nav-section-label { color: #737a73; font-size: .62rem; font-weight: 700; letter-spacing: .13em; margin: 1.35rem 1.5rem .5rem; text-transform: uppercase; }
 .nav-item { padding: .1rem .75rem; }
