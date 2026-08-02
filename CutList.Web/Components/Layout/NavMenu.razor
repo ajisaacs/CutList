@@ -1,6 +1,7 @@
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">CutList</a>
+<div class="top-row">
+    <div class="brand-lockup">
+        <a class="brand-mark" href="" aria-label="CutList home"><i class="bi bi-scissors"></i></a>
+        <a class="navbar-brand" href=""><span>Cut</span>List<small>SHOP FLOOR EDITION</small></a>
     </div>
 </div>
 
@@ -8,29 +9,31 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
+        <p class="nav-section-label">Workspace</p>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <i class="bi bi-grid-1x2-fill" aria-hidden="true"></i> Overview
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="jobs">
-                <span class="bi bi-list-check-nav-menu" aria-hidden="true"></span> Jobs
+                <i class="bi bi-layers-fill" aria-hidden="true"></i> Jobs
             </NavLink>
         </div>
+        <p class="nav-section-label">Library</p>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="materials">
-                <span class="bi bi-box-nav-menu" aria-hidden="true"></span> Materials
+                <i class="bi bi-box-seam-fill" aria-hidden="true"></i> Materials
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="stock">
-                <span class="bi bi-boxes-nav-menu" aria-hidden="true"></span> Stock Items
+                <i class="bi bi-rulers" aria-hidden="true"></i> Stock Items
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="tools">
-                <span class="bi bi-tools-nav-menu" aria-hidden="true"></span> Cutting Tools
+                <i class="bi bi-tools" aria-hidden="true"></i> Cutting Tools
             </NavLink>
         </div>
     </nav>

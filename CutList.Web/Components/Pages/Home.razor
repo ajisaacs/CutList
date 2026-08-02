@@ -2,48 +2,48 @@
 
 <PageTitle>CutList - Home</PageTitle>
 
-<h1>CutList</h1>
-
-<p class="lead">1D Bin Packing Optimization for Material Cutting</p>
-
-<div class="row mt-4">
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">Jobs</h5>
-                <p class="card-text">Create and manage cut list jobs. Add parts and stock bins, then optimize to minimize waste.</p>
-                <a href="jobs" class="btn btn-primary">Go to Jobs</a>
-            </div>
+<section class="dashboard-hero">
+    <div>
+        <p class="eyebrow">Production planning</p>
+        <h1>Make every length count.</h1>
+        <p class="hero-copy">Build a cut plan, optimize the stock, and send a clear list to the shop floor.</p>
+        <div class="hero-actions">
+            <a href="jobs/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New job</a>
+            <a href="jobs" class="btn btn-quiet">View all jobs <i class="bi bi-arrow-up-right"></i></a>
         </div>
     </div>
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">Materials</h5>
-                <p class="card-text">Manage material types (tube, bar, angle, etc.) with their shapes and sizes.</p>
-                <a href="materials" class="btn btn-outline-primary">Manage Materials</a>
-            </div>
-        </div>
+    <div class="hero-graphic" aria-hidden="true">
+        <span class="cut-line line-one"></span><span class="cut-line line-two"></span><span class="cut-line line-three"></span>
+        <b>01</b>
     </div>
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title">Cutting Tools</h5>
-                <p class="card-text">Configure cutting tools with their kerf widths for accurate waste calculations.</p>
-                <a href="tools" class="btn btn-outline-primary">Manage Tools</a>
-            </div>
-        </div>
+</section>
+
+<section class="dashboard-section">
+    <div class="section-heading">
+        <div><p class="eyebrow">Start here</p><h2>Set up your workspace</h2></div>
+        <span class="section-note">Three things to keep production moving</span>
     </div>
-</div>
+    <div class="action-grid">
+        <a href="jobs" class="action-card action-card-featured">
+            <span class="card-number">01</span><i class="bi bi-layers"></i><h3>Plan a job</h3>
+            <p>Add required cuts, choose stock, then optimize the layout.</p><span class="card-link">Open jobs <i class="bi bi-arrow-right"></i></span>
+        </a>
+        <a href="materials" class="action-card">
+            <span class="card-number">02</span><i class="bi bi-box-seam"></i><h3>Material library</h3>
+            <p>Keep profiles, grades, and dimensions ready to reuse.</p><span class="card-link">Manage materials <i class="bi bi-arrow-right"></i></span>
+        </a>
+        <a href="tools" class="action-card">
+            <span class="card-number">03</span><i class="bi bi-tools"></i><h3>Cutting tools</h3>
+            <p>Set kerf values so the numbers match the real cut.</p><span class="card-link">Configure tools <i class="bi bi-arrow-right"></i></span>
+        </a>
+    </div>
+</section>
 
-<hr class="my-4" />
-
-<h4>How It Works</h4>
-<ol>
-    <li><strong>Set up materials</strong> - Define the shapes and sizes of materials you work with</li>
-    <li><strong>Add stock</strong> - Record which stock lengths you have on hand</li>
-    <li><strong>Create a job</strong> - Add the parts you need to cut with their lengths and quantities</li>
-    <li><strong>Add stock bins</strong> - Specify which stock lengths to cut from</li>
-    <li><strong>Optimize</strong> - Run the optimizer to find the best cutting pattern</li>
-    <li><strong>Print report</strong> - Generate a printable cut list to take to the shop</li>
-</ol>
+<section class="workflow-panel">
+    <div><p class="eyebrow">From estimate to shop floor</p><h2>A simple, reliable run of work.</h2></div>
+    <ol class="workflow-list">
+        <li><span>1</span><div><strong>Define material</strong><small>Profile, size, and grade</small></div></li>
+        <li><span>2</span><div><strong>Add stock &amp; parts</strong><small>Lengths, quantities, and kerf</small></div></li>
+        <li><span>3</span><div><strong>Optimize &amp; print</strong><small>Efficient cuts, ready to run</small></div></li>
+    </ol>
+</section>

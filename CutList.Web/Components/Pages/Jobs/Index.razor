@@ -62,9 +62,11 @@ else
                     <td>@(job.CuttingTool?.Name ?? "-")</td>
                     <td>@((job.UpdatedAt ?? job.CreatedAt).ToLocalTime().ToString("g"))</td>
                     <td>
-                        <a href="jobs/@job.Id" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => DuplicateJob(job)" title="Copy"><i class="bi bi-copy"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(job)" title="Delete"><i class="bi bi-trash"></i></button>
+                        <div class="table-actions">
+                            <a href="jobs/@job.Id" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => DuplicateJob(job)" title="Copy"><i class="bi bi-copy"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(job)" title="Delete"><i class="bi bi-trash"></i></button>
+                        </div>
                     </td>
                 </tr>
             }
