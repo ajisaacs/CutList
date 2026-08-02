@@ -987,6 +987,16 @@ else
                     <button class="btn btn-outline-secondary ms-2" @onclick="PrintReport">
                         <i class="bi bi-printer me-1"></i> Print Report
                     </button>
+                    @if (!job.IsLocked)
+                    {
+                        <button class="btn btn-warning ms-2" @onclick="LockJob" disabled="@lockingJob">
+                            @if (lockingJob)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            <i class="bi bi-lock me-1"></i>Lock Job
+                        </button>
+                    }
                 }
                 @if (job.OptimizedAt.HasValue)
                 {
@@ -1049,16 +1059,6 @@ else
                         @if (job.IsLocked)
                         {
                             <span class="badge bg-success"><i class="bi bi-lock-fill me-1"></i>Job Locked</span>
-                        }
-                        else
-                        {
-                            <button class="btn btn-warning btn-sm" @onclick="LockJob" disabled="@lockingJob">
-                                @if (lockingJob)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                <i class="bi bi-lock me-1"></i>Lock Job
-                            </button>
                         }
                     </div>
                     <div class="card-body">
