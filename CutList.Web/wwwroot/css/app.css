@@ -251,6 +251,7 @@ main { background: var(--paper); box-shadow: none; min-width: 0; }
 h1, h2, h3, h4, h5, h6 { color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-weight: 700; letter-spacing: -.045em; }
 h1 { font-size: clamp(2.25rem, 4vw, 4.1rem); line-height: .98; }
 h2 { font-size: clamp(1.6rem, 2.5vw, 2.25rem); }
+.job-title { font-size: clamp(1.75rem, 2.5vw, 2.5rem); line-height: 1.1; }
 a, .btn-link { color: var(--green); }
 .btn { border-radius: .35rem; font-size: .85rem; font-weight: 750; letter-spacing: .01em; padding: .65rem 1rem; }
 .btn-primary { background: var(--orange); border-color: var(--orange); color: #231c19; }
