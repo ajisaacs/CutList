@@ -244,11 +244,6 @@ ModelManifest.xml
 # FAKE - F# Make
 .fake/
 
-# AlroCatalog scraper output
-scripts/AlroCatalog/__pycache__/
-scripts/AlroCatalog/pdfs/
-scripts/AlroCatalog/screenshots/
-
 # Superpowers subagent-driven-development scratch workspace
 .superpowers/
 

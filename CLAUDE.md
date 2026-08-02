@@ -171,7 +171,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 ### CatalogService
 - `ExportAsync()` — dumps cutting tools and materials (with dimensions + stock items) into a shape-grouped `CatalogData` DTO for bulk export/import tooling
-- Backs the `CatalogController` REST endpoint and the `scripts/ExportData` / `scripts/AlroCatalog` data-loading workflows
+- Backs the `CatalogController` REST endpoint and the `scripts/ExportData` data-loading workflow
 
 ## CutList.Web Pages
 
@@ -218,7 +218,6 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 - `Deploy-CutListWeb.ps1` — publishes and installs CutList.Web as a Windows Service (see Build Commands above)
 - `ExportData/` — standalone console project that exercises `CutList.Web`'s data layer to import/export catalog seed data (e.g. `Data/SeedData/oneals-catalog.json`)
-- `AlroCatalog/` — Python scraper (`scrape_alro.py`) for pulling material/size/grade data from the Alro Steel SmartGrid site into a JSON catalog for import; see `SCRAPE_PLAN.md` for scraper status and cascading-dropdown navigation notes. Not part of the .NET build.
 
 ## Key Files
 
