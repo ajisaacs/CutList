@@ -97,6 +97,8 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Error handling**: `UseExceptionHandler("/Error", ...)` in non-Development environments routes to `Components/Pages/Error.razor`.
 
+**Table actions**: Every row-level action cell uses the shared `table-actions` class from `wwwroot/css/app.css`. It is an `inline-flex` non-wrapping control group, so Edit/Delete/Copy buttons remain side by side and do not increase table-row height.
+
 ### CutList.Mcp — MCP Server
 
 Stdio-transport MCP server (`ModelContextProtocol` SDK) exposing CutList.Web's REST API as tools for Claude Code. Registers tools via `WithToolsFromAssembly`; logging is disabled entirely so it doesn't interfere with the stdio transport.

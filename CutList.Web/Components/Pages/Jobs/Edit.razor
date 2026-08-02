@@ -686,8 +686,10 @@ else
                                         <td>
                                             @if (!job.IsLocked)
                                             {
-                                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditPart(part)" title="Edit"><i class="bi bi-pencil"></i></button>
-                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePart(part)" title="Delete"><i class="bi bi-trash"></i></button>
+                                                <div class="table-actions">
+                                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => EditPart(part)" title="Edit"><i class="bi bi-pencil"></i></button>
+                                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePart(part)" title="Delete"><i class="bi bi-trash"></i></button>
+                                                </div>
                                             }
                                         </td>
                                     </tr>
@@ -928,8 +930,10 @@ else
                             <td>
                                 @if (!job.IsLocked)
                                 {
-                                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditStock(stock)" title="Edit"><i class="bi bi-pencil"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteStock(stock)" title="Delete"><i class="bi bi-trash"></i></button>
+                                    <div class="table-actions">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => EditStock(stock)" title="Edit"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteStock(stock)" title="Delete"><i class="bi bi-trash"></i></button>
+                                    </div>
                                 }
                             </td>
                         </tr>

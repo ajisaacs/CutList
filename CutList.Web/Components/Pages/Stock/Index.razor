@@ -59,7 +59,7 @@ else
                         <td>@item.Material.Size</td>
                         <td>@ArchUnits.FormatFromInches((double)item.LengthInches)</td>
                         <td>
-                            <div class="d-flex gap-1">
+                            <div class="table-actions">
                                 <a href="stock/@item.Id" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(item)" title="Delete"><i class="bi bi-trash"></i></button>
                             </div>
