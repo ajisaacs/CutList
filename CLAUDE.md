@@ -101,6 +101,8 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Job title**: The job-editor page uses the `job-title` class to keep long job names at a compact, readable heading size without changing the larger dashboard hero typography.
 
+**Material list semantics**: The Results tab labels lengths not covered by the job's configured stock as a **Material List**, not a purchase list. It identifies required material; purchasing remains a separate decision outside the cut-list result.
+
 ### CutList.Mcp — MCP Server
 
 Stdio-transport MCP server (`ModelContextProtocol` SDK) exposing CutList.Web's REST API as tools for Claude Code. Registers tools via `WithToolsFromAssembly`; logging is disabled entirely so it doesn't interfere with the stdio transport.

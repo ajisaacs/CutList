@@ -304,8 +304,8 @@
         margin: 0 !important;
     }
 
-    /* Keep purchase list with cut lists to save paper */
-    .print-purchase-list {
+    /* Keep material list with cut lists to save paper */
+    .print-material-list {
         break-inside: avoid;
         page-break-inside: avoid;
     }
