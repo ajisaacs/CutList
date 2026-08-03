@@ -216,7 +216,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - **Stock priority** — Lower number = used first; `-1` quantity = unlimited
 - **Job stock** — Jobs must have stock explicitly configured (catalog-sourced `StockItem` rows or custom-length rows); there is no fallback to auto-discovered inventory
 - **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
-- **Job lock flow** — Optimize job -> Lock Job (manual action, available whether or not purchases are needed) -> job becomes read-only until Unlock
+- **Job lock flow** — Optimize job -> review/print results -> Lock Job (manual action beside Print Report on the Results tab, available whether or not purchases are needed) -> job becomes read-only until Unlock
 - **Timestamps** — `CreatedAt` defaults to `GETUTCDATE()`; `UpdatedAt` set on modifications
 - **Collections** — Encapsulated in Core; use `AsReadOnly()`, access via `Add*` methods
 - **Priority system** — Lower priority bins used first in packing algorithm
