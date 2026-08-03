@@ -373,6 +373,12 @@
         padding: 0 !important;
     }
 
+    /* Keep each stock-bar result, its cuts, and its waste on one printed page. */
+    .cutlist-material-card tbody tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
     /* Reduce spacing */
     .mb-4 {
         margin-bottom: 0.5rem !important;

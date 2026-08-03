@@ -22,7 +22,7 @@ class CutBadgeFormatTests(unittest.TestCase):
         self.assertIn('class="cut-part-badge-name"', cut_rows)
         self.assertIn('class="cut-part-badge-length"', cut_rows)
         self.assertIn('@item.Name', cut_rows)
-        self.assertIn('@ArchUnits.FormatFromInches(item.Length)', cut_rows)
+        self.assertIn('@FormatResultLength(item.Length)', cut_rows)
         self.assertNotIn('$"{item.Name} (', cut_rows)
 
     def test_length_section_has_a_darker_background_than_the_part_number_section(self) -> None:

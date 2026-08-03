@@ -24,4 +24,16 @@ public class ResultsLengthDisplayTests
         Assert.Contains("cut-part-badge-divider", markup);
         Assert.Contains("Show feet + inches", markup);
     }
+
+    [Fact]
+    public void Printed_cut_list_rows_are_kept_together()
+    {
+        var sourcePath = Path.GetFullPath(
+            Path.Combine(AppContext.BaseDirectory, "../../../../CutList.Web/wwwroot/css/report.css"));
+        var css = File.ReadAllText(sourcePath);
+
+        Assert.Contains(".cutlist-material-card tbody tr", css);
+        Assert.Contains("break-inside: avoid", css);
+        Assert.Contains("page-break-inside: avoid", css);
+    }
 }
