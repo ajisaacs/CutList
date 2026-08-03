@@ -20,6 +20,15 @@ class JobResultsActionsTests(unittest.TestCase):
         self.assertIn('@onclick="LockJob"', action_row)
         self.assertIn("Lock Job", action_row)
 
+    def test_print_report_hides_job_lock_status(self) -> None:
+        markup = JOB_EDITOR.read_text()
+        report_css = (REPO_ROOT / "CutList.Web/wwwroot/css/report.css").read_text()
+
+        self.assertIn('class="alert alert-warning d-flex justify-content-between align-items-center mb-3 print-screen-only"', markup)
+        self.assertIn('<span class="badge bg-success print-screen-only">', markup)
+        self.assertIn(".print-screen-only", report_css)
+        self.assertIn("display: none !important;", report_css)
+
 
 if __name__ == "__main__":
     unittest.main()
