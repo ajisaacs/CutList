@@ -144,9 +144,16 @@
 /* Print styles - Compact layout to save paper */
 @media print {
     body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        -webkit-print-color-adjust: economy;
+        print-color-adjust: economy;
         font-size: 10pt;
+    }
+
+    *,
+    *::before,
+    *::after {
+        background: transparent !important;
+        box-shadow: none !important;
     }
 
     .print-screen-only,
