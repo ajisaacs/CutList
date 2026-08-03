@@ -141,6 +141,11 @@
     display: none;
 }
 
+/* The selected tool belongs on the paper cut report, not in the interactive results layout. */
+.print-cut-method {
+    display: none;
+}
+
 /* Print styles - Compact layout to save paper */
 @media print {
     body {
@@ -312,6 +317,14 @@
         margin: 0 !important;
     }
 
+    .print-cut-method {
+        display: block !important;
+        border: 1px solid #ccc;
+        font-size: 9pt;
+        margin: -0.25rem 0 0.5rem;
+        padding: 0.3rem 0.75rem;
+    }
+
     /* Keep material list with cut lists to save paper */
     .print-material-list {
         break-inside: avoid;
@@ -335,6 +348,15 @@
 
     .badge {
         border: 1px solid #999;
+    }
+
+    /* Badges lose their blue fills in print, so force their white screen text and divider to black. */
+    .cut-part-badge {
+        color: #000 !important;
+    }
+
+    .cut-part-badge-divider {
+        border-left: 1px solid #000 !important;
     }
 
     /* Cut list tables: hide screen header, show repeating print header in thead */

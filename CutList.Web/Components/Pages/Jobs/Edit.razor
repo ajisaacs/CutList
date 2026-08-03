@@ -1060,6 +1060,14 @@ else
                     </div>
                 </div>
 
+                @if (job.CuttingTool != null)
+                {
+                    <div class="print-cut-method">
+                        <strong>Cut Method:</strong> @job.CuttingTool.Name
+                        <span class="ms-2">Kerf: @FormatResultLength((double)job.CuttingTool.KerfInches)</span>
+                    </div>
+                }
+
                 <!-- Material List: required stock lengths not covered by job stock -->
                 <div class="card mb-4 print-material-list">
                     <div class="card-header d-flex justify-content-between align-items-center">

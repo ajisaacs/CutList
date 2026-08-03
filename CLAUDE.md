@@ -12,9 +12,9 @@ The solution contains four projects:
 
 | Project | Framework | Purpose |
 |---------|-----------|---------|
-| **CutList** | .NET 8.0 Windows Forms | Original desktop UI (MVP pattern) |
-| **CutList.Core** | .NET 8.0 Class Library | Domain models and packing algorithms (platform-agnostic) |
-| **CutList.Web** | .NET 8.0 Blazor Server | Web-based UI + REST API, EF Core + SQL Server |
+| **CutList** | .NET 10.0 Windows Forms | Original desktop UI (MVP pattern) |
+| **CutList.Core** | .NET 10.0 Class Library | Domain models and packing algorithms (platform-agnostic) |
+| **CutList.Web** | .NET 10.0 Blazor Server | Web-based UI + REST API, EF Core + SQL Server |
 | **CutList.Mcp** | .NET 10.0 Console (stdio) | MCP server exposing CutList.Web's REST API as tools for Claude |
 
 **Key Dependencies**: Math-Expression-Evaluator (input parsing), Newtonsoft.Json (serialization), Entity Framework Core (data access), Bootstrap 5 + Bootstrap Icons (UI), ModelContextProtocol SDK (CutList.Mcp)
@@ -217,6 +217,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - **Job stock** — Jobs must have stock explicitly configured (catalog-sourced `StockItem` rows or custom-length rows); there is no fallback to auto-discovered inventory
 - **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
 - **Job lock flow** — Optimize job -> review/print results -> Lock Job (manual action beside Print Report on the Results tab, available whether or not purchases are needed) -> job becomes read-only until Unlock
+- **Printed cut badges** — Print styles intentionally remove color fills; cut badges therefore force black text and a black part-number/length divider so both remain legible on paper. The print-only tool line shows the selected cut method and kerf immediately below the summary.
 - **Timestamps** — `CreatedAt` defaults to `GETUTCDATE()`; `UpdatedAt` set on modifications
 - **Collections** — Encapsulated in Core; use `AsReadOnly()`, access via `Add*` methods
 - **Priority system** — Lower priority bins used first in packing algorithm

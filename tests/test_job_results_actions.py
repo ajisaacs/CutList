@@ -45,6 +45,18 @@ class JobResultsActionsTests(unittest.TestCase):
         self.assertIn("background: transparent !important;", print_styles)
         self.assertIn("box-shadow: none !important;", print_styles)
 
+    def test_print_report_shows_the_selected_cutting_method_and_kerf(self) -> None:
+        markup = JOB_EDITOR.read_text()
+        results_start = markup.index("private RenderFragment RenderResultsTab()")
+        summary_start = markup.index('<div class="row mb-4 print-summary">', results_start)
+        material_list_start = markup.index('<!-- Material List:', summary_start)
+        report_summary = markup[summary_start:material_list_start]
+
+        self.assertIn('class="print-cut-method"', report_summary)
+        self.assertIn("<strong>Cut Method:</strong>", report_summary)
+        self.assertIn("@job.CuttingTool.Name", report_summary)
+        self.assertIn("Kerf:", report_summary)
+
 
 if __name__ == "__main__":
     unittest.main()

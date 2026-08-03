@@ -33,6 +33,15 @@ class CutBadgeFormatTests(unittest.TestCase):
         self.assertIn('.cut-part-badge-length {', css)
         self.assertIn('background-color: #4c6680;', css)
 
+    def test_printed_cut_badges_keep_part_numbers_and_separators_legible(self) -> None:
+        report_css = (REPO_ROOT / "CutList.Web/wwwroot/css/report.css").read_text()
+        print_styles = report_css[report_css.index("@media print {"):]
+
+        self.assertIn(".cut-part-badge {", print_styles)
+        self.assertIn("color: #000 !important;", print_styles)
+        self.assertIn(".cut-part-badge-divider {", print_styles)
+        self.assertIn("border-left: 1px solid #000 !important;", print_styles)
+
 
 if __name__ == "__main__":
     unittest.main()
