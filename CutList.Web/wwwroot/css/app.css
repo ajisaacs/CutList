@@ -272,6 +272,11 @@ a, .btn-link { color: var(--accent-dark); }
 .table-actions .btn { align-items: center; display: inline-flex; justify-content: center; min-height: 2rem; min-width: 2rem; padding: .35rem .45rem; }
 .alert { border-radius: .4rem; border-width: 1px; }
 
+/* Results cut badges keep the part number and its length visually distinct. */
+.cut-part-badge { background-color: #6c8ebf; display: inline-flex; font-weight: 500; overflow: hidden; padding: 0; }
+.cut-part-badge-name { padding: .35em .55em; }
+.cut-part-badge-length { background-color: #4c6680; padding: .35em .55em; }
+
 /* Overview */
 .overview-header { align-items: end; border-bottom: 1px solid var(--line); display: flex; gap: 2rem; justify-content: space-between; padding-bottom: 2rem; }
 .overview-header h1 { margin: .4rem 0 .75rem; max-width: 14ch; }

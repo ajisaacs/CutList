@@ -1162,8 +1162,12 @@ else
                                                 <td>
                                                     @foreach (var item in entry.Bin.Items)
                                                     {
-                                                        <span class="badge me-1 mb-1 fs-6" style="background-color: #6c8ebf; font-weight: 500;">
-                                                            @(string.IsNullOrWhiteSpace(item.Name) ? ArchUnits.FormatFromInches(item.Length) : $"{item.Name} ({ArchUnits.FormatFromInches(item.Length)})")
+                                                        <span class="badge me-1 mb-1 fs-6 cut-part-badge">
+                                                            @if (!string.IsNullOrWhiteSpace(item.Name))
+                                                            {
+                                                                <span class="cut-part-badge-name">@item.Name</span>
+                                                            }
+                                                            <span class="cut-part-badge-length">@ArchUnits.FormatFromInches(item.Length)</span>
                                                         </span>
                                                     }
                                                 </td>
