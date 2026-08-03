@@ -275,6 +275,7 @@ a, .btn-link { color: var(--accent-dark); }
 /* Results cut badges keep the part number and its length visually distinct. */
 .cut-part-badge { background-color: #6c8ebf; display: inline-flex; font-weight: 500; overflow: hidden; padding: 0; }
 .cut-part-badge-name { padding: .35em .55em; }
+.cut-part-badge-divider { border-left: 1px solid rgba(255, 255, 255, .75); margin: .2em 0; }
 .cut-part-badge-length { background-color: #4c6680; padding: .35em .55em; }
 
 /* Overview */

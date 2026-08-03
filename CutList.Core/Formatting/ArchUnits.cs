@@ -80,5 +80,13 @@ namespace CutList.Core.Formatting
                 return $"{inches}\"";
             }
         }
+
+        /// <summary>
+        /// Formats a measurement as a mixed fraction of total inches without converting to feet.
+        /// </summary>
+        public static string FormatInches(double totalInches)
+        {
+            return $"{FormatHelper.ConvertToMixedFraction(totalInches)}\"";
+        }
     }
 }
