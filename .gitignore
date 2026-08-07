@@ -249,3 +249,7 @@ ModelManifest.xml
 
 # Playwright MCP browser session logs/traces
 .playwright-mcp/
+
+# Python bytecode cache (tests/)
+__pycache__/
+*.pyc
