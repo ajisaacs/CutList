@@ -20,9 +20,9 @@ jobs:
         run: echo "${{ secrets.REGISTRY_TOKEN }}" | docker login git.thecozycat.net -u "${{ gitea.actor }}" --password-stdin
 
       - name: Build image
-        run: docker build -f CutList.Web/Dockerfile -t git.thecozycat.net/${{ gitea.repository_owner }}/cutlist:latest -t git.thecozycat.net/${{ gitea.repository_owner }}/cutlist:${{ gitea.sha }} .
+        run: docker build -f CutList.Web/Dockerfile -t git.thecozycat.net/internal/cutlist:latest -t git.thecozycat.net/internal/cutlist:${{ gitea.sha }} .
 
       - name: Push image
         run: |
-          docker push git.thecozycat.net/${{ gitea.repository_owner }}/cutlist:latest
-          docker push git.thecozycat.net/${{ gitea.repository_owner }}/cutlist:${{ gitea.sha }}
+          docker push git.thecozycat.net/internal/cutlist:latest
+          docker push git.thecozycat.net/internal/cutlist:${{ gitea.sha }}
