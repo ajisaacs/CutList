@@ -1,0 +1,14 @@
+.git
+.hermes
+.env
+.env.*
+.vs
+.vscode
+**/bin
+**/obj
+**/__pycache__
+**/*.pyc
+**/TestResults
+*.user
+*.suo
+*.log

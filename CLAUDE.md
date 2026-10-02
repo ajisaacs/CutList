@@ -9,8 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - GitHub is the primary repository: `https://github.com/ajisaacs/CutList.git` (`master`). Push changes and open/merge pull requests on GitHub.
 - Gitea `aj/CutList` is a read-only hourly pull mirror of GitHub, for code and tags only. Do not push to Gitea or treat it as the issue/PR/release tracker.
 - The original Gitea repository is retained, archived, as `aj/CutList-before-github-primary`; do not delete it.
-- The legacy `.gitea/workflows/build-cutlist.yml` does not run on the backup mirror. Automatic container publishing has not yet been migrated to GitHub Actions; do not assume a GitHub push updates the deployed image.
-- See `docs/repository-workflow.md` for clone setup, backup boundaries, and the container-publishing blocker.
+- GitHub Actions `.github/workflows/build-cutlist.yml` publishes private `ghcr.io/ajisaacs/cutlist` images (`latest` and full commit-SHA tags) for relevant `master` pushes or a manual run on `master`. Publishing does not redeploy the application.
+- The legacy `.gitea/workflows/build-cutlist.yml` is retained as a historical reference and does not run on the backup mirror.
+- See `docs/repository-workflow.md` for clone setup, backup boundaries, and container publishing/pull requirements.
 
 ## Project Overview
 
@@ -53,7 +54,7 @@ dotnet clean CutList.sln
 
 ### Container deployment
 
-CutList.Web is deployed using Docker images built from `CutList.Web/Dockerfile`. See `docs/repository-workflow.md` for the image registry and pending container-publishing migration; GitHub pushes do not automatically publish images yet.
+CutList.Web images are built from `CutList.Web/Dockerfile` with the repository root as the Docker context and published privately to `ghcr.io/ajisaacs/cutlist`. The workflow uses the built-in `GITHUB_TOKEN` (contents read, packages write), checks private visibility before promoting `latest`, and reads back both tags to verify matching manifests. It does not restart services, change deployment configuration, or apply database migrations. See `docs/repository-workflow.md` for authenticated pulls and rollout boundaries.
 
 ### Publishing CutList.Mcp
 

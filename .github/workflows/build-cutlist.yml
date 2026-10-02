@@ -1,0 +1,74 @@
+name: Build CutList image
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "CutList.Web/**"
+      - "CutList.Core/**"
+      - "CutList.sln"
+      - "Directory.*"
+      - "global.json"
+      - "NuGet.Config"
+      - "nuget.config"
+      - ".dockerignore"
+      - ".github/workflows/build-cutlist.yml"
+      - "tests/test_ghcr_workflow.py"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: cutlist-image
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/ajisaacs/cutlist
+
+jobs:
+  build-and-push:
+    if: github.repository == 'ajisaacs/CutList' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check publishing contract
+        run: python3 -m unittest discover -s tests -p test_ghcr_workflow.py -v
+
+      - name: Build image
+        run: |
+          docker build --pull -f CutList.Web/Dockerfile \
+            --label org.opencontainers.image.source=https://github.com/ajisaacs/CutList \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --tag "$IMAGE:$GITHUB_SHA" --tag "$IMAGE:latest" .
+
+      - name: Log in to GHCR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Publish commit tag and verify private visibility
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker manifest inspect "$IMAGE:$GITHUB_SHA" > "$RUNNER_TEMP/cutlist-sha.json"
+          visibility=$(gh api users/ajisaacs/packages/container/cutlist --jq '.visibility')
+          test "$visibility" = private
+
+      - name: Publish latest and verify matching manifests
+        run: |
+          docker push "$IMAGE:latest"
+          docker manifest inspect "$IMAGE:latest" > "$RUNNER_TEMP/cutlist-latest.json"
+          cmp "$RUNNER_TEMP/cutlist-sha.json" "$RUNNER_TEMP/cutlist-latest.json"
+          printf 'Published private images:\n- %s:%s\n- %s:latest\n\nVerified identical registry manifests.\n' \
+            "$IMAGE" "$GITHUB_SHA" "$IMAGE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log out of GHCR
+        if: always()
+        run: docker logout ghcr.io

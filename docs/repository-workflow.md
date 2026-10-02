@@ -31,17 +31,34 @@ The original Gitea repository is preserved read-only at https://git.thecozycat.n
 
 Do not re-enable a Gitea-to-GitHub push mirror: it could overwrite GitHub-side changes or remove GitHub-only branches. Restoring the old repository as writable would require an explicit, coordinated reversal of this workflow, not merely unarchiving it.
 
-## Container publishing: pending migration
+## Container publishing: GHCR
 
-The legacy workflow at `.gitea/workflows/build-cutlist.yml` built and pushed `git.thecozycat.net/internal/cutlist:latest` and a commit-SHA tag using the Gitea Actions `REGISTRY_TOKEN` secret. That workflow is retained as a reference, but Actions is disabled on the read-only backup mirror and the original repository is archived.
+The active workflow is `.github/workflows/build-cutlist.yml`. It builds `CutList.Web/Dockerfile` with the repository root as the build context and publishes to GitHub Container Registry:
 
-The repository move does not restart or change the running CutList application, its database, or existing container images. Future GitHub pushes do not automatically publish an image yet.
+- `ghcr.io/ajisaacs/cutlist:latest`
+- `ghcr.io/ajisaacs/cutlist:<full-commit-SHA>`
 
-The GitHub credential available during the cutover can push repository content but returns HTTP 403 for the Actions secrets API. To finish migrating container publishing:
+Images remain **private**, independently of the public source repository. The workflow uses the built-in `GITHUB_TOKEN` with only `contents: read` and `packages: write`; no custom registry secret is required. The source label links the package to this repository. The workflow publishes the commit tag, verifies private visibility, then publishes `latest` and reads back both registry manifests to confirm they match.
 
-1. Give the credential used for `ajisaacs/CutList` repository Secrets read/write permission and Workflows write permission, or configure the workflow/secrets through the GitHub UI.
-2. Add a suitable registry-publishing credential as GitHub Actions secret `REGISTRY_TOKEN`; keep the value out of Git history, documentation, and logs. Use an explicitly configured registry username rather than assuming the GitHub actor is a Gitea user.
-3. Adapt the legacy workflow into `.github/workflows/`, replacing Gitea contexts with GitHub contexts while retaining the private internal registry/image destination.
-4. Exercise a build/push, verify both the SHA and `latest` image tags in the registry, and separately verify any intended application update before claiming publishing/deployment is restored.
+Relevant pushes to `master` trigger publishing: web/core source, solution/build configuration, Docker context exclusions, the workflow, or its contract tests. Manual runs are also available:
 
-Do not switch to a public image namespace, broaden registry access, or restart the deployed application as part of the repository migration.
+```bash
+gh workflow run build-cutlist.yml --repo ajisaacs/CutList --ref master
+```
+
+The publishing job refuses non-`master` refs and fork repositories. A serialized concurrency group prevents overlapping publishers. Checkout is pinned to a commit and does not persist credentials; `.dockerignore` excludes local credentials, Git/agent metadata, and build outputs.
+
+### Pulling private images
+
+The deployment host must authenticate to `ghcr.io` as a GitHub account with package access, using a personal access token (classic) with `read:packages`. Supply it through a secure credential store or `docker login ghcr.io -u ajisaacs --password-stdin`; never put tokens in Compose files, Git, documentation, or command arguments. After authenticating:
+
+```bash
+docker pull ghcr.io/ajisaacs/cutlist:latest
+# For a repeatable rollout, choose the full commit-SHA tag instead.
+```
+
+Publishing does **not** change or restart the running CutList application, its database, or its deployment image reference. Existing deployments using `git.thecozycat.net/internal/cutlist` will remain on that registry until a separately verified rollout switches them. Keep the old registry images for rollback; do not delete them or broaden package visibility.
+
+The legacy `.gitea/workflows/build-cutlist.yml` is retained as a historical reference. It does not run on the read-only mirror, and the original repository remains archived. The old Actions-secrets migration blocker no longer applies to publishing because GHCR uses the workflow token; pushing workflow changes still requires GitHub Workflows write permission.
+
+Next hardening: consider digest-pinned deployment rollouts and image vulnerability scanning after the publishing baseline is verified. The baseline image build reports NU1903 for the existing `Microsoft.OpenApi` 2.4.1 dependency (high severity, `GHSA-v5pm-xwqc-g5wc`); dependency remediation is separate from this registry migration.
