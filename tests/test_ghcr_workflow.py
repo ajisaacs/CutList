@@ -35,13 +35,18 @@ class GhcrWorkflowTests(unittest.TestCase):
         self.assertNotIn("REGISTRY_TOKEN", source)
         self.assertNotIn("write-all", source)
 
-    def test_checks_private_visibility_before_promoting_latest_and_reads_back_tags(self) -> None:
+    def test_checks_public_visibility_before_uploading_and_reads_back_tags(self) -> None:
         source = WORKFLOW.read_text()
-        self.assertIn('test "$visibility" = private', source)
-        self.assertLess(source.index('test "$visibility" = private'), source.index('docker push "$IMAGE:latest"'))
+        self.assertIn('test "$visibility" = public', source)
+        self.assertLess(source.index('test "$visibility" = public'), source.index('docker push "$IMAGE:$GITHUB_SHA"'))
         self.assertIn('docker manifest inspect "$IMAGE:$GITHUB_SHA"', source)
         self.assertIn('docker manifest inspect "$IMAGE:latest"', source)
         self.assertIn('cmp "$RUNNER_TEMP/cutlist-sha.json" "$RUNNER_TEMP/cutlist-latest.json"', source)
+
+    def test_anonymous_pulls_happen_only_after_logging_out(self) -> None:
+        source = WORKFLOW.read_text()
+        self.assertLess(source.index('docker logout ghcr.io'), source.index('docker pull "$IMAGE:$GITHUB_SHA"'))
+        self.assertIn('docker pull "$IMAGE:latest"', source)
 
     def test_local_credentials_and_build_outputs_are_not_in_docker_context(self) -> None:
         patterns = set((REPO_ROOT / ".dockerignore").read_text().splitlines())

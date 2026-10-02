@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - GitHub is the primary repository: `https://github.com/ajisaacs/CutList.git` (`master`). Push changes and open/merge pull requests on GitHub.
 - Gitea `aj/CutList` is a read-only hourly pull mirror of GitHub, for code and tags only. Do not push to Gitea or treat it as the issue/PR/release tracker.
 - The original Gitea repository is retained, archived, as `aj/CutList-before-github-primary`; do not delete it.
-- GitHub Actions `.github/workflows/build-cutlist.yml` publishes private `ghcr.io/ajisaacs/cutlist` images (`latest` and full commit-SHA tags) for relevant `master` pushes or a manual run on `master`. Publishing does not redeploy the application.
+- GitHub Actions `.github/workflows/build-cutlist.yml` publishes public `ghcr.io/ajisaacs/cutlist` images (`latest` and full commit-SHA tags) for relevant `master` pushes or a manual run on `master`. Anyone can pull the images without credentials. Publishing does not redeploy the application.
 - The legacy `.gitea/workflows/build-cutlist.yml` is retained as a historical reference and does not run on the backup mirror.
 - See `docs/repository-workflow.md` for clone setup, backup boundaries, and container publishing/pull requirements.
 
@@ -54,7 +54,7 @@ dotnet clean CutList.sln
 
 ### Container deployment
 
-CutList.Web images are built from `CutList.Web/Dockerfile` with the repository root as the Docker context and published privately to `ghcr.io/ajisaacs/cutlist`. The workflow uses the built-in `GITHUB_TOKEN` (contents read, packages write), checks private visibility before promoting `latest`, and reads back both tags to verify matching manifests. It does not restart services, change deployment configuration, or apply database migrations. See `docs/repository-workflow.md` for authenticated pulls and rollout boundaries.
+CutList.Web images are built from `CutList.Web/Dockerfile` with the repository root as the Docker context and published publicly to `ghcr.io/ajisaacs/cutlist`, as explicitly requested by the owner. The workflow uses the built-in `GITHUB_TOKEN` (contents read, packages write), checks public visibility before uploading, reads back both tags to verify matching manifests, and logs out before verifying anonymous pulls. It does not restart services, change deployment configuration, or apply database migrations. See `docs/repository-workflow.md` for pull commands and rollout boundaries.
 
 ### Publishing CutList.Mcp
 

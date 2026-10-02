@@ -38,7 +38,7 @@ The active workflow is `.github/workflows/build-cutlist.yml`. It builds `CutList
 - `ghcr.io/ajisaacs/cutlist:latest`
 - `ghcr.io/ajisaacs/cutlist:<full-commit-SHA>`
 
-Images remain **private**, independently of the public source repository. The workflow uses the built-in `GITHUB_TOKEN` with only `contents: read` and `packages: write`; no custom registry secret is required. The source label links the package to this repository. The workflow publishes the commit tag, verifies private visibility, then publishes `latest` and reads back both registry manifests to confirm they match.
+Images are **public**, explicitly requested by the owner so anyone can download them without credentials. The workflow uses the built-in `GITHUB_TOKEN` with only `contents: read` and `packages: write`; no custom registry secret is required. The source label links the package to this repository. Before uploading, the workflow verifies the existing package is public; it then publishes the commit tag and `latest`, reads back both manifests to confirm they match, and logs out before testing anonymous pulls.
 
 Relevant pushes to `master` trigger publishing: web/core source, solution/build configuration, Docker context exclusions, the workflow, or its contract tests. Manual runs are also available:
 
@@ -48,16 +48,18 @@ gh workflow run build-cutlist.yml --repo ajisaacs/CutList --ref master
 
 The publishing job refuses non-`master` refs and fork repositories. A serialized concurrency group prevents overlapping publishers. Checkout is pinned to a commit and does not persist credentials; `.dockerignore` excludes local credentials, Git/agent metadata, and build outputs.
 
-### Pulling private images
+### Pulling public images
 
-The deployment host must authenticate to `ghcr.io` as a GitHub account with package access, using a personal access token (classic) with `read:packages`. Supply it through a secure credential store or `docker login ghcr.io -u ajisaacs --password-stdin`; never put tokens in Compose files, Git, documentation, or command arguments. After authenticating:
+No GitHub account, token, or registry login is required:
 
 ```bash
 docker pull ghcr.io/ajisaacs/cutlist:latest
 # For a repeatable rollout, choose the full commit-SHA tag instead.
 ```
 
-Publishing does **not** change or restart the running CutList application, its database, or its deployment image reference. Existing deployments using `git.thecozycat.net/internal/cutlist` will remain on that registry until a separately verified rollout switches them. Keep the old registry images for rollback; do not delete them or broaden package visibility.
+Publishing does **not** change or restart the running CutList application, its database, or its deployment image reference. Existing deployments using `git.thecozycat.net/internal/cutlist` will remain on that registry until a separately verified rollout switches them. Keep the old registry images for rollback; do not delete them or change visibility/access to the old registry packages.
+
+Package settings: https://github.com/users/ajisaacs/packages/container/cutlist/settings. If the GHCR package is removed and recreated, confirm its visibility is public in those settings before rerunning this workflow; the preflight deliberately fails closed when package metadata is unavailable or not public.
 
 The legacy `.gitea/workflows/build-cutlist.yml` is retained as a historical reference. It does not run on the read-only mirror, and the original repository remains archived. The old Actions-secrets migration blocker no longer applies to publishing because GHCR uses the workflow token; pushing workflow changes still requires GitHub Workflows write permission.
 
