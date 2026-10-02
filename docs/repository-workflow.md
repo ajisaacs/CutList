@@ -63,4 +63,6 @@ Package settings: https://github.com/users/ajisaacs/packages/container/cutlist/s
 
 The legacy `.gitea/workflows/build-cutlist.yml` is retained as a historical reference. It does not run on the read-only mirror, and the original repository remains archived. The old Actions-secrets migration blocker no longer applies to publishing because GHCR uses the workflow token; pushing workflow changes still requires GitHub Workflows write permission.
 
-Next hardening: consider digest-pinned deployment rollouts and image vulnerability scanning after the publishing baseline is verified. The baseline image build reports NU1903 for the existing `Microsoft.OpenApi` 2.4.1 dependency (high severity, `GHSA-v5pm-xwqc-g5wc`); dependency remediation is separate from this registry migration.
+`CutList.Web` directly references `Microsoft.OpenApi` 2.7.5, the first patched 2.x release for [GHSA-v5pm-xwqc-g5wc](https://github.com/advisories/GHSA-v5pm-xwqc-g5wc), overriding Swashbuckle 10.1.3's vulnerable 2.4.1 transitive dependency without changing its major-version API. Keep this override until the parent package's dependency floor is patched. Verify upgrades with `dotnet list CutList.Web/CutList.Web.csproj package --vulnerable --include-transitive` and an isolated Development-mode Swagger document smoke test; Production must continue to keep Swagger disabled.
+
+Next hardening: consider digest-pinned deployment rollouts and image vulnerability scanning. A clean NuGet audit does not cover base-image OS packages.
