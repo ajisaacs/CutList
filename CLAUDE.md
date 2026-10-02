@@ -51,17 +51,13 @@ dotnet ef database update --project CutList.Web
 dotnet clean CutList.sln
 ```
 
-### Deploying CutList.Web as a Windows Service
+### Container deployment
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/Deploy-CutListWeb.ps1 -ServiceName CutListWeb -InstallDir C:\Services\CutListWeb -Urls "http://*:5270" -OpenFirewall
-```
-
-Publishes, (re)creates the `CutListWeb` Windows service with auto-restart recovery, and optionally opens the firewall port. See `docs/deploy-script-guide.md` (global docs) for the template this follows.
+CutList.Web is deployed using Docker images built from `CutList.Web/Dockerfile`. See `docs/repository-workflow.md` for the image registry and pending container-publishing migration; GitHub pushes do not automatically publish images yet.
 
 ### Publishing CutList.Mcp
 
-CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `~/.claude/mcp/CutList.Mcp/` and registered in `~/.claude/settings.local.json` (see global `CLAUDE.md` MCP Server Publishing table). It talks to CutList.Web's REST API at `http://localhost:5270`, so CutList.Web must be running (dev `dotnet run` or the deployed Windows service) for the MCP tools to work.
+CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `~/.claude/mcp/CutList.Mcp/` and registered in `~/.claude/settings.local.json` (see global `CLAUDE.md` MCP Server Publishing table). It talks to CutList.Web's REST API at `http://localhost:5270`, so CutList.Web must be running (dev `dotnet run` or a Docker container reachable at that URL) for the MCP tools to work.
 
 ## Architecture
 
@@ -233,7 +229,6 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 ## Supporting Scripts (`scripts/`)
 
-- `Deploy-CutListWeb.ps1` — publishes and installs CutList.Web as a Windows Service (see Build Commands above)
 - `ExportData/` — standalone console project that exercises `CutList.Web`'s data layer to import/export catalog seed data (e.g. `Data/SeedData/oneals-catalog.json`)
 
 ## Key Files
