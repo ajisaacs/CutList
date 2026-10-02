@@ -4,6 +4,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Repository Workflow
+
+- GitHub is the primary repository: `https://github.com/ajisaacs/CutList.git` (`master`). Push changes and open/merge pull requests on GitHub.
+- Gitea `aj/CutList` is a read-only hourly pull mirror of GitHub, for code and tags only. Do not push to Gitea or treat it as the issue/PR/release tracker.
+- The original Gitea repository is retained, archived, as `aj/CutList-before-github-primary`; do not delete it.
+- The legacy `.gitea/workflows/build-cutlist.yml` does not run on the backup mirror. Automatic container publishing has not yet been migrated to GitHub Actions; do not assume a GitHub push updates the deployed image.
+- See `docs/repository-workflow.md` for clone setup, backup boundaries, and the container-publishing blocker.
+
 ## Project Overview
 
 CutList is a 1D bin packing optimization application that helps users optimize material cutting. It calculates efficient bin packing solutions to minimize waste when cutting stock materials into required parts.

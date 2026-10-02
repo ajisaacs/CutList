@@ -1,3 +1,5 @@
+# Legacy reference: GitHub is primary; Gitea is a read-only pull mirror.
+# This workflow does not run on the mirror. See docs/repository-workflow.md.
 name: Build CutList image
 
 on:
