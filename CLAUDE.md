@@ -184,7 +184,9 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - Cutting tools: full CRUD with single-default enforcement
 
 ### CutListPackingService
-- `PackAsync(parts, kerfInches, jobStock?)` — runs optimization per material group
+- `PackAsync(parts, kerfInches, jobStock?, engineId?)` — runs optimization per material group with the requested engine (null = configured default); an unknown id throws `UnknownPackingEngineException` before any database work
+- `Engines` / `DefaultEngine` expose the engine catalog for selection UIs
+- Results record `EngineId`/`EngineName`; `SavedOptimizationResult` persists them inside `OptimizationResultJson` (no schema change). Results saved before engine selection have no engine fields and load as Advanced Fit, the only engine the job path used then
 - Separates results into `InStockBins` (from catalog-sourced job stock) and `ToBePurchasedBins`
 - `GetSummary(result)` — calculates total bins, pieces, waste, efficiency %
 - `SerializeResult(result)` / `LoadSavedResult(json)` — JSON round-trip via DTO layer (`SavedOptimizationResult` etc.)
@@ -232,7 +234,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - **Material selection flow** — Shape dropdown -> Size dropdown -> Length input -> Quantity (conditional dropdowns)
 - **Stock priority** — Lower number = used first; `-1` quantity = unlimited
 - **Job stock** — Jobs must have stock explicitly configured (catalog-sourced `StockItem` rows or custom-length rows); there is no fallback to auto-discovered inventory
-- **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
+- **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`, including the engine used; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
 - **Job lock flow** — Optimize job -> review/print results -> Lock Job (manual action beside Print Report on the Results tab, available whether or not purchases are needed) -> job becomes read-only until Unlock
 - **Printed cut badges** — Print styles intentionally remove color fills; cut badges therefore force black text and a black part-number/length divider so both remain legible on paper. The print-only tool line shows the selected cut method and kerf immediately below the summary.
 - **Timestamps** — `CreatedAt` defaults to `GETUTCDATE()`; `UpdatedAt` set on modifications

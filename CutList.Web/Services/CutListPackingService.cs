@@ -17,15 +17,31 @@ public class CutListPackingService
         _engines = engines;
     }
 
+    /// <summary>Selectable engines in display order.</summary>
+    public IReadOnlyList<PackingEngineInfo> Engines => _engines.Engines;
+
+    /// <summary>Engine used when none is requested (Packing:DefaultEngine).</summary>
+    public PackingEngineInfo DefaultEngine => _engines.Default;
+
     public async Task<MultiMaterialPackResult> PackAsync(IEnumerable<JobPart> parts, decimal kerfInches)
     {
         return await PackAsync(parts, kerfInches, null);
     }
 
-    public async Task<MultiMaterialPackResult> PackAsync(IEnumerable<JobPart> parts, decimal kerfInches, IEnumerable<JobStock>? jobStock)
+    /// <param name="engineId">Packing engine id; null uses the configured default.</param>
+    /// <exception cref="UnknownPackingEngineException">The engine id is not registered.</exception>
+    public async Task<MultiMaterialPackResult> PackAsync(
+        IEnumerable<JobPart> parts, decimal kerfInches, IEnumerable<JobStock>? jobStock, string? engineId = null)
     {
+        // Resolve first so an unknown engine fails before any database work.
+        var engineInfo = _engines.Resolve(engineId);
+
         await using var context = _factory.CreateDbContext();
-        var result = new MultiMaterialPackResult();
+        var result = new MultiMaterialPackResult
+        {
+            EngineId = engineInfo.Id,
+            EngineName = engineInfo.DisplayName
+        };
 
         // Group parts by material
         var partsByMaterial = parts.GroupBy(p => p.MaterialId);
@@ -89,7 +105,7 @@ public class CutListPackingService
             }
 
             // Run the packing algorithm
-            var engine = new MultiBinEngine(_engines.Create(null));
+            var engine = new MultiBinEngine(_engines.Create(engineInfo.Id));
             engine.Spacing = (double)kerfInches;
 
             var multiBins = stockBins
@@ -236,6 +252,11 @@ public class StockBinSource
 
 public class MultiMaterialPackResult
 {
+    /// <summary>Id of the engine that produced this result.</summary>
+    public string EngineId { get; set; } = string.Empty;
+
+    public string EngineName { get; set; } = string.Empty;
+
     public List<MaterialPackResult> MaterialResults { get; set; } = new();
 }
 
@@ -300,13 +321,20 @@ public class SavedMaterialResult
 public class SavedOptimizationResult
 {
     public DateTime OptimizedAt { get; set; }
+
+    // Null in results saved before engine selection existed; the job path always used Advanced Fit then.
+    public string? EngineId { get; set; }
+    public string? EngineName { get; set; }
+
     public List<SavedMaterialResult> MaterialResults { get; set; } = new();
 
     public static SavedOptimizationResult FromPackResult(MultiMaterialPackResult result)
     {
         var saved = new SavedOptimizationResult
         {
-            OptimizedAt = DateTime.UtcNow
+            OptimizedAt = DateTime.UtcNow,
+            EngineId = result.EngineId,
+            EngineName = result.EngineName
         };
 
         foreach (var mr in result.MaterialResults)
@@ -331,7 +359,11 @@ public class SavedOptimizationResult
 
     public async Task<MultiMaterialPackResult> ToPackResultAsync(ApplicationDbContext context)
     {
-        var result = new MultiMaterialPackResult();
+        var result = new MultiMaterialPackResult
+        {
+            EngineId = EngineId ?? BuiltInPackingEngines.AdvancedFit.Id,
+            EngineName = EngineName ?? BuiltInPackingEngines.AdvancedFit.DisplayName
+        };
 
         foreach (var savedMr in MaterialResults)
         {
