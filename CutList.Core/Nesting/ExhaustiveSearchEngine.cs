@@ -11,10 +11,23 @@ namespace CutList.Core.Nesting
     public class ExhaustiveSearchEngine : IPackingEngine
     {
         /// <summary>
-        /// Search steps (pattern candidates and search nodes) per stock length before the engine keeps
-        /// the best plan found so far. Measured: under 0.2 s at p95 and about 0.5 s worst case.
+        /// Search steps (every pattern-enumeration step and search node) per stock length before the
+        /// engine keeps the best plan found so far. Measured: about 0.05 s at p95 on 100-300 part jobs,
+        /// 0.3 s worst seen (200 distinct lengths).
         /// </summary>
         public const int DefaultSearchBudget = 1_000_000;
+
+        /// <summary>
+        /// Most distinct part lengths per stock length the engine searches. Pattern enumeration recurses
+        /// once per distinct length; more varied jobs keep the First Fit plan, reported as a fallback.
+        /// </summary>
+        public const int MaxDistinctLengths = 200;
+
+        /// <summary>
+        /// Most bars per stock length the engine searches over. The bar searches recurse once per bar;
+        /// larger searches keep the First Fit plan, reported as a fallback, unless it is proven optimal.
+        /// </summary>
+        public const int MaxSearchBars = 1_000;
 
         private readonly IPackingEngine _firstFit = new FirstFitEngine();
         private readonly int _searchBudget;
@@ -33,12 +46,15 @@ namespace CutList.Core.Nesting
 
             var oversized = request.Items.Where(i => i.Length > request.StockLength).ToList();
             var demand = CutDemand.From(parts, request.StockLength, request.Spacing);
+            if (demand.GroupCount > MaxDistinctLengths)
+                return WithFallback(firstFit);
+
             var budget = new SearchBudget(_searchBudget);
             bool firstFitPlacedAll = firstFit.ItemsNotUsed.Count == oversized.Count;
 
             if (demand.LowerBound(demand.Counts) <= request.MaxBinCount)
             {
-                var patterns = new MinBarsSearch(demand, budget).Solve(
+                var patterns = new MinBarsSearch(demand, budget, MaxSearchBars).Solve(
                     firstFitPlacedAll ? firstFit.Bins.Count : int.MaxValue, request.MaxBinCount);
                 if (patterns != null)
                     return Build(demand, patterns, oversized);
@@ -56,7 +72,7 @@ namespace CutList.Core.Nesting
             PackingRequest request, CutDemand demand, SearchBudget budget, PackResult firstFit, List<BinItem> oversized)
         {
             double firstFitLength = firstFit.Bins.Sum(b => b.Items.Sum(i => i.Length));
-            var search = new MaxFillSearch(demand, budget);
+            var search = new MaxFillSearch(demand, budget, MaxSearchBars);
             var patterns = search.Solve(request.MaxBinCount, firstFitLength);
             if (patterns == null)
                 return search.Completed ? firstFit : WithFallback(firstFit);

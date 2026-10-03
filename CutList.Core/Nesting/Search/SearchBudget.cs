@@ -14,6 +14,9 @@ namespace CutList.Core.Nesting.Search
         public long Used { get; private set; }
         public bool Exhausted { get; private set; }
 
+        /// <summary>Stops the search as if the budget ran out (used when a job is too large to search safely).</summary>
+        public void Stop() => Exhausted = true;
+
         public void Charge()
         {
             if (++Used > _limit)

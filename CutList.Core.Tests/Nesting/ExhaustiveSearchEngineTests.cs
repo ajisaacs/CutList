@@ -168,6 +168,36 @@ public class ExhaustiveSearchEngineTests
     }
 
     [Fact]
+    public void Too_many_distinct_lengths_keep_first_fit_without_searching()
+    {
+        // Pattern enumeration recurses once per distinct length, so very varied jobs are not searched.
+        var items = Enumerable.Range(0, ExhaustiveSearchEngine.MaxDistinctLengths + 1)
+            .Select(i => new BinItem($"P{i}", 10 + i / 8.0)).ToList();
+
+        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 240, 0.125));
+
+        Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
+        Assert.Equal(items.Count, result.Bins.Sum(b => b.Items.Count));
+    }
+
+    [Fact]
+    public void Searches_needing_too_many_bars_keep_first_fit()
+    {
+        // 1,010 x 4" and 2,020 x 3" on 10" bars: First Fit needs 1,179 bars, the optimum 1,010. Bar
+        // searches recurse once per bar, so a search over more than MaxSearchBars is not attempted.
+        var items = Enumerable.Repeat(4.0, 1010).Concat(Enumerable.Repeat(3.0, 2020))
+            .Select((length, i) => new BinItem($"P{i}", length)).ToList();
+        var request = new PackingRequest(items, 10, 0);
+        var firstFitBars = new FirstFitEngine().Pack(request).Bins.Count;
+
+        var result = new ExhaustiveSearchEngine().Pack(request);
+
+        Assert.True(firstFitBars - 1 > ExhaustiveSearchEngine.MaxSearchBars);
+        Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
+        Assert.Equal(firstFitBars, result.Bins.Count);
+    }
+
+    [Fact]
     public void Lower_bound_lets_the_last_kerf_run_off_the_bar()
     {
         // 4 + 3 + 3 plus two 0.125" kerfs fills a 10.25" bar exactly; the kerf after the last cut may

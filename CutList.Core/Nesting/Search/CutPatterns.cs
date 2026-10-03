@@ -19,9 +19,9 @@ namespace CutList.Core.Nesting.Search
 
             void Recurse(int group, double room, double length)
             {
+                budget.Charge(); // every step counts, including ones that reach no pattern
                 if (group == d.GroupCount)
                 {
-                    budget.Charge();
                     if (length <= 0 || length > maxLength + CutDemand.Eps) return;
                     for (int i = 0; i < d.GroupCount; i++)
                         if (remaining[i] > current[i] && d.Sizes[i] <= room)

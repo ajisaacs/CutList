@@ -10,12 +10,15 @@ namespace CutList.Core.Nesting.Search
         private const int MaxMemo = 1_000_000;
         private readonly CutDemand _d;
         private readonly SearchBudget _budget;
+        private readonly int _maxDepth;
         private readonly HashSet<string> _failed = new();
 
-        public MinBarsSearch(CutDemand d, SearchBudget budget)
+        /// <param name="maxDepth">Most bars to search over; the search recurses once per bar.</param>
+        public MinBarsSearch(CutDemand d, SearchBudget budget, int maxDepth = int.MaxValue)
         {
             _d = d;
             _budget = budget;
+            _maxDepth = maxDepth;
         }
 
         /// <summary>
@@ -30,6 +33,11 @@ namespace CutList.Core.Nesting.Search
             List<int[]>? best = null;
             int lower = _d.LowerBound(_d.Counts);
             int bars = (int)Math.Min((long)upperBound - 1, maxBars);
+            if (bars >= lower && bars > _maxDepth)
+            {
+                _budget.Stop(); // too many bars to recurse over safely
+                return null;
+            }
             try
             {
                 while (bars >= lower)

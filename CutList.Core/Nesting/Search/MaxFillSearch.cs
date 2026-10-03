@@ -9,13 +9,16 @@ namespace CutList.Core.Nesting.Search
     {
         private readonly CutDemand _d;
         private readonly SearchBudget _budget;
+        private readonly int _maxDepth;
         private double _best;
         private List<int[]>? _bestPatterns;
 
-        public MaxFillSearch(CutDemand d, SearchBudget budget)
+        /// <param name="maxDepth">Most bars to search over; the search recurses once per bar.</param>
+        public MaxFillSearch(CutDemand d, SearchBudget budget, int maxDepth = int.MaxValue)
         {
             _d = d;
             _budget = budget;
+            _maxDepth = maxDepth;
         }
 
         /// <summary>True when the search finished, so its result (or the incumbent) is optimal.</summary>
@@ -24,6 +27,8 @@ namespace CutList.Core.Nesting.Search
         /// <summary>Patterns placing more length than <paramref name="incumbentLength"/>, or null.</summary>
         public List<int[]>? Solve(int bars, double incumbentLength)
         {
+            if (bars > _maxDepth)
+                return null; // too many bars to recurse over safely; Completed stays false
             _best = incumbentLength;
             try
             {
