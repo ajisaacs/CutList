@@ -9,7 +9,7 @@ CutList optimizes one-dimensional material cutting to reduce waste when turning 
 - Manage a material catalog covering bar, tube, pipe, angle, channel, and I-beam shapes.
 - Enter lengths in feet, inches, and fractions, such as `12'`, `6"`, or `12 1/2"`.
 - Review stock utilization, waste, unplaced parts, and required material; print cut-list reports.
-- Save optimization results, duplicate jobs, and lock completed plans against accidental edits.
+- Save optimization results, duplicate jobs, and lock ordered plans so they cannot be changed through the web UI, REST API, or MCP until explicitly unlocked.
 - Integrate through a REST API or stdio MCP tools.
 
 Stock catalog entries describe available cutting lengths, not counted on-hand inventory. Each job must explicitly specify the stock it may use. CutList is a **1D cutting optimizer**, not a sheet-metal or other 2D nesting tool.
@@ -124,13 +124,16 @@ The MCP server provides tools for managing jobs, materials, and stock, and for o
 
 ## Build and test
 
-From the repository root, build the cross-platform applications and run the core test suite:
+From the repository root, build the cross-platform applications and run the test suites:
 
 ```bash
 dotnet build CutList.Web/CutList.Web.csproj
 dotnet build CutList.Mcp/CutList.Mcp.csproj
 dotnet test CutList.Core.Tests/CutList.Core.Tests.csproj
+dotnet test CutList.Web.Tests/CutList.Web.Tests.csproj
 ```
+
+`CutList.Web.Tests` starts a disposable SQL Server container, so it requires a running Docker daemon.
 
 On Windows, build the full solution with `dotnet build CutList.sln`. Building the individual cross-platform projects avoids the Windows Forms target on Linux and macOS.
 
@@ -142,7 +145,8 @@ On Windows, build the full solution with `dotnet build CutList.sln`. Building th
 | `CutList.Core/` | Shared domain models, unit formatting, and packing algorithms |
 | `CutList.Web/` | Blazor UI, REST API, SQL Server data access, and migrations |
 | `CutList.Mcp/` | Stdio MCP integration for the web API |
-| `CutList.Core.Tests/` | .NET test suite |
+| `CutList.Core.Tests/` | Core .NET tests |
+| `CutList.Web.Tests/` | Web, REST, MCP, and UI integration tests (SQL Server via Docker) |
 | `tests/` | Python regression tests |
 | `docs/` | Additional project documentation |
 

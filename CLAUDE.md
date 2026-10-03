@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CutList is a 1D bin packing optimization application that helps users optimize material cutting. It calculates efficient bin packing solutions to minimize waste when cutting stock materials into required parts.
 
-The solution contains four projects:
+The solution contains four application projects plus test projects:
 
 | Project | Framework | Purpose |
 |---------|-----------|---------|
@@ -25,6 +25,8 @@ The solution contains four projects:
 | **CutList.Core** | .NET 10.0 Class Library | Domain models and packing algorithms (platform-agnostic) |
 | **CutList.Web** | .NET 10.0 Blazor Server | Web-based UI + REST API, EF Core + SQL Server |
 | **CutList.Mcp** | .NET 10.0 Console (stdio) | MCP server exposing CutList.Web's REST API as tools for Claude |
+| **CutList.Core.Tests** | .NET 10.0 xUnit | Core formatting/packing tests |
+| **CutList.Web.Tests** | .NET 10.0 xUnit + bUnit | Web/REST/MCP/Blazor integration tests against a disposable SQL Server container |
 
 **Key Dependencies**: Math-Expression-Evaluator (input parsing), Newtonsoft.Json (serialization), Entity Framework Core (data access), Bootstrap 5 + Bootstrap Icons (UI), ModelContextProtocol SDK (CutList.Mcp)
 
@@ -47,6 +49,11 @@ dotnet run --project CutList.Web/CutList.Web.csproj # Blazor + REST API (default
 # EF Core migrations (always apply immediately after creating)
 dotnet ef migrations add <Name> --project CutList.Web
 dotnet ef database update --project CutList.Web
+
+# Tests (Linux: build/test projects individually; the WinForms project is Windows-only)
+dotnet test CutList.Core.Tests/CutList.Core.Tests.csproj
+dotnet test CutList.Web.Tests/CutList.Web.Tests.csproj   # needs a Docker daemon
+python3 -B -m unittest discover -s tests -p 'test_*.py'
 
 # Clean build
 dotnet clean CutList.sln
@@ -100,7 +107,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **REST API** (`Controllers/`): `JobsController`, `MaterialsController`, `StockItemsController`, `CuttingToolsController`, `PackingController`, `CatalogController` — Swagger/OpenAPI enabled in Development. This API is the integration surface `CutList.Mcp` calls into; the Blazor UI talks to the services directly and does not go through it.
 
-**Error handling**: `UseExceptionHandler("/Error", ...)` in non-Development environments routes to `Components/Pages/Error.razor`.
+**Error handling**: `UseExceptionHandler("/Error", ...)` in non-Development environments routes to `Components/Pages/Error.razor`. `Controllers/JobMutationExceptionFilter` (registered globally in `AddControllers`) maps only the two job-domain conflicts to 409 `application/problem+json` (see Job locking below); all other exceptions are untouched.
 
 **Table actions**: Every row-level action cell uses the shared `table-actions` class from `wwwroot/css/app.css`. It is an `inline-flex` non-wrapping control group, so Edit/Delete/Copy buttons remain side by side and do not increase table-row height.
 
@@ -114,8 +121,8 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 Stdio-transport MCP server (`ModelContextProtocol` SDK) exposing CutList.Web's REST API as tools for Claude Code. Registers tools via `WithToolsFromAssembly`; logging is disabled entirely so it doesn't interfere with the stdio transport.
 
-- `ApiClient.cs` — typed `HttpClient` wrapper for CutList.Web's REST API (`BaseAddress` hardcoded to `http://localhost:5270`)
-- `JobTools.cs` — job CRUD, parts/stock, optimization (`OptimizeJob`), cutting tools
+- `ApiClient.cs` — typed `HttpClient` wrapper for CutList.Web's REST API (`BaseAddress` hardcoded to `http://localhost:5270`). Job mutations use `EnsureJobSuccessAsync`: a `job_locked`/`job_changed` problem response becomes an `HttpRequestException` with the server's detail and 409 status; other failures keep the generic status error. Duplicate material/stock 409s still raise `ApiConflictException`.
+- `JobTools.cs` — job CRUD, parts/stock, optimization (`OptimizeJob`), cutting tools. `list_jobs`/`get_job` expose `IsLocked`/`LockedAt`; mutation tools return `Success = false` with the lock explanation; `add_job_parts` stops at the first job conflict and reports how many parts were really added. `optimize_job` is a non-persisting preview (works on locked jobs). There is deliberately no lock/unlock tool and no automatic retry.
 - `InventoryTools.cs` — materials, stock items (`add_stock`, etc.)
 - `CutListTools.cs` — static helpers shared across tool classes
 - `Models.cs` — shared DTOs distinct from CutList.Web's own DTOs (kept intentionally thin for MCP tool responses)
@@ -144,7 +151,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 ### Job
 - `JobNumber` (auto-generated "JOB-#####", unique), `Name`, `Customer`, `CuttingToolId`, `Notes`
-- `LockedAt` (DateTime?) — set when materials ordered; `IsLocked` computed property
+- `LockedAt` (DateTime?, UTC) — set when materials ordered; `IsLocked` computed property. Configured as an EF **concurrency token** (metadata-only migration `JobLockedAtConcurrencyToken`), so job UPDATE/DELETE statements carry `WHERE LockedAt = <value read>`
 - `OptimizationResultJson` (string?, nvarchar(max)) — serialized optimization results
 - `OptimizedAt` (DateTime?) — when optimization was last run
 - **Relationships**: `Parts` (1:many JobPart), `Stock` (1:many JobStock), `CuttingTool`
@@ -166,11 +173,12 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - CRUD with soft delete
 
 ### JobService
-- Job CRUD: `CreateAsync` (auto-generates JobNumber), `DuplicateAsync` (deep copy), `QuickCreateAsync`
-- Lock/Unlock: `LockAsync(id)`, `UnlockAsync(id)` — controls job editability
-- Parts: `AddPartAsync`, `UpdatePartAsync`, `DeletePartAsync` (all update job timestamp + clear optimization results)
-- Stock: `AddStockAsync`, `UpdateStockAsync`, `DeleteStockAsync` (all clear optimization results)
-- Optimization: `SaveOptimizationResultAsync`, `ClearOptimizationResultAsync`
+- Job CRUD: `CreateAsync` (auto-generates JobNumber), `DuplicateAsync` (deep copy into a new unlocked job without saved results), `QuickCreateAsync`
+- `UpdateAsync(job)` reloads the persisted job and copies only `Name`, `Customer`, `CuttingToolId`, `Notes` (never lock state, ids, timestamps, results, or child/navigation collections from the caller's object); clears optimization results
+- Lock/Unlock: `LockAsync(id)` (idempotent; keeps the original lock time), `UnlockAsync(id)` (keeps the saved result) — the only lock transitions; neither invalidates results
+- Parts: `AddPartAsync`, `UpdatePartAsync`, `DeletePartAsync`; Stock: `AddStockAsync`, `UpdateStockAsync`, `DeleteStockAsync` — load the stored child and its persisted owner, refuse to move a child to another job (`ArgumentException`), copy only editable scalars, and save the child together with the parent timestamp + result invalidation in one `SaveChanges`. Add methods copy the generated `Id`/`SortOrder` back to the caller's object
+- Optimization: `SaveOptimizationResultAsync`, `ClearOptimizationResultAsync` (do not change `UpdatedAt`)
+- Missing resources: add/update with a missing job or child throws `KeyNotFoundException`; delete/lock/unlock/save/clear of a missing row is a no-op (controllers return 404 before calling)
 - Cutting tools: full CRUD with single-default enforcement
 
 ### CutListPackingService
@@ -214,7 +222,9 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 - **Nullable reference types enabled** — handle nulls explicitly
 - **Soft deletes** — Materials, StockItems, CuttingTools use `IsActive` flag
-- **Job locking** — `LockedAt` timestamp set via a manual Lock Job action (always available, regardless of whether the job needs purchases); Edit page disables all modification via `<fieldset disabled>`, hides add/edit/delete buttons; Unlock button to re-enable editing
+- **Job locking** — `LockedAt` timestamp set via a manual Lock Job action (always available, regardless of whether the job needs purchases). **Enforcement lives in `JobService`**, not the UI: `UpdateAsync`, `DeleteAsync`, the six part/stock methods, `SaveOptimizationResultAsync` and `ClearOptimizationResultAsync` throw `JobLockedException` (`JobId`, persisted `LockedAt`) for a locked job, even for no-op requests and stale/forged caller objects. Allowed while locked: reads, printing, `DuplicateAsync`, `LockAsync`/`UnlockAsync`, `/api/jobs/{id}/pack` and `/api/packing/optimize` previews (they never persist), and global catalog/tool maintenance. Every guarded mutation reads the parent in its own context and forces the parent UPDATE (or DELETE) into the same save, so a lock committed between read and save fails the `LockedAt` concurrency check and rolls the whole save back; the service then re-reads and throws `JobLockedException`, or `JobMutationConflictException` if the job is not locked (e.g. deleted). Nothing is retried. Concurrent same-direction lock/unlock is idempotent; an unlock never overwrites a newer lock. This guards lock state only — it is not general optimistic versioning of unlocked edits, and separate sequential requests (e.g. batch adds) are not atomic as a group
+- **Lock conflicts over HTTP** — 409 `application/problem+json` with `title`, `detail`, `code` (`job_locked` or `job_changed`), `jobId`, and for `job_locked` the persisted UTC `lockedAt`. 404/400 behavior is unchanged. `JobDto`/`JobDetailDto` responses include read-only `IsLocked` and `LockedAt`; request DTOs cannot set lock state
+- **Lock conflicts in Blazor** — the Edit page disables/hides controls for locked jobs (presentation only) and routes every persisted change through `TryJobChangeAsync`: on a conflict it closes stale modals, reloads the persisted job and saved result, and shows `#job-conflict-alert`; row/import loops stop and report rows actually saved. `RunOptimization` publishes a new plan only after it is saved. The Jobs index disables Delete for locked rows (Copy stays available) and reports a delete rejected after the confirmation opened
 - **Pagination** — All list pages use `Pager` with `pageSize = 25`
 - **ConfirmDialog** — All destructive actions use the shared `ConfirmDialog` component
 - **Material selection flow** — Shape dropdown -> Size dropdown -> Length input -> Quantity (conditional dropdowns)
@@ -241,7 +251,9 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | `CutList.Core/ArchUnits.cs` | Architectural unit parsing/conversion |
 | `CutList.Core/Formatting/FormatHelper.cs` | Display formatting |
 | `CutList.Web/Data/ApplicationDbContext.cs` | EF Core context with all DbSets and configuration |
-| `CutList.Web/Services/JobService.cs` | Job orchestration (CRUD, parts, stock, tools, lock/unlock) |
+| `CutList.Web/Services/JobService.cs` | Job orchestration (CRUD, parts, stock, tools, lock/unlock) and lock enforcement |
+| `CutList.Web/Controllers/JobMutationExceptionFilter.cs` | Maps `JobLockedException`/`JobMutationConflictException` to 409 problem responses |
+| `CutList.Web.Tests/Infrastructure/` | Testcontainers SQL Server fixture (real migrations, never the production DB), `WebApplicationFactory` host, whole-DB `JobSnapshot`, `MutationSaveGate` (deterministic lock-before-save races), `SqlCommandRecorder` (SQL capture / rollback fault injection) |
 | `CutList.Web/Services/CutListPackingService.cs` | Bridges web entities to Core packing engine |
 | `CutList.Web/Components/Pages/Jobs/Edit.razor` | Job editor (tabbed: Details, Parts, Stock, Results) |
 | `CutList.Mcp/ApiClient.cs` | HTTP client the MCP server uses to call CutList.Web's REST API |
