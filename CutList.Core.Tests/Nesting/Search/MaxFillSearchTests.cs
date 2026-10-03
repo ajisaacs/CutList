@@ -74,7 +74,7 @@ public class MaxFillSearchTests
             Go(i + 1, placed);
             for (int b = 0; b < bars; b++)
             {
-                if (used[b] + lengths[i] + kerf > capacity + 1e-9) continue;
+                if (used[b] + lengths[i] + kerf > capacity + Tolerance.Epsilon) continue; // the engine's fit rule
                 used[b] += lengths[i] + kerf;
                 Go(i + 1, placed + lengths[i]);
                 used[b] -= lengths[i] + kerf;

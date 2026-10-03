@@ -154,6 +154,20 @@ public class ExhaustiveSearchEngineTests
     }
 
     [Fact]
+    public void Four_limited_bars_hold_parts_that_pair_within_the_tolerance()
+    {
+        // Three 6.0000000011 + 3.9999999991 pairs (10.0000000002" each, within tolerance) plus a 4".
+        var items = new[] { 6.0000000011, 6.0000000011, 6.0000000011, 3.9999999991, 3.9999999991, 3.9999999991, 4.0 }
+            .Select((length, i) => new BinItem($"P{i}", length)).ToList();
+
+        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10, 0, maxBinCount: 4));
+
+        Assert.Equal(4, result.Bins.Count);
+        Assert.Empty(result.ItemsNotUsed);
+        Assert.Null(result.FallbackEngine);
+    }
+
+    [Fact]
     public void Lower_bound_lets_the_last_kerf_run_off_the_bar()
     {
         // 4 + 3 + 3 plus two 0.125" kerfs fills a 10.25" bar exactly; the kerf after the last cut may

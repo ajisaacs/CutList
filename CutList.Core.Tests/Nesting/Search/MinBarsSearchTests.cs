@@ -30,6 +30,18 @@ public class MinBarsSearchTests
     }
 
     [Fact]
+    public void Finds_packings_that_fit_only_within_the_tolerance()
+    {
+        // Each 6.0000000011 + 3.9999999991 pair is 10.0000000002" on a 10" bar: within tolerance.
+        var d = Demand(6.0000000011, 6.0000000011, 6.0000000011, 3.9999999991, 3.9999999991, 3.9999999991, 4.0);
+
+        var patterns = new MinBarsSearch(d, new SearchBudget(1_000_000)).Solve(upperBound: int.MaxValue, maxBars: 4);
+
+        Assert.NotNull(patterns);
+        Assert.Equal(4, patterns.Count);
+    }
+
+    [Fact]
     public void Respects_the_bar_limit()
     {
         Assert.Null(new MinBarsSearch(Demand(4, 4, 3, 3, 3, 3), new SearchBudget(1_000_000))

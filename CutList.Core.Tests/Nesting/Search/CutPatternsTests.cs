@@ -30,6 +30,18 @@ public class CutPatternsTests
         Assert.Equal(new[] { new[] { 0, 3 }, new[] { 2, 0 } }, patterns.Select(p => p.Pattern));
     }
 
+    [Theory]
+    [InlineData(6.000005, true)]  // 10.000005" fits a 10" bar within Tolerance.Epsilon
+    [InlineData(6.00002, false)]  // 10.00002" does not
+    public void Parts_fit_up_to_the_tolerance_and_no_further(double longPart, bool fitsTogether)
+    {
+        var d = Demand(longPart, 4);
+
+        var patterns = CutPatterns.Maximal(d, d.Counts, mustInclude: -1, maxLength: double.MaxValue, new SearchBudget(1000));
+
+        Assert.Equal(fitsTogether, patterns.Any(p => p.Pattern.SequenceEqual(new[] { 1, 1 })));
+    }
+
     [Fact]
     public void Budget_stops_the_search_and_says_so()
     {

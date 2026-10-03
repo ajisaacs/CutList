@@ -25,6 +25,8 @@ public class CutDemandTests
     [InlineData(10.0, 0.0, new[] { 4.0, 4, 3, 3, 3, 3 }, 2)]
     [InlineData(10.25, 0.125, new[] { 4.0, 4, 3, 3, 3, 3 }, 2)] // last kerf may run off the bar
     [InlineData(10.1875, 0.125, new[] { 4.0, 4, 3, 3, 3, 3 }, 3)]
+    // Each 6.0000000011 + 3.9999999991 pair fits within the fit tolerance, so four bars suffice.
+    [InlineData(10.0, 0.0, new[] { 6.0000000011, 6.0000000011, 6.0000000011, 3.9999999991, 3.9999999991, 3.9999999991, 4.0 }, 4)]
     public void Lower_bound(double stock, double kerf, double[] lengths, int expected)
     {
         var d = Demand(stock, kerf, lengths);

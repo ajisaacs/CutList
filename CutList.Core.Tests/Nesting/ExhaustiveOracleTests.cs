@@ -40,7 +40,7 @@ public class ExhaustiveOracleTests
             if (i == s.Length) { best = bins.Count; return; }
             for (int b = 0; b < bins.Count; b++)
             {
-                if (bins[b] + s[i] > capacity + 1e-9) continue;
+                if (bins[b] + s[i] > capacity + Tolerance.Epsilon) continue; // the engine's fit rule
                 bins[b] += s[i];
                 Go(i + 1);
                 bins[b] -= s[i];
