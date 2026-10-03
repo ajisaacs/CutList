@@ -66,15 +66,21 @@ namespace CutList.Core.Nesting
 
         private static bool TryFindBestBin(IEnumerable<Bin> bins, double length, out Bin? found)
         {
+            // Room left after adding the part, in CutFit units (exact; Tolerance.Epsilon allowed).
             found = null;
+            long bestRoom = long.MaxValue;
 
             foreach (var bin in bins)
             {
-                if (bin.RemainingLength < length)
+                long room = CutFit.Capacity(bin.Length, bin.Spacing)
+                    - bin.Items.Sum(i => CutFit.Size(i.Length, bin.Spacing))
+                    - CutFit.Size(length, bin.Spacing);
+                if (room < 0)
                     continue;
 
-                if (found == null || bin.RemainingLength < found.RemainingLength)
+                if (room < bestRoom)
                 {
+                    bestRoom = room;
                     found = bin;
                 }
             }

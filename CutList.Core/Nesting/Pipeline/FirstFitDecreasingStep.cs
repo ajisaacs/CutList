@@ -19,12 +19,17 @@ namespace CutList.Core.Nesting.Pipeline
 
         private static void FillBin(Bin bin, List<BinItem> remainingItems)
         {
+            // The bar starts empty; track its use in CutFit units so the fit check is exact.
+            long capacity = CutFit.Capacity(bin.Length, bin.Spacing);
+            long used = 0;
             for (int i = 0; i < remainingItems.Count; i++)
             {
                 var item = remainingItems[i];
-                if (bin.RemainingLength >= item.Length)
+                long size = CutFit.Size(item.Length, bin.Spacing);
+                if (used + size <= capacity)
                 {
                     bin.AddItem(item);
+                    used += size;
                     remainingItems.RemoveAt(i);
                     i--;
                 }
