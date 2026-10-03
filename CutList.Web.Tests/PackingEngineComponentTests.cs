@@ -43,7 +43,7 @@ public sealed class PackingEngineComponentTests : IAsyncLifetime
     {
         var page = await RenderResultsTabAsync(_seed.UnlockedJobId);
         var options = page.FindAll("select#packing-engine option").Select(o => o.GetAttribute("value"));
-        Assert.Equal(new[] { "firstfit", "bestfit", "exhaustive" }, options);
+        Assert.Equal(new[] { "exhaustive", "firstfit", "bestfit" }, options);
 
         page.Find("select#packing-engine").Change(new ChangeEventArgs { Value = "bestfit" });
         await page.Find("#run-optimization").ClickAsync(new());
@@ -67,7 +67,8 @@ public sealed class PackingEngineComponentTests : IAsyncLifetime
     [Fact]
     public async Task Plan_saved_under_a_retired_engine_id_still_loads_and_reoptimizes_with_the_default()
     {
-        // "advanced" was renamed to "firstfit" without an alias; plans saved under it must keep loading.
+        // "advanced" was renamed to "firstfit" without an alias; plans saved under it must keep loading,
+        // and the picker then starts on the configured default (exhaustive).
         await SavePlanAsync(_seed.UnlockedJobId, "bestfit");
         var retired = (await SavedJsonAsync(_seed.UnlockedJobId))!
             .Replace("\"EngineId\":\"bestfit\"", "\"EngineId\":\"advanced\"")
@@ -84,7 +85,7 @@ public sealed class PackingEngineComponentTests : IAsyncLifetime
 
         await page.Find("#run-optimization").ClickAsync(new());
 
-        Assert.Contains("\"EngineId\":\"firstfit\"", await SavedJsonAsync(_seed.UnlockedJobId));
+        Assert.Contains("\"EngineId\":\"exhaustive\"", await SavedJsonAsync(_seed.UnlockedJobId));
     }
 
     [Fact]

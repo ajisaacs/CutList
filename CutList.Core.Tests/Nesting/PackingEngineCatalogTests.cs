@@ -14,21 +14,21 @@ public class PackingEngineCatalogTests
         new(new PackingEngineInfo(id, id.ToUpperInvariant(), $"{id} engine"), () => new FakeEngine());
 
     [Fact]
-    public void Built_in_catalog_lists_engines_in_order_with_firstfit_as_default()
+    public void Built_in_catalog_lists_engines_in_order_with_exhaustive_as_default()
     {
         var catalog = PackingEngineCatalog.CreateDefault();
 
-        Assert.Equal(new[] { "firstfit", "bestfit", "exhaustive" }, catalog.Engines.Select(e => e.Id));
-        Assert.Equal("firstfit", catalog.Default.Id);
+        Assert.Equal(new[] { "exhaustive", "firstfit", "bestfit" }, catalog.Engines.Select(e => e.Id));
+        Assert.Equal("exhaustive", catalog.Default.Id);
         Assert.All(catalog.Engines, e => Assert.False(string.IsNullOrWhiteSpace(e.Description)));
     }
 
     [Theory]
     [InlineData("BestFit", "bestfit")]
-    [InlineData(" exhaustive ", "exhaustive")]
-    [InlineData(null, "firstfit")]
-    [InlineData("", "firstfit")]
-    [InlineData("   ", "firstfit")]
+    [InlineData(" firstfit ", "firstfit")]
+    [InlineData(null, "exhaustive")]
+    [InlineData("", "exhaustive")]
+    [InlineData("   ", "exhaustive")]
     public void Resolve_is_case_insensitive_and_blank_means_default(string? requested, string expected)
     {
         Assert.Equal(expected, PackingEngineCatalog.CreateDefault().Resolve(requested).Id);
@@ -40,13 +40,13 @@ public class PackingEngineCatalogTests
         var ex = Assert.Throws<UnknownPackingEngineException>(() => PackingEngineCatalog.CreateDefault().Resolve("optimal"));
 
         Assert.Equal("optimal", ex.EngineId);
-        Assert.Equal("Unknown packing engine 'optimal'. Available engines: firstfit, bestfit, exhaustive.", ex.Message);
+        Assert.Equal("Unknown packing engine 'optimal'. Available engines: exhaustive, firstfit, bestfit.", ex.Message);
     }
 
     [Fact]
     public void Configured_default_is_honored_and_validated()
     {
-        Assert.Equal("exhaustive", PackingEngineCatalog.CreateDefault("Exhaustive").Default.Id);
+        Assert.Equal("firstfit", PackingEngineCatalog.CreateDefault("FirstFit").Default.Id);
         Assert.Throws<UnknownPackingEngineException>(() => PackingEngineCatalog.CreateDefault("fastest"));
     }
 
@@ -55,9 +55,9 @@ public class PackingEngineCatalogTests
     {
         var catalog = PackingEngineCatalog.CreateDefault();
 
-        Assert.IsType<FirstFitEngine>(catalog.Create(null));
+        Assert.IsType<ExhaustiveSearchEngine>(catalog.Create(null));
+        Assert.IsType<FirstFitEngine>(catalog.Create("firstfit"));
         Assert.IsType<BestFitEngine>(catalog.Create("bestfit"));
-        Assert.IsType<ExhaustiveSearchEngine>(catalog.Create("exhaustive"));
         Assert.NotSame(catalog.Create("bestfit"), catalog.Create("bestfit"));
     }
 

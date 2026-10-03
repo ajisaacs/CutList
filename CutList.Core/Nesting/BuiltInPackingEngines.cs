@@ -25,9 +25,9 @@ namespace CutList.Core.Nesting
         /// <summary>Selectable engines in display order; the first is the default.</summary>
         public static IReadOnlyList<PackingEngineRegistration> All { get; } = new[]
         {
+            new PackingEngineRegistration(Exhaustive, () => new ExhaustiveSearchEngine()),
             new PackingEngineRegistration(FirstFit, () => new FirstFitEngine()),
             new PackingEngineRegistration(BestFit, () => new BestFitEngine()),
-            new PackingEngineRegistration(Exhaustive, () => new ExhaustiveSearchEngine()),
         };
     }
 }

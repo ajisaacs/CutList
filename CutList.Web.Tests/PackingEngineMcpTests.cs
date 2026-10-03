@@ -34,7 +34,7 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
     {
         var engines = await _tools.ListPackingEngines();
 
-        Assert.Equal(new[] { "firstfit", "bestfit", "exhaustive" }, engines.Select(e => e.Id));
+        Assert.Equal(new[] { "exhaustive", "firstfit", "bestfit" }, engines.Select(e => e.Id));
         Assert.Single(engines, e => e.IsDefault);
     }
 
@@ -54,7 +54,7 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
         var result = await _tools.OptimizeJob(_seed.UnlockedJobId, engine: "fastest");
 
         Assert.False(result.Success);
-        Assert.Contains("Unknown packing engine 'fastest'. Available engines: firstfit, bestfit, exhaustive.", result.Error);
+        Assert.Contains("Unknown packing engine 'fastest'. Available engines: exhaustive, firstfit, bestfit.", result.Error);
     }
 
     [Theory]
@@ -100,6 +100,6 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
             "optimal");
 
         Assert.False(result.Success);
-        Assert.Contains("Available engines: firstfit, bestfit, exhaustive", result.Error);
+        Assert.Contains("Available engines: exhaustive, firstfit, bestfit", result.Error);
     }
 }
