@@ -16,7 +16,8 @@ public class EngineContractTests
         string Name,
         (double Length, int Quantity, int Priority)[] Stock,
         (double Length, int Count)[] Parts,
-        int ExpectedNotPlaced);
+        int ExpectedNotPlaced,
+        bool SharedNames = false);
 
     // ExpectedNotPlaced is algorithm-independent for these inputs.
     private static readonly Scenario[] Scenarios =
@@ -27,6 +28,11 @@ public class EngineContractTests
         new("oversized parts are reported", new[] { (96.0, -1, 1) }, new[] { (100.0, 2), (30.0, 3) }, 2),
         new("priority order across stock lengths", new[] { (48.0, 2, 1), (120.0, -1, 2) }, new[] { (40.0, 4), (100.0, 2) }, 0),
         new("no parts", new[] { (96.0, -1, 1) }, Array.Empty<(double, int)>(), 0),
+        // The app names every copy of a part the same; identity must survive value-equal parts.
+        new("same-named copies on limited stock",
+            new[] { (240.0, 3, 1), (288.0, -1, 2) },
+            new[] { (79.5625, 5), (32.3125, 2), (34.3125, 3), (74.3125, 4), (21.125, 3) },
+            0, SharedNames: true),
     };
 
     public static TheoryData<string, string> Cases()
@@ -53,7 +59,7 @@ public class EngineContractTests
         var scenario = Scenarios.Single(s => s.Name == scenarioName);
         var items = scenario.Parts
             .SelectMany((part, index) => Enumerable.Range(1, part.Count)
-                .Select(n => new BinItem($"P{index}-{n}", part.Length)))
+                .Select(n => new BinItem(scenario.SharedNames ? $"P{index}" : $"P{index}-{n}", part.Length)))
             .ToList();
         var packer = CreatePacker(engineId);
         packer.SetBins(scenario.Stock.Select(s => new MultiBin(s.Length, s.Quantity, s.Priority)));

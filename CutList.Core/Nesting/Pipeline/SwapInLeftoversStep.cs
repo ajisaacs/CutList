@@ -71,9 +71,11 @@ namespace CutList.Core.Nesting.Pipeline
                         remainingItems.Add(firstItem);
                         bin.AddItems(testBin.Items);
 
+                        // BinItem equality is by value and copies of a part share a name: remove
+                        // these exact instances.
                         foreach (var item in testBin.Items)
                         {
-                            remainingItems.Remove(item);
+                            remainingItems.RemoveAt(remainingItems.FindIndex(x => ReferenceEquals(x, item)));
                         }
 
                         return true;
