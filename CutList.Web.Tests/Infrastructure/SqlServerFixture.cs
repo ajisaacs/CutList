@@ -81,6 +81,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
     public async Task<TestSeed> ResetAsync()
     {
         Factory.SaveGate.Reset();
+        Factory.Sql.Reset();
 
         await using var context = await CreateContextAsync();
         await context.Database.ExecuteSqlRawAsync("""

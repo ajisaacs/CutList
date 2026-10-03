@@ -22,6 +22,8 @@ public sealed class CutListWebFactory : WebApplicationFactory<Program>
 
     public MutationSaveGate SaveGate { get; } = new();
 
+    public SqlCommandRecorder Sql { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -40,7 +42,7 @@ public sealed class CutListWebFactory : WebApplicationFactory<Program>
 
             services.AddDbContextFactory<ApplicationDbContext>(options => options
                 .UseSqlServer(_connectionString)
-                .AddInterceptors(SaveGate));
+                .AddInterceptors(SaveGate, Sql));
         });
     }
 }
