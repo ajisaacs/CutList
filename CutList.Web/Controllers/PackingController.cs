@@ -87,13 +87,13 @@ public class PackingController : ControllerBase
         }
 
         // Run packing
-        var engine = new MultiBinEngine(_engines.Create(engineInfo.Id))
+        var packer = new MultiBinPacker(_engines.Create(engineInfo.Id))
         {
             Spacing = (double)dto.Kerf
         };
 
-        engine.SetBins(multiBins);
-        var result = engine.Pack(items);
+        packer.SetBins(multiBins);
+        var result = packer.Pack(items);
 
         // Map result
         var bins = result.Bins.Select(bin => new PackedBinDto

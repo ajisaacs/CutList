@@ -260,10 +260,10 @@ public static class CutListTools
 
     private static PackResult RunPackingAlgorithm(List<BinItem> items, List<MultiBin> bins, double kerf, string? engineId)
     {
-        var engine = new MultiBinEngine(Engines.Create(engineId));
-        engine.SetBins(bins);
-        engine.Spacing = kerf;
-        return engine.Pack(items);
+        var packer = new MultiBinPacker(Engines.Create(engineId));
+        packer.SetBins(bins);
+        packer.Spacing = kerf;
+        return packer.Pack(items);
     }
 
     private static double ParseLength(string input)

@@ -105,21 +105,21 @@ public class CutListPackingService
             }
 
             // Run the packing algorithm
-            var engine = new MultiBinEngine(_engines.Create(engineInfo.Id));
-            engine.Spacing = (double)kerfInches;
+            var packer = new MultiBinPacker(_engines.Create(engineInfo.Id));
+            packer.Spacing = (double)kerfInches;
 
             var multiBins = stockBins
                 .Select(b => new MultiBin((double)b.LengthInches, b.Quantity, b.Priority))
                 .ToList();
 
-            engine.SetBins(multiBins);
+            packer.SetBins(multiBins);
 
             var items = materialParts
                 .SelectMany(p => Enumerable.Range(0, p.Quantity)
                     .Select(_ => new BinItem(p.Name, (double)p.LengthInches)))
                 .ToList();
 
-            var packResult = engine.Pack(items);
+            var packResult = packer.Pack(items);
 
             // Separate bins into in-stock and to-be-purchased
             var inStockBins = new List<Bin>();

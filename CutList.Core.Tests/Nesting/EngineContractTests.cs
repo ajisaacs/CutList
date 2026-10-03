@@ -5,7 +5,7 @@ namespace CutList.Core.Tests.Nesting;
 
 /// <summary>
 /// Behavior every packing engine must satisfy when driven the way callers use it (through
-/// MultiBinEngine). Every engine is covered; a new engine is checked automatically.
+/// MultiBinPacker). Every engine is covered; a new engine is checked automatically.
 /// </summary>
 public class EngineContractTests
 {
@@ -43,7 +43,7 @@ public class EngineContractTests
     // Every registered engine is checked; adding an engine to BuiltInPackingEngines.All adds its cases.
     private static IEnumerable<string> EngineIds() => Catalog.Engines.Select(e => e.Id);
 
-    private static MultiBinEngine CreatePacker(string engineId) =>
+    private static MultiBinPacker CreatePacker(string engineId) =>
         new(Catalog.Create(engineId)) { Spacing = Kerf };
 
     [Theory]

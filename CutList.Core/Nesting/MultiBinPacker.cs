@@ -4,13 +4,13 @@ namespace CutList.Core.Nesting
     /// Packs items across multiple stock types with different lengths, in priority order (then
     /// shortest first), running one single-length engine for every stock type.
     /// </summary>
-    public class MultiBinEngine
+    public class MultiBinPacker
     {
         private readonly IEngine _engine;
         private readonly List<MultiBin> _bins = new();
 
         /// <param name="engine">Single-length engine, normally from <see cref="IPackingEngineCatalog.Create"/>.</param>
-        public MultiBinEngine(IEngine engine)
+        public MultiBinPacker(IEngine engine)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         }

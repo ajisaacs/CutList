@@ -78,7 +78,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 - **Tool**: Cutting tool with kerf/blade width
 
 **Packing Engine**:
-- `IEngine` packs one stock length (`PackingRequest` -> `PackResult`); `MultiBinEngine(IEngine)` runs that engine across stock types in priority order (then shortest first)
+- `IEngine` packs one stock length (`PackingRequest` -> `PackResult`); `MultiBinPacker(IEngine)` (not itself an engine) runs that engine across stock types in priority order (then shortest first)
 - Built-in engines (`BuiltInPackingEngines.All`, the single list): `firstfit` (`FirstFitEngine`, first-fit decreasing; when bar quantity is limited, a swap pass fills those bars tighter; default), `bestfit` (`BestFitEngine`), `exhaustive` (`ExhaustiveSearchEngine`, branch-and-bound search for the fewest bars; falls back to First Fit above `DefaultMaxItems` parts per stock length, when limited stock cannot hold every part, or when its search-node budget runs out first)
 - `PackingEngineCatalog` (`IPackingEngineCatalog`) resolves ids case-insensitively, treats null/blank as the default, creates a fresh engine per run, and rejects unknown ids with `UnknownPackingEngineException` (message lists valid ids). Callers never reference concrete engine classes
 - **Adding an engine**: implement `IEngine` and add one `PackingEngineRegistration` to `BuiltInPackingEngines.All`. `CutList.Core.Tests/Nesting/EngineContractTests` then runs it through the shared contract (every part placed or reported as not placed, no overfilled bar, finite stock respected, `-1` = unlimited)
@@ -251,7 +251,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | File | Purpose |
 |------|---------|
 | `CutList.Core/Nesting/FirstFitEngine.cs` | Default 1D bin packing algorithm (first-fit decreasing) |
-| `CutList.Core/Nesting/MultiBinEngine.cs` | Multi-bin type orchestration |
+| `CutList.Core/Nesting/MultiBinPacker.cs` | Multi-bin type orchestration |
 | `CutList.Core/Nesting/BuiltInPackingEngines.cs` | The list of selectable packing engines |
 | `CutList.Core/Nesting/PackingEngineCatalog.cs` | Engine id resolution and creation |
 | `CutList.Core/ArchUnits.cs` | Architectural unit parsing/conversion |

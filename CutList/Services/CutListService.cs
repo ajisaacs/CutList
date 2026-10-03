@@ -28,11 +28,11 @@ namespace CutList.Services
                 var multiBins = ConvertToMultiBins(stockBins);
                 var binItems = ConvertToBinItems(parts);
 
-                var engine = new MultiBinEngine(Engines.Create(null));
-                engine.SetBins(multiBins);
-                engine.Spacing = cuttingTool.Kerf;
+                var packer = new MultiBinPacker(Engines.Create(null));
+                packer.SetBins(multiBins);
+                packer.Spacing = cuttingTool.Kerf;
 
-                var packResult = engine.Pack(binItems);
+                var packResult = packer.Pack(binItems);
                 return Result<PackResult>.Success(packResult);
             }
             catch (Exception ex)
