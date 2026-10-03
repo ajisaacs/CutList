@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CutList.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,7 +39,11 @@ public sealed record JobSnapshot(
     IReadOnlyList<StockItemRow> StockItems,
     IReadOnlyList<CuttingToolRow> CuttingTools)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new ScaleInsensitiveDecimalConverter() }
+    };
 
     public static async Task<JobSnapshot> CaptureAsync(IServiceProvider services)
     {
@@ -84,4 +89,16 @@ public sealed record JobSnapshot(
         Assert.Equal(before.ToJson(), after.ToJson());
 
     public static Task<JobSnapshot> CaptureAsync(SqlServerFixture fixture) => CaptureAsync(fixture.Services);
+
+    /// <summary>
+    /// decimal(10,4) columns read back as e.g. 55.5000; compare values, not scale.
+    /// </summary>
+    private sealed class ScaleInsensitiveDecimalConverter : JsonConverter<decimal>
+    {
+        public override decimal Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            reader.GetDecimal();
+
+        public override void Write(Utf8JsonWriter writer, decimal value, JsonSerializerOptions options) =>
+            writer.WriteNumberValue(value / 1.000000000000000000000000000000000m);
+    }
 }

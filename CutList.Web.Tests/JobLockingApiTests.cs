@@ -48,6 +48,127 @@ public sealed class JobLockingApiTests : IAsyncLifetime
         await AssertJobLockedProblemAsync(response, _seed.LockedJobId, _seed.LockedAt);
     }
 
+    // --- Part and stock routes ---
+
+    [Theory]
+    [MemberData(nameof(ChildMutations.All), MemberType = typeof(ChildMutations))]
+    public async Task Child_route_on_locked_job_returns_job_locked_problem_and_changes_nothing(ChildOp op)
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        var response = await SendChildMutationAsync(op, _seed.LockedJobId, _seed.LockedPartId, _seed.LockedStockId);
+
+        await AssertJobLockedProblemAsync(response, _seed.LockedJobId, _seed.LockedAt);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Theory]
+    [MemberData(nameof(ChildMutations.All), MemberType = typeof(ChildMutations))]
+    public async Task Child_route_on_unlocked_job_succeeds_and_invalidates_saved_result(ChildOp op)
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        var response = await SendChildMutationAsync(op, _seed.UnlockedJobId, _seed.UnlockedPartId, _seed.UnlockedStockId);
+
+        var expectedStatus = op switch
+        {
+            ChildOp.AddPart or ChildOp.AddStock => HttpStatusCode.Created,
+            ChildOp.DeletePart or ChildOp.DeleteStock => HttpStatusCode.NoContent,
+            _ => HttpStatusCode.OK
+        };
+        Assert.Equal(expectedStatus, response.StatusCode);
+
+        if (op == ChildOp.AddStock)
+        {
+            var dto = await response.Content.ReadFromJsonAsync<JobStockDto>();
+            Assert.NotNull(dto);
+            Assert.NotEqual(0, dto.Id);
+            Assert.Equal(_seed.UnlockedJobId, dto.JobId);
+        }
+
+        var after = await JobSnapshot.CaptureAsync(_db);
+        var job = after.Job(_seed.UnlockedJobId);
+        Assert.Null(job.OptimizationResultJson);
+        Assert.Null(job.OptimizedAt);
+        Assert.True(job.UpdatedAt > before.Job(_seed.UnlockedJobId).UpdatedAt);
+        Assert.Equal(before.Job(_seed.LockedJobId), after.Job(_seed.LockedJobId));
+        Assert.Equal(before.PartsOf(_seed.LockedJobId), after.PartsOf(_seed.LockedJobId));
+        Assert.Equal(before.StockOf(_seed.LockedJobId), after.StockOf(_seed.LockedJobId));
+
+        var (partDelta, stockDelta) = op switch
+        {
+            ChildOp.AddPart => (1, 0),
+            ChildOp.DeletePart => (-1, 0),
+            ChildOp.AddStock => (0, 1),
+            ChildOp.DeleteStock => (0, -1),
+            _ => (0, 0)
+        };
+        Assert.Equal(before.Parts.Count + partDelta, after.Parts.Count);
+        Assert.Equal(before.Stock.Count + stockDelta, after.Stock.Count);
+    }
+
+    [Theory]
+    [InlineData("PUT", "parts")]
+    [InlineData("DELETE", "parts")]
+    [InlineData("PUT", "stock")]
+    [InlineData("DELETE", "stock")]
+    public async Task Child_route_with_a_child_from_another_job_is_not_found(string method, string collection)
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var lockedChildId = collection == "parts" ? _seed.LockedPartId : _seed.LockedStockId;
+        var unlockedChildId = collection == "parts" ? _seed.UnlockedPartId : _seed.UnlockedStockId;
+
+        // Locked child addressed through the unlocked job, and vice versa.
+        foreach (var (jobId, childId) in new[] { (_seed.UnlockedJobId, lockedChildId), (_seed.LockedJobId, unlockedChildId) })
+        {
+            var request = new HttpRequestMessage(new HttpMethod(method), $"/api/jobs/{jobId}/{collection}/{childId}");
+            if (method == "PUT")
+                request.Content = JsonContent.Create(new { name = "Wrong parent", quantity = 1 });
+
+            var response = await _client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task Child_routes_for_missing_job_are_not_found()
+    {
+        var response = await _client.PostAsJsonAsync("/api/jobs/999999/stock", new CreateJobStockDto
+        {
+            MaterialId = _seed.FlatBarMaterialId, Length = "10", Quantity = 1, IsCustomLength = true
+        });
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        response = await _client.DeleteAsync($"/api/jobs/999999/parts/{_seed.UnlockedPartId}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    private Task<HttpResponseMessage> SendChildMutationAsync(ChildOp op, int jobId, int partId, int stockId) => op switch
+    {
+        ChildOp.AddPart => _client.PostAsJsonAsync($"/api/jobs/{jobId}/parts", new CreateJobPartDto
+        {
+            MaterialId = _seed.RoundTubeMaterialId, Name = "Added part", Length = "55 1/2", Quantity = 7
+        }),
+        ChildOp.UpdatePart => _client.PutAsJsonAsync($"/api/jobs/{jobId}/parts/{partId}", new UpdateJobPartDto
+        {
+            MaterialId = _seed.RoundTubeMaterialId, Name = "Edited part", Length = "77 1/8", Quantity = 9
+        }),
+        ChildOp.DeletePart => _client.DeleteAsync($"/api/jobs/{jobId}/parts/{partId}"),
+        ChildOp.AddStock => _client.PostAsJsonAsync($"/api/jobs/{jobId}/stock", new CreateJobStockDto
+        {
+            MaterialId = _seed.RoundTubeMaterialId, StockItemId = _seed.RoundTubeStockItemId, Length = "288",
+            Quantity = 3, IsCustomLength = false, Priority = 4
+        }),
+        ChildOp.UpdateStock => _client.PutAsJsonAsync($"/api/jobs/{jobId}/stock/{stockId}", new UpdateJobStockDto
+        {
+            Length = "120", Quantity = 11, Priority = 2
+        }),
+        ChildOp.DeleteStock => _client.DeleteAsync($"/api/jobs/{jobId}/stock/{stockId}"),
+        _ => throw new ArgumentOutOfRangeException(nameof(op), op, null)
+    };
+
     private static async Task AssertJobLockedProblemAsync(HttpResponseMessage response, int jobId, DateTime lockedAt)
     {
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);

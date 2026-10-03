@@ -234,102 +234,129 @@ public class JobService
         return part;
     }
 
+    /// <summary>
+    /// Updates a part's editable fields (material, name, length, quantity). The stored part's owner
+    /// is authoritative: the owner must be unlocked and the incoming <c>JobId</c> must match it.
+    /// </summary>
+    /// <exception cref="JobLockedException">The owning job is locked.</exception>
+    /// <exception cref="KeyNotFoundException">The part does not exist.</exception>
+    /// <exception cref="ArgumentException">The part would be moved to a different job.</exception>
     public async Task UpdatePartAsync(JobPart part)
     {
         await using var context = _factory.CreateDbContext();
-        context.JobParts.Update(part);
-        await context.SaveChangesAsync();
+        var stored = await context.JobParts.FirstOrDefaultAsync(p => p.Id == part.Id)
+            ?? throw new KeyNotFoundException($"Job part {part.Id} was not found.");
+        var job = await LoadUnlockedJobAsync(context, stored.JobId);
+        RequireSameOwner(stored.JobId, part.JobId, nameof(part));
 
-        var job = await context.Jobs.FindAsync(part.JobId);
-        if (job != null)
-        {
-            job.UpdatedAt = DateTime.UtcNow;
-            job.OptimizationResultJson = null;
-            job.OptimizedAt = null;
-            await context.SaveChangesAsync();
-        }
+        stored.MaterialId = part.MaterialId;
+        stored.Name = part.Name;
+        stored.LengthInches = part.LengthInches;
+        stored.Quantity = part.Quantity;
+        TouchJob(context, job);
+        InvalidateOptimization(job);
+
+        await SaveJobMutationAsync(context, job.Id);
     }
 
+    /// <summary>Deletes a part from an unlocked job. Deleting a missing part is a no-op.</summary>
+    /// <exception cref="JobLockedException">The owning job is locked.</exception>
     public async Task DeletePartAsync(int id)
     {
         await using var context = _factory.CreateDbContext();
-        var part = await context.JobParts.FindAsync(id);
-        if (part != null)
-        {
-            var jobId = part.JobId;
-            context.JobParts.Remove(part);
-            await context.SaveChangesAsync();
+        var stored = await context.JobParts.FirstOrDefaultAsync(p => p.Id == id);
+        if (stored == null)
+            return;
 
-            var job = await context.Jobs.FindAsync(jobId);
-            if (job != null)
-            {
-                job.UpdatedAt = DateTime.UtcNow;
-                job.OptimizationResultJson = null;
-                job.OptimizedAt = null;
-                await context.SaveChangesAsync();
-            }
-        }
+        var job = await LoadUnlockedJobAsync(context, stored.JobId);
+        context.JobParts.Remove(stored);
+        TouchJob(context, job);
+        InvalidateOptimization(job);
+
+        await SaveJobMutationAsync(context, job.Id);
     }
 
     // Stock management
+
+    /// <summary>
+    /// Adds stock to an unlocked job. Only the stock's scalar fields are used; the generated
+    /// <c>Id</c> and <c>SortOrder</c> are copied back to <paramref name="stock"/> after saving.
+    /// </summary>
+    /// <exception cref="JobLockedException">The job is locked.</exception>
+    /// <exception cref="KeyNotFoundException">The job does not exist.</exception>
     public async Task<JobStock> AddStockAsync(JobStock stock)
     {
         await using var context = _factory.CreateDbContext();
+        var job = await LoadUnlockedJobAsync(context, stock.JobId);
+
         var maxOrder = await context.JobStocks
-            .Where(s => s.JobId == stock.JobId)
+            .Where(s => s.JobId == job.Id)
             .MaxAsync(s => (int?)s.SortOrder) ?? -1;
-        stock.SortOrder = maxOrder + 1;
 
-        context.JobStocks.Add(stock);
-        await context.SaveChangesAsync();
-
-        var job = await context.Jobs.FindAsync(stock.JobId);
-        if (job != null)
+        var entity = new JobStock
         {
-            job.UpdatedAt = DateTime.UtcNow;
-            job.OptimizationResultJson = null;
-            job.OptimizedAt = null;
-            await context.SaveChangesAsync();
-        }
+            JobId = job.Id,
+            MaterialId = stock.MaterialId,
+            StockItemId = stock.StockItemId,
+            LengthInches = stock.LengthInches,
+            Quantity = stock.Quantity,
+            IsCustomLength = stock.IsCustomLength,
+            Priority = stock.Priority,
+            SortOrder = maxOrder + 1
+        };
+        context.JobStocks.Add(entity);
+        TouchJob(context, job);
+        InvalidateOptimization(job);
 
+        await SaveJobMutationAsync(context, job.Id);
+
+        stock.Id = entity.Id;
+        stock.SortOrder = entity.SortOrder;
         return stock;
     }
 
+    /// <summary>
+    /// Updates job stock's editable fields (material, stock item, length, quantity, custom flag,
+    /// priority). The stored row's owner must be unlocked and match the incoming <c>JobId</c>.
+    /// </summary>
+    /// <exception cref="JobLockedException">The owning job is locked.</exception>
+    /// <exception cref="KeyNotFoundException">The stock row does not exist.</exception>
+    /// <exception cref="ArgumentException">The stock would be moved to a different job.</exception>
     public async Task UpdateStockAsync(JobStock stock)
     {
         await using var context = _factory.CreateDbContext();
-        context.JobStocks.Update(stock);
-        await context.SaveChangesAsync();
+        var stored = await context.JobStocks.FirstOrDefaultAsync(s => s.Id == stock.Id)
+            ?? throw new KeyNotFoundException($"Job stock {stock.Id} was not found.");
+        var job = await LoadUnlockedJobAsync(context, stored.JobId);
+        RequireSameOwner(stored.JobId, stock.JobId, nameof(stock));
 
-        var job = await context.Jobs.FindAsync(stock.JobId);
-        if (job != null)
-        {
-            job.UpdatedAt = DateTime.UtcNow;
-            job.OptimizationResultJson = null;
-            job.OptimizedAt = null;
-            await context.SaveChangesAsync();
-        }
+        stored.MaterialId = stock.MaterialId;
+        stored.StockItemId = stock.StockItemId;
+        stored.LengthInches = stock.LengthInches;
+        stored.Quantity = stock.Quantity;
+        stored.IsCustomLength = stock.IsCustomLength;
+        stored.Priority = stock.Priority;
+        TouchJob(context, job);
+        InvalidateOptimization(job);
+
+        await SaveJobMutationAsync(context, job.Id);
     }
 
+    /// <summary>Deletes stock from an unlocked job. Deleting a missing row is a no-op.</summary>
+    /// <exception cref="JobLockedException">The owning job is locked.</exception>
     public async Task DeleteStockAsync(int id)
     {
         await using var context = _factory.CreateDbContext();
-        var stock = await context.JobStocks.FindAsync(id);
-        if (stock != null)
-        {
-            var jobId = stock.JobId;
-            context.JobStocks.Remove(stock);
-            await context.SaveChangesAsync();
+        var stored = await context.JobStocks.FirstOrDefaultAsync(s => s.Id == id);
+        if (stored == null)
+            return;
 
-            var job = await context.Jobs.FindAsync(jobId);
-            if (job != null)
-            {
-                job.UpdatedAt = DateTime.UtcNow;
-                job.OptimizationResultJson = null;
-                job.OptimizedAt = null;
-                await context.SaveChangesAsync();
-            }
-        }
+        var job = await LoadUnlockedJobAsync(context, stored.JobId);
+        context.JobStocks.Remove(stored);
+        TouchJob(context, job);
+        InvalidateOptimization(job);
+
+        await SaveJobMutationAsync(context, job.Id);
     }
 
     public async Task<List<StockItem>> GetAvailableStockForMaterialAsync(int materialId)
@@ -431,6 +458,14 @@ public class JobService
     {
         if (job.LockedAt is DateTime lockedAt)
             throw new JobLockedException(job.Id, lockedAt);
+    }
+
+    private static void RequireSameOwner(int storedJobId, int incomingJobId, string paramName)
+    {
+        if (incomingJobId != storedJobId)
+            throw new ArgumentException(
+                $"Job children cannot be moved between jobs (stored job {storedJobId}, requested job {incomingJobId}).",
+                paramName);
     }
 
     /// <summary>
