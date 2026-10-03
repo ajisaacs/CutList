@@ -145,6 +145,59 @@ public sealed class JobLockingApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    // --- Job header and deletion routes ---
+
+    [Fact]
+    public async Task Update_and_delete_routes_on_locked_job_return_job_locked_problem()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        var put = await _client.PutAsJsonAsync($"/api/jobs/{_seed.LockedJobId}", new UpdateJobDto
+        {
+            Name = "Renamed after order", Customer = "Someone else", CuttingToolId = 4, Notes = "changed"
+        });
+        await AssertJobLockedProblemAsync(put, _seed.LockedJobId, _seed.LockedAt);
+
+        var delete = await _client.DeleteAsync($"/api/jobs/{_seed.LockedJobId}");
+        await AssertJobLockedProblemAsync(delete, _seed.LockedJobId, _seed.LockedAt);
+
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task Update_and_delete_routes_on_unlocked_job_succeed()
+    {
+        var put = await _client.PutAsJsonAsync($"/api/jobs/{_seed.UnlockedJobId}", new UpdateJobDto
+        {
+            Name = "Renamed rack", Notes = "API edit"
+        });
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        var dto = await put.Content.ReadFromJsonAsync<JobDetailDto>();
+        Assert.Equal("Renamed rack", dto!.Name);
+        Assert.Equal("Open Customer", dto.Customer);
+
+        var afterPut = await JobSnapshot.CaptureAsync(_db);
+        Assert.Null(afterPut.Job(_seed.UnlockedJobId).OptimizationResultJson);
+
+        var delete = await _client.DeleteAsync($"/api/jobs/{_seed.UnlockedJobId}");
+        Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
+        var afterDelete = await JobSnapshot.CaptureAsync(_db);
+        Assert.DoesNotContain(afterDelete.Jobs, j => j.Id == _seed.UnlockedJobId);
+        Assert.Empty(afterDelete.PartsOf(_seed.UnlockedJobId));
+        Assert.Empty(afterDelete.StockOf(_seed.UnlockedJobId));
+        Assert.Equal(afterPut.Job(_seed.LockedJobId), afterDelete.Job(_seed.LockedJobId));
+    }
+
+    [Fact]
+    public async Task Update_and_delete_routes_for_missing_job_are_not_found()
+    {
+        var put = await _client.PutAsJsonAsync("/api/jobs/999999", new UpdateJobDto { Name = "Ghost" });
+        Assert.Equal(HttpStatusCode.NotFound, put.StatusCode);
+
+        var delete = await _client.DeleteAsync("/api/jobs/999999");
+        Assert.Equal(HttpStatusCode.NotFound, delete.StatusCode);
+    }
+
     private Task<HttpResponseMessage> SendChildMutationAsync(ChildOp op, int jobId, int partId, int stockId) => op switch
     {
         ChildOp.AddPart => _client.PostAsJsonAsync($"/api/jobs/{jobId}/parts", new CreateJobPartDto

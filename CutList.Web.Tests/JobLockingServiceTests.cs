@@ -304,6 +304,130 @@ public sealed class JobLockingServiceTests : IAsyncLifetime
         JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
     }
 
+    // --- Header updates and deletion ---
+
+    [Fact]
+    public async Task UpdateAsync_rejects_locked_job_even_when_caller_clears_LockedAt()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var job = (await _jobs.GetByIdAsync(_seed.LockedJobId))!;
+        job.Name = "Renamed after order";
+        job.LockedAt = null; // forged/stale lock state from the caller
+
+        var ex = await Assert.ThrowsAsync<JobLockedException>(() => _jobs.UpdateAsync(job));
+
+        Assert.Equal(_seed.LockedJobId, ex.JobId);
+        Assert.Equal(_seed.LockedAt, ex.LockedAt);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_with_a_view_read_before_another_session_locked_is_rejected()
+    {
+        var stale = (await _jobs.GetByIdAsync(_seed.UnlockedJobId))!;
+        Assert.Null(stale.LockedAt);
+
+        await using (var otherScope = _db.Services.CreateAsyncScope())
+        {
+            await otherScope.ServiceProvider.GetRequiredService<JobService>().LockAsync(_seed.UnlockedJobId);
+        }
+
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var lockedAt = before.Job(_seed.UnlockedJobId).LockedAt;
+        Assert.NotNull(lockedAt);
+
+        stale.Notes = "Edited in a stale editor";
+        stale.LockedAt = null;
+        var ex = await Assert.ThrowsAsync<JobLockedException>(() => _jobs.UpdateAsync(stale));
+
+        Assert.Equal(lockedAt, ex.LockedAt);
+        var after = await JobSnapshot.CaptureAsync(_db);
+        JobSnapshot.AssertUnchanged(before, after);
+        Assert.Equal("{\"seed\":\"unlocked cut plan\"}", after.Job(_seed.UnlockedJobId).OptimizationResultJson);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_on_unlocked_job_copies_only_the_header_fields()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var job = (await _jobs.GetByIdAsync(_seed.UnlockedJobId))!;
+
+        // Editable header fields.
+        job.Name = "Renamed rack";
+        job.Customer = "New Customer";
+        job.CuttingToolId = 3;
+        job.Notes = "Updated notes";
+
+        // Everything else on the incoming graph must be ignored.
+        job.JobNumber = "JOB-HACKED";
+        job.CreatedAt = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        job.UpdatedAt = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        job.LockedAt = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        job.OptimizationResultJson = "{\"forged\":true}";
+        job.OptimizedAt = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        job.CuttingTool!.Name = "Renamed tool via navigation";
+        job.CuttingTool.KerfInches = 9m;
+        var part = job.Parts.Single();
+        part.Name = "Edited via header graph";
+        part.Quantity = 1000;
+        part.Material.Size = "Edited material via graph";
+        job.Parts.Add(new JobPart { MaterialId = _seed.FlatBarMaterialId, Name = "Added via header", LengthInches = 1m, Quantity = 1 });
+        job.Stock.Single().Quantity = 1000;
+
+        await _jobs.UpdateAsync(job);
+
+        var after = await JobSnapshot.CaptureAsync(_db);
+        var updated = after.Job(_seed.UnlockedJobId);
+        Assert.True(updated.UpdatedAt > before.Job(_seed.UnlockedJobId).UpdatedAt);
+        var expected = before with
+        {
+            Jobs = before.Jobs.Select(j => j.Id == _seed.UnlockedJobId
+                ? j with
+                {
+                    Name = "Renamed rack", Customer = "New Customer", CuttingToolId = 3, Notes = "Updated notes",
+                    UpdatedAt = updated.UpdatedAt, OptimizationResultJson = null, OptimizedAt = null
+                }
+                : j).ToList()
+        };
+        JobSnapshot.AssertUnchanged(expected, after);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_for_missing_job_is_not_found()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _jobs.UpdateAsync(new Job { Id = int.MaxValue, Name = "Ghost" }));
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_rejects_locked_job_and_keeps_its_children()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        var ex = await Assert.ThrowsAsync<JobLockedException>(() => _jobs.DeleteAsync(_seed.LockedJobId));
+
+        Assert.Equal(_seed.LockedJobId, ex.JobId);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_removes_unlocked_job_with_its_children_only()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        await _jobs.DeleteAsync(_seed.UnlockedJobId);
+        await _jobs.DeleteAsync(int.MaxValue); // missing job remains a no-op
+
+        var expected = before with
+        {
+            Jobs = before.Jobs.Where(j => j.Id != _seed.UnlockedJobId).ToList(),
+            Parts = before.Parts.Where(p => p.JobId != _seed.UnlockedJobId).ToList(),
+            Stock = before.Stock.Where(s => s.JobId != _seed.UnlockedJobId).ToList()
+        };
+        JobSnapshot.AssertUnchanged(expected, await JobSnapshot.CaptureAsync(_db));
+    }
+
     [Fact]
     public async Task LockedAt_is_a_concurrency_token_on_the_job_model()
     {

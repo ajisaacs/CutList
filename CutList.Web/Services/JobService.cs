@@ -60,14 +60,26 @@ public class JobService
         return await CreateAsync(job);
     }
 
+    /// <summary>
+    /// Updates an unlocked job's header fields (name, customer, cutting tool, notes) and clears its
+    /// saved optimization result. Lock state, identifiers, timestamps, saved results, and child or
+    /// navigation collections on <paramref name="job"/> are ignored; the persisted job is authoritative.
+    /// </summary>
+    /// <exception cref="JobLockedException">The persisted job is locked.</exception>
+    /// <exception cref="KeyNotFoundException">The job does not exist.</exception>
     public async Task UpdateAsync(Job job)
     {
         await using var context = _factory.CreateDbContext();
-        job.UpdatedAt = DateTime.UtcNow;
-        job.OptimizationResultJson = null;
-        job.OptimizedAt = null;
-        context.Jobs.Update(job);
-        await context.SaveChangesAsync();
+        var stored = await LoadUnlockedJobAsync(context, job.Id);
+
+        stored.Name = job.Name;
+        stored.Customer = job.Customer;
+        stored.CuttingToolId = job.CuttingToolId;
+        stored.Notes = job.Notes;
+        TouchJob(context, stored);
+        InvalidateOptimization(stored);
+
+        await SaveJobMutationAsync(context, stored.Id);
     }
 
     public async Task LockAsync(int id)
@@ -92,15 +104,20 @@ public class JobService
         }
     }
 
+    /// <summary>
+    /// Deletes an unlocked job and (by cascade) its parts and stock. Deleting a missing job is a no-op.
+    /// </summary>
+    /// <exception cref="JobLockedException">The job is locked.</exception>
     public async Task DeleteAsync(int id)
     {
         await using var context = _factory.CreateDbContext();
-        var job = await context.Jobs.FindAsync(id);
-        if (job != null)
-        {
-            context.Jobs.Remove(job);
-            await context.SaveChangesAsync();
-        }
+        var job = await context.Jobs.FirstOrDefaultAsync(j => j.Id == id);
+        if (job == null)
+            return;
+
+        RequireUnlocked(job);
+        context.Jobs.Remove(job);
+        await SaveJobMutationAsync(context, job.Id);
     }
 
     public async Task<Job> DuplicateAsync(int id)
