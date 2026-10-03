@@ -18,6 +18,21 @@ public class ExhaustiveFitEngineTests
     }
 
     [Fact]
+    public void Exhausted_search_budget_stops_the_search_and_uses_the_fallback()
+    {
+        // Same parts as the optimal-packing test below: a full search finds 2 bars, Advanced Fit needs 3.
+        var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
+        var request = new PackingRequest(items, 10, 0);
+        var fallbackBars = new AdvancedFitEngine().Pack(request).Bins.Count;
+
+        var result = new ExhaustiveFitEngine(maxItems: int.MaxValue, maxSearchNodes: 1).Pack(request);
+
+        Assert.Equal(3, fallbackBars);
+        Assert.Equal(fallbackBars, result.Bins.Count);
+        Assert.Equal(6, result.Bins.Sum(b => b.Items.Count));
+    }
+
+    [Fact]
     public void Default_budget_finds_the_optimal_packing_where_first_fit_needs_an_extra_bar()
     {
         // First-fit decreasing packs {4,4} {3,3,3} {3} = 3 bars; the optimum is {4,3,3} {4,3,3} = 2 bars.
