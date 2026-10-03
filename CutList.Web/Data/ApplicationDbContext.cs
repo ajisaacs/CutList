@@ -175,6 +175,10 @@ public class ApplicationDbContext : DbContext
 
             entity.Property(e => e.OptimizationResultJson).HasColumnType("nvarchar(max)");
 
+            // Lock enforcement: job UPDATE/DELETE statements include the LockedAt value that was read,
+            // so a concurrent lock/unlock makes the save fail instead of overwriting the new state.
+            entity.Property(e => e.LockedAt).IsConcurrencyToken();
+
             entity.HasIndex(e => e.JobNumber).IsUnique();
 
             entity.HasOne(e => e.CuttingTool)

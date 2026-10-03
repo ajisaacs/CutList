@@ -198,27 +198,39 @@ public class JobService
     }
 
     // Parts management
+
+    /// <summary>
+    /// Adds a part to an unlocked job. Only the part's scalar fields are used; the generated
+    /// <c>Id</c> and <c>SortOrder</c> are copied back to <paramref name="part"/> after saving.
+    /// </summary>
+    /// <exception cref="JobLockedException">The job is locked.</exception>
+    /// <exception cref="KeyNotFoundException">The job does not exist.</exception>
     public async Task<JobPart> AddPartAsync(JobPart part)
     {
         await using var context = _factory.CreateDbContext();
+        var job = await LoadUnlockedJobAsync(context, part.JobId);
+
         var maxOrder = await context.JobParts
-            .Where(p => p.JobId == part.JobId)
+            .Where(p => p.JobId == job.Id)
             .MaxAsync(p => (int?)p.SortOrder) ?? -1;
-        part.SortOrder = maxOrder + 1;
 
-        context.JobParts.Add(part);
-        await context.SaveChangesAsync();
-
-        // Update job timestamp and clear stale results
-        var job = await context.Jobs.FindAsync(part.JobId);
-        if (job != null)
+        var entity = new JobPart
         {
-            job.UpdatedAt = DateTime.UtcNow;
-            job.OptimizationResultJson = null;
-            job.OptimizedAt = null;
-            await context.SaveChangesAsync();
-        }
+            JobId = job.Id,
+            MaterialId = part.MaterialId,
+            Name = part.Name,
+            LengthInches = part.LengthInches,
+            Quantity = part.Quantity,
+            SortOrder = maxOrder + 1
+        };
+        context.JobParts.Add(entity);
+        TouchJob(context, job);
+        InvalidateOptimization(job);
 
+        await SaveJobMutationAsync(context, job.Id);
+
+        part.Id = entity.Id;
+        part.SortOrder = entity.SortOrder;
         return part;
     }
 
@@ -396,6 +408,68 @@ public class JobService
         {
             tool.IsActive = false;
             await context.SaveChangesAsync();
+        }
+    }
+
+    // Lock enforcement
+    //
+    // A locked job (materials ordered) is immutable until explicitly unlocked. Every job mutation
+    // reads the persisted parent in its own context, rejects it if locked, and saves the parent
+    // together with any child change in a single SaveChanges. Job.LockedAt is a concurrency token,
+    // so a lock committed between the read and the save makes the parent UPDATE/DELETE affect zero
+    // rows and the whole save rolls back.
+
+    private static async Task<Job> LoadUnlockedJobAsync(ApplicationDbContext context, int jobId)
+    {
+        var job = await context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId)
+            ?? throw new KeyNotFoundException($"Job {jobId} was not found.");
+        RequireUnlocked(job);
+        return job;
+    }
+
+    private static void RequireUnlocked(Job job)
+    {
+        if (job.LockedAt is DateTime lockedAt)
+            throw new JobLockedException(job.Id, lockedAt);
+    }
+
+    /// <summary>
+    /// Stamps the job and forces its UPDATE so the LockedAt concurrency check runs in the same save.
+    /// </summary>
+    private static void TouchJob(ApplicationDbContext context, Job job)
+    {
+        job.UpdatedAt = DateTime.UtcNow;
+        context.Entry(job).Property(j => j.UpdatedAt).IsModified = true;
+    }
+
+    private static void InvalidateOptimization(Job job)
+    {
+        job.OptimizationResultJson = null;
+        job.OptimizedAt = null;
+    }
+
+    /// <summary>
+    /// Saves a job mutation. If the job's lock state changed after it was read, the save has already
+    /// rolled back; report the current state without retrying.
+    /// </summary>
+    private async Task SaveJobMutationAsync(ApplicationDbContext context, int jobId)
+    {
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            await using var fresh = _factory.CreateDbContext();
+            var lockedAt = await fresh.Jobs.AsNoTracking()
+                .Where(j => j.Id == jobId)
+                .Select(j => j.LockedAt)
+                .FirstOrDefaultAsync();
+
+            if (lockedAt is DateTime currentLock)
+                throw new JobLockedException(jobId, currentLock, ex);
+
+            throw new JobMutationConflictException(jobId, ex);
         }
     }
 }

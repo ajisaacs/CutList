@@ -1,4 +1,5 @@
 using CutList.Web.Components;
+using CutList.Web.Controllers;
 using CutList.Web.Data;
 using CutList.Web.Services;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,11 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Host.UseWindowsService();
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    // Translate job lock conflicts from JobService into 409 problem responses.
+    options.Filters.Add<JobMutationExceptionFilter>();
+});
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -53,3 +58,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+// Exposes the entry point to WebApplicationFactory in CutList.Web.Tests.
+public partial class Program;
