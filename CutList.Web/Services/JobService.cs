@@ -82,26 +82,38 @@ public class JobService
         await SaveJobMutationAsync(context, stored.Id);
     }
 
+    /// <summary>
+    /// Locks the job (materials ordered). Idempotent: an already-locked job keeps its original lock
+    /// time. Locking never changes the saved optimization result. Missing jobs are ignored.
+    /// </summary>
+    /// <exception cref="JobMutationConflictException">The job was deleted while being locked.</exception>
     public async Task LockAsync(int id)
     {
         await using var context = _factory.CreateDbContext();
-        var job = await context.Jobs.FindAsync(id);
-        if (job != null)
-        {
-            job.LockedAt = DateTime.UtcNow;
-            await context.SaveChangesAsync();
-        }
+        var job = await context.Jobs.FirstOrDefaultAsync(j => j.Id == id);
+        if (job == null || job.LockedAt != null)
+            return;
+
+        job.LockedAt = DateTime.UtcNow;
+        await SaveLockTransitionAsync(context, id, locked: true);
     }
 
+    /// <summary>
+    /// Explicitly unlocks the job so it can be edited again. The saved optimization result is kept;
+    /// subsequent edits invalidate it as usual. Missing or already-unlocked jobs are ignored.
+    /// </summary>
+    /// <exception cref="JobMutationConflictException">
+    /// The job was unlocked and re-locked (or deleted) by another session while being unlocked.
+    /// </exception>
     public async Task UnlockAsync(int id)
     {
         await using var context = _factory.CreateDbContext();
-        var job = await context.Jobs.FindAsync(id);
-        if (job != null)
-        {
-            job.LockedAt = null;
-            await context.SaveChangesAsync();
-        }
+        var job = await context.Jobs.FirstOrDefaultAsync(j => j.Id == id);
+        if (job == null || job.LockedAt == null)
+            return;
+
+        job.LockedAt = null;
+        await SaveLockTransitionAsync(context, id, locked: false);
     }
 
     /// <summary>
@@ -190,28 +202,46 @@ public class JobService
     }
 
     // Optimization result persistence
+
+    /// <summary>
+    /// Saves the optimization result for an unlocked job. Missing jobs are ignored.
+    /// </summary>
+    /// <exception cref="JobLockedException">The job is locked (its ordered cut plan is preserved).</exception>
     public async Task SaveOptimizationResultAsync(int jobId, string resultJson, DateTime optimizedAt)
     {
         await using var context = _factory.CreateDbContext();
-        var job = await context.Jobs.FindAsync(jobId);
-        if (job != null)
-        {
-            job.OptimizationResultJson = resultJson;
-            job.OptimizedAt = optimizedAt;
-            await context.SaveChangesAsync();
-        }
+        var job = await context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
+        if (job == null)
+            return;
+
+        RequireUnlocked(job);
+        job.OptimizationResultJson = resultJson;
+        job.OptimizedAt = optimizedAt;
+        ForceJobUpdate(context, job);
+
+        await SaveJobMutationAsync(context, job.Id);
     }
 
+    /// <summary>
+    /// Clears the saved optimization result for an unlocked job. Missing jobs and already-empty
+    /// results are ignored.
+    /// </summary>
+    /// <exception cref="JobLockedException">The job is locked (even if its result is already empty).</exception>
     public async Task ClearOptimizationResultAsync(int jobId)
     {
         await using var context = _factory.CreateDbContext();
-        var job = await context.Jobs.FindAsync(jobId);
-        if (job != null && job.OptimizationResultJson != null)
-        {
-            job.OptimizationResultJson = null;
-            job.OptimizedAt = null;
-            await context.SaveChangesAsync();
-        }
+        var job = await context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
+        if (job == null)
+            return;
+
+        RequireUnlocked(job);
+        if (job.OptimizationResultJson == null && job.OptimizedAt == null)
+            return;
+
+        InvalidateOptimization(job);
+        ForceJobUpdate(context, job);
+
+        await SaveJobMutationAsync(context, job.Id);
     }
 
     // Parts management
@@ -491,6 +521,15 @@ public class JobService
     private static void TouchJob(ApplicationDbContext context, Job job)
     {
         job.UpdatedAt = DateTime.UtcNow;
+        ForceJobUpdate(context, job);
+    }
+
+    /// <summary>
+    /// Marks the job modified without changing UpdatedAt, so EF always issues the guarded
+    /// UPDATE ... WHERE LockedAt = @original even when every assigned value is unchanged.
+    /// </summary>
+    private static void ForceJobUpdate(ApplicationDbContext context, Job job)
+    {
         context.Entry(job).Property(j => j.UpdatedAt).IsModified = true;
     }
 
@@ -520,6 +559,31 @@ public class JobService
 
             if (lockedAt is DateTime currentLock)
                 throw new JobLockedException(jobId, currentLock, ex);
+
+            throw new JobMutationConflictException(jobId, ex);
+        }
+    }
+
+    /// <summary>
+    /// Saves an explicit lock/unlock. If another session changed the lock first, a job already in the
+    /// requested state is treated as success; an opposite transition is reported, never overwritten.
+    /// </summary>
+    private async Task SaveLockTransitionAsync(ApplicationDbContext context, int jobId, bool locked)
+    {
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            await using var fresh = _factory.CreateDbContext();
+            var current = await fresh.Jobs.AsNoTracking()
+                .Where(j => j.Id == jobId)
+                .Select(j => new { j.LockedAt })
+                .FirstOrDefaultAsync();
+
+            if (current != null && current.LockedAt.HasValue == locked)
+                return;
 
             throw new JobMutationConflictException(jobId, ex);
         }

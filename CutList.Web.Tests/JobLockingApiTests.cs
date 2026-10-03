@@ -198,6 +198,50 @@ public sealed class JobLockingApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, delete.StatusCode);
     }
 
+    // --- Read-only previews remain available ---
+
+    [Fact]
+    public async Task Pack_preview_of_locked_job_calculates_without_persisting_anything()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        var response = await _client.PostAsJsonAsync($"/api/jobs/{_seed.LockedJobId}/pack", new PackJobRequestDto());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<PackResponseDto>();
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Materials.Count);
+        Assert.Equal(10, result.Summary.TotalPieces);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task Standalone_packing_does_not_touch_job_state()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        var response = await _client.PostAsJsonAsync("/api/packing/optimize", new StandalonePackRequestDto
+        {
+            Parts = { new PartInputDto { Name = "A", Length = "24", Quantity = 3 } },
+            StockBins = { new StockBinInputDto { Length = "96", Quantity = -1, Priority = 1 } }
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task Reads_of_locked_job_remain_available()
+    {
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/api/jobs")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync($"/api/jobs/{_seed.LockedJobId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync($"/api/jobs/{_seed.LockedJobId}/parts")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync($"/api/jobs/{_seed.LockedJobId}/stock")).StatusCode);
+
+        var duplicate = await _client.PostAsync($"/api/jobs/{_seed.LockedJobId}/duplicate", null);
+        Assert.Equal(HttpStatusCode.Created, duplicate.StatusCode);
+    }
+
     private Task<HttpResponseMessage> SendChildMutationAsync(ChildOp op, int jobId, int partId, int stockId) => op switch
     {
         ChildOp.AddPart => _client.PostAsJsonAsync($"/api/jobs/{jobId}/parts", new CreateJobPartDto

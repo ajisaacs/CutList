@@ -428,6 +428,162 @@ public sealed class JobLockingServiceTests : IAsyncLifetime
         JobSnapshot.AssertUnchanged(expected, await JobSnapshot.CaptureAsync(_db));
     }
 
+    // --- Optimization result persistence ---
+
+    [Fact]
+    public async Task SaveOptimizationResult_rejects_locked_job_including_identical_values()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var stored = before.Job(_seed.LockedJobId);
+
+        await Assert.ThrowsAsync<JobLockedException>(() =>
+            _jobs.SaveOptimizationResultAsync(_seed.LockedJobId, "{\"new\":\"provisional plan\"}", DateTime.UtcNow));
+        await Assert.ThrowsAsync<JobLockedException>(() =>
+            _jobs.SaveOptimizationResultAsync(_seed.LockedJobId, stored.OptimizationResultJson!, stored.OptimizedAt!.Value));
+
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task ClearOptimizationResult_rejects_locked_job_including_an_already_empty_result()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        await Assert.ThrowsAsync<JobLockedException>(() => _jobs.ClearOptimizationResultAsync(_seed.LockedJobId));
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+
+        await using (var context = await _db.CreateContextAsync())
+        {
+            await context.Jobs.Where(j => j.Id == _seed.LockedJobId).ExecuteUpdateAsync(s => s
+                .SetProperty(j => j.OptimizationResultJson, (string?)null)
+                .SetProperty(j => j.OptimizedAt, (DateTime?)null));
+        }
+
+        var emptyBefore = await JobSnapshot.CaptureAsync(_db);
+        await Assert.ThrowsAsync<JobLockedException>(() => _jobs.ClearOptimizationResultAsync(_seed.LockedJobId));
+        JobSnapshot.AssertUnchanged(emptyBefore, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task Optimization_result_save_and_clear_work_on_unlocked_job_without_touching_UpdatedAt()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var optimizedAt = new DateTime(2026, 10, 3, 9, 15, 0, DateTimeKind.Utc).AddTicks(9876543);
+
+        await _jobs.SaveOptimizationResultAsync(_seed.UnlockedJobId, "{\"plan\":2}", optimizedAt);
+
+        var saved = await JobSnapshot.CaptureAsync(_db);
+        JobSnapshot.AssertUnchanged(before with
+        {
+            Jobs = before.Jobs.Select(j => j.Id == _seed.UnlockedJobId
+                ? j with
+                {
+                    OptimizationResultJson = "{\"plan\":2}",
+                    OptimizedAt = DateTime.SpecifyKind(optimizedAt, DateTimeKind.Unspecified)
+                }
+                : j).ToList()
+        }, saved);
+
+        await _jobs.ClearOptimizationResultAsync(_seed.UnlockedJobId);
+        await _jobs.ClearOptimizationResultAsync(_seed.UnlockedJobId); // already empty: no-op
+
+        JobSnapshot.AssertUnchanged(before with
+        {
+            Jobs = before.Jobs.Select(j => j.Id == _seed.UnlockedJobId
+                ? j with { OptimizationResultJson = null, OptimizedAt = null }
+                : j).ToList()
+        }, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    // --- Lock transitions ---
+
+    [Fact]
+    public async Task LockAsync_is_idempotent_and_preserves_the_original_lock_time_and_result()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        await _jobs.LockAsync(_seed.LockedJobId);
+        await _jobs.LockAsync(_seed.LockedJobId);
+
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task LockAsync_sets_lock_without_invalidating_result_and_UnlockAsync_preserves_result()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var startedAt = DateTime.UtcNow.AddSeconds(-1);
+
+        await _jobs.LockAsync(_seed.UnlockedJobId);
+
+        var locked = await JobSnapshot.CaptureAsync(_db);
+        var lockedAt = locked.Job(_seed.UnlockedJobId).LockedAt;
+        Assert.NotNull(lockedAt);
+        Assert.True(lockedAt >= startedAt);
+        JobSnapshot.AssertUnchanged(before with
+        {
+            Jobs = before.Jobs.Select(j => j.Id == _seed.UnlockedJobId ? j with { LockedAt = lockedAt } : j).ToList()
+        }, locked);
+
+        await _jobs.UnlockAsync(_seed.UnlockedJobId);
+        await _jobs.UnlockAsync(_seed.LockedJobId);
+        await _jobs.UnlockAsync(_seed.LockedJobId); // already unlocked: no-op
+
+        JobSnapshot.AssertUnchanged(before with
+        {
+            Jobs = before.Jobs.Select(j => j with { LockedAt = null }).ToList()
+        }, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task Lock_and_unlock_of_missing_job_are_no_ops()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        await _jobs.LockAsync(int.MaxValue);
+        await _jobs.UnlockAsync(int.MaxValue);
+        await _jobs.SaveOptimizationResultAsync(int.MaxValue, "{}", DateTime.UtcNow);
+        await _jobs.ClearOptimizationResultAsync(int.MaxValue);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    // --- Allowed while locked ---
+
+    [Fact]
+    public async Task DuplicateAsync_copies_a_locked_job_into_a_new_unlocked_job_without_results()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        var duplicate = await _jobs.DuplicateAsync(_seed.LockedJobId);
+
+        var after = await JobSnapshot.CaptureAsync(_db);
+        Assert.NotEqual(_seed.LockedJobId, duplicate.Id);
+        var copy = after.Job(duplicate.Id);
+        var source = before.Job(_seed.LockedJobId);
+        Assert.Equal($"JOB-{duplicate.Id}", copy.JobNumber);
+        Assert.Equal($"{source.Name} (Copy)", copy.Name);
+        Assert.Equal(source.Customer, copy.Customer);
+        Assert.Equal(source.CuttingToolId, copy.CuttingToolId);
+        Assert.Equal(source.Notes, copy.Notes);
+        Assert.Null(copy.LockedAt);
+        Assert.Null(copy.OptimizationResultJson);
+        Assert.Null(copy.OptimizedAt);
+
+        Assert.Equal(
+            before.PartsOf(_seed.LockedJobId).Select(p => p with { Id = 0, JobId = 0 }),
+            after.PartsOf(duplicate.Id).Select(p => p with { Id = 0, JobId = 0 }));
+        Assert.Equal(
+            before.StockOf(_seed.LockedJobId).Select(s => s with { Id = 0, JobId = 0 }),
+            after.StockOf(duplicate.Id).Select(s => s with { Id = 0, JobId = 0 }));
+        Assert.DoesNotContain(after.PartsOf(duplicate.Id), p => before.Parts.Any(bp => bp.Id == p.Id));
+
+        // The locked source and everything else are untouched.
+        JobSnapshot.AssertUnchanged(before, after with
+        {
+            Jobs = after.Jobs.Where(j => j.Id != duplicate.Id).ToList(),
+            Parts = after.Parts.Where(p => p.JobId != duplicate.Id).ToList(),
+            Stock = after.Stock.Where(s => s.JobId != duplicate.Id).ToList()
+        });
+    }
+
     [Fact]
     public async Task LockedAt_is_a_concurrency_token_on_the_job_model()
     {
