@@ -2,8 +2,9 @@ namespace CutList.Core.Nesting
 {
     /// <summary>
     /// Exhaustive bin packing engine that searches arrangements for the fewest bins (then least
-    /// waste). Falls back to AdvancedFitEngine when there are more items than the threshold, or
-    /// when limited stock cannot hold every item.
+    /// waste). Falls back to AdvancedFitEngine when there are more items than the threshold, when
+    /// limited stock cannot hold every item, or when the search-node budget runs out before any
+    /// complete packing is found.
     /// </summary>
     public class ExhaustiveFitEngine : IEngine
     {
@@ -13,20 +14,30 @@ namespace CutList.Core.Nesting
         /// </summary>
         public const int DefaultMaxItems = 25;
 
+        /// <summary>
+        /// Search nodes explored before the engine stops and keeps the best complete packing found
+        /// so far (or falls back when none is complete). Bounds worst-case time when limited stock
+        /// makes bin-count pruning ineffective.
+        /// </summary>
+        public const int DefaultMaxSearchNodes = 2_000_000;
+
         private readonly IEngine _fallbackEngine;
         private readonly int _maxItems;
+        private readonly int _maxSearchNodes;
 
         public ExhaustiveFitEngine() : this(DefaultMaxItems)
         {
         }
 
         /// <summary>
-        /// Creates an exhaustive engine with a custom item threshold for testing.
+        /// Creates an exhaustive engine with custom limits (used by tests).
         /// </summary>
         /// <param name="maxItems">Maximum items before falling back. Use int.MaxValue to disable fallback.</param>
-        public ExhaustiveFitEngine(int maxItems)
+        /// <param name="maxSearchNodes">Search-node budget; see <see cref="DefaultMaxSearchNodes"/>.</param>
+        public ExhaustiveFitEngine(int maxItems, int maxSearchNodes = DefaultMaxSearchNodes)
         {
             _maxItems = maxItems;
+            _maxSearchNodes = maxSearchNodes;
             _fallbackEngine = new AdvancedFitEngine();
         }
 
@@ -131,6 +142,10 @@ namespace CutList.Core.Nesting
                 return;
             }
 
+            // Budget: stop exploring; the caller keeps the best complete packing (or falls back).
+            if (++current.NodesVisited > _maxSearchNodes)
+                return;
+
             // Pruning: if we already have more bins than best, stop
             if (current.BinCount >= best.BinCount)
                 return;
@@ -217,6 +232,7 @@ namespace CutList.Core.Nesting
             public List<List<BinItem>> Bins { get; set; } = new();
             public int BinCount { get; set; }
             public int LastBinIndexUsed { get; set; }
+            public int NodesVisited { get; set; }
         }
     }
 }
