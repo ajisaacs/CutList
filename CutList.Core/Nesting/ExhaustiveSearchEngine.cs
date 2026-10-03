@@ -61,6 +61,13 @@ namespace CutList.Core.Nesting
                 return PackWithFallback(request);
             }
 
+            // Limited stock too short for every part can never give a complete packing, which is all
+            // the search accepts; skip straight to the fallback instead of spending the search budget.
+            if (ExceedsStockCapacity(validItems, request))
+            {
+                return PackWithFallback(request);
+            }
+
             // Sort items descending for better pruning
             var sortedItems = validItems.OrderByDescending(i => i.Length).ToList();
 
@@ -119,6 +126,20 @@ namespace CutList.Core.Nesting
             finalResult.AddBins(sortedBins);
 
             return finalResult;
+        }
+
+        /// <summary>
+        /// True when finite stock cannot hold the items' total length. Each item counts one kerf, and
+        /// the kerf after a bin's last cut may run off the end, so a bin holds StockLength + Spacing.
+        /// </summary>
+        private static bool ExceedsStockCapacity(List<BinItem> items, PackingRequest request)
+        {
+            if (request.MaxBinCount == int.MaxValue)
+                return false;
+
+            double volume = items.Sum(i => i.Length + request.Spacing);
+            double capacity = (double)request.MaxBinCount * (request.StockLength + request.Spacing);
+            return volume > capacity + Tolerance.Epsilon;
         }
 
         private PackResult PackWithFallback(PackingRequest request)

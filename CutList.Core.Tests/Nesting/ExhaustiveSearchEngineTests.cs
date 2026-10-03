@@ -73,6 +73,37 @@ public class ExhaustiveSearchEngineTests
     }
 
     [Fact]
+    public void Exactly_enough_limited_stock_still_gets_the_full_search()
+    {
+        // Two 10.25" bars hold {4,3,3} twice with 1/8" kerfs exactly (the kerf after the last cut runs
+        // off the end). First Fit cannot place every part on two bars; the search can.
+        var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
+        var request = new PackingRequest(items, 10.25, 0.125, maxBinCount: 2);
+
+        var result = new ExhaustiveSearchEngine().Pack(request);
+
+        Assert.Null(result.FallbackEngine);
+        Assert.Equal(2, result.Bins.Count);
+        Assert.Empty(result.ItemsNotUsed);
+        Assert.NotEmpty(new FirstFitEngine().Pack(request).ItemsNotUsed);
+    }
+
+    [Fact]
+    public void Limited_stock_too_short_for_every_part_gets_the_first_fit_result()
+    {
+        // 1/16" shorter than the exact fit above, so no complete packing exists.
+        var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
+        var request = new PackingRequest(items, 10.1875, 0.125, maxBinCount: 2);
+
+        var result = new ExhaustiveSearchEngine().Pack(request);
+        var firstFit = new FirstFitEngine().Pack(request);
+
+        Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
+        Assert.Equal(firstFit.Bins.Select(b => b.Items.Count), result.Bins.Select(b => b.Items.Count));
+        Assert.Equal(firstFit.ItemsNotUsed.Count, result.ItemsNotUsed.Count);
+    }
+
+    [Fact]
     public void Lower_bound_lets_the_last_kerf_run_off_the_bar()
     {
         // 4 + 3 + 3 plus two 0.125" kerfs fills a 10.25" bar exactly; the kerf after the last cut may
