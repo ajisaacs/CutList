@@ -70,8 +70,24 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
 
         Assert.True(result.Success, result.Error);
         Assert.Equal(engine, result.EngineId);
+        Assert.Equal(engine == "bestfit" ? "Best Fit" : "Exhaustive", result.EngineName);
         Assert.Empty(result.UnusedItems);
         Assert.Equal(5, result.Bins.Sum(b => b.Items.Count));
+    }
+
+    [Fact]
+    public void Create_cutlist_reports_an_exhaustive_fallback()
+    {
+        // One 96" bar cannot hold five 24" parts, so the search falls back to First Fit.
+        var result = CutListTools.CreateCutList(
+            [new PartInput { Name = "A", Length = "24", Quantity = 5 }],
+            [new StockBinInput { Length = "96", Quantity = 1, Priority = 1 }],
+            0.125,
+            "exhaustive");
+
+        Assert.True(result.Success, result.Error);
+        Assert.Equal("exhaustive", result.EngineId);
+        Assert.Equal("Exhaustive (First Fit fallback)", result.EngineName);
     }
 
     [Fact]

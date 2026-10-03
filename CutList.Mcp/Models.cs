@@ -21,6 +21,7 @@ public class CutListResult
     public bool Success { get; set; }
     public string? Error { get; set; }
     public string? EngineId { get; set; }
+    public string? EngineName { get; set; }
     public List<ResultBin> Bins { get; set; } = new();
     public List<ResultItem> UnusedItems { get; set; } = new();
     public CutListSummary? Summary { get; set; }
@@ -78,6 +79,7 @@ public class CutListReportResult
     public bool Success { get; set; }
     public string? Error { get; set; }
     public string? EngineId { get; set; }
+    public string? EngineName { get; set; }
     public string? FilePath { get; set; }
     public int TotalBins { get; set; }
     public int TotalParts { get; set; }

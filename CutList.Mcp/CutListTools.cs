@@ -84,6 +84,7 @@ public static class CutListTools
             {
                 Success = true,
                 EngineId = engineInfo.Id,
+                EngineName = engineInfo.RunName(packResult.FallbackEngine),
                 Bins = resultBins,
                 UnusedItems = unusedItems,
                 Summary = new CutListSummary
@@ -210,6 +211,7 @@ public static class CutListTools
             {
                 Success = true,
                 EngineId = engineInfo.Id,
+                EngineName = engineInfo.RunName(packResult.FallbackEngine),
                 FilePath = Path.GetFullPath(outputPath),
                 TotalBins = packResult.Bins.Count,
                 TotalParts = binItems!.Count - packResult.ItemsNotUsed.Count,

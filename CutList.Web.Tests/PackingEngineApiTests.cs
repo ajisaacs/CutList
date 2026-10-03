@@ -96,7 +96,25 @@ public sealed class PackingEngineApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("exhaustive", body.RootElement.GetProperty("engine").GetString());
+        Assert.Equal("Exhaustive", body.RootElement.GetProperty("engineName").GetString());
         Assert.Equal(1, body.RootElement.GetProperty("summary").GetProperty("totalBins").GetInt32());
         Assert.Equal(0, body.RootElement.GetProperty("summary").GetProperty("itemsNotPlaced").GetInt32());
+    }
+
+    [Fact]
+    public async Task Standalone_optimize_reports_an_exhaustive_fallback()
+    {
+        // One 96" bar cannot hold five 24" parts, so the search falls back to First Fit.
+        var response = await _client.PostAsJsonAsync("/api/packing/optimize", new StandalonePackRequestDto
+        {
+            Parts = { new PartInputDto { Name = "A", Length = "24", Quantity = 5 } },
+            StockBins = { new StockBinInputDto { Length = "96", Quantity = 1, Priority = 1 } },
+            Engine = "exhaustive"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("exhaustive", body.RootElement.GetProperty("engine").GetString());
+        Assert.Equal("Exhaustive (First Fit fallback)", body.RootElement.GetProperty("engineName").GetString());
     }
 }

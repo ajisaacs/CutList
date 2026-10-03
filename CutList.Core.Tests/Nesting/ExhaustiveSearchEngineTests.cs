@@ -30,6 +30,33 @@ public class ExhaustiveSearchEngineTests
         Assert.Equal(3, fallbackBars);
         Assert.Equal(fallbackBars, result.Bins.Count);
         Assert.Equal(6, result.Bins.Sum(b => b.Items.Count));
+        Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
+    }
+
+    [Fact]
+    public void Above_the_part_threshold_the_fallback_is_recorded()
+    {
+        var items = new[] { 4.0, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
+
+        var result = new ExhaustiveSearchEngine(maxItems: 2).Pack(new PackingRequest(items, 10, 0));
+
+        Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
+        Assert.Equal(3, result.Bins.Sum(b => b.Items.Count));
+    }
+
+    [Fact]
+    public void Packer_records_a_fallback_from_any_stock_length()
+    {
+        // One 48" bar cannot hold both 40" parts, so that stock length falls back to First Fit; the
+        // unlimited 120" stock then takes the leftover part with a completed search.
+        var packer = new MultiBinPacker(new ExhaustiveSearchEngine()) { Spacing = 0.125 };
+        packer.SetBins(new[] { new MultiBin(48, 1, 1), new MultiBin(120, -1, 2) });
+
+        var result = packer.Pack(new List<BinItem> { new("A", 40), new("B", 40) });
+
+        Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
+        Assert.Equal(2, result.Bins.Sum(b => b.Items.Count));
+        Assert.Empty(result.ItemsNotUsed);
     }
 
     [Fact]
@@ -42,6 +69,7 @@ public class ExhaustiveSearchEngineTests
 
         Assert.Equal(2, result.Bins.Count);
         Assert.Equal(6, result.Bins.Sum(b => b.Items.Count));
+        Assert.Null(result.FallbackEngine);
     }
 
     [Fact]

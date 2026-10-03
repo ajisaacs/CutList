@@ -67,6 +67,7 @@ namespace CutList.Core.Nesting
                 var packResult = _engine.Pack(request);
 
                 result.AddBins(packResult.Bins);
+                result.FallbackEngine ??= packResult.FallbackEngine;
                 remainingItems = packResult.ItemsNotUsed.ToList();
             }
 

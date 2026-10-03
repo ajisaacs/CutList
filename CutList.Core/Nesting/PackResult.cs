@@ -31,6 +31,12 @@ namespace CutList.Core.Nesting
         /// </summary>
         public IReadOnlyList<Bin> Bins => _bins;
 
+        /// <summary>
+        /// Engine that actually packed this result when the selected engine handed it off (for a
+        /// <see cref="MultiBinPacker"/> result: for at least one stock length); null otherwise.
+        /// </summary>
+        public PackingEngineInfo? FallbackEngine { get; set; }
+
         public void AddItemNotUsed(BinItem item)
         {
             _itemsNotUsed.Add(item);

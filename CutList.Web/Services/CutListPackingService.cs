@@ -168,6 +168,8 @@ public class CutListPackingService
             });
         }
 
+        result.EngineName = engineInfo.RunName(
+            result.MaterialResults.Select(m => m.PackResult.FallbackEngine).FirstOrDefault(f => f != null));
         return result;
     }
 

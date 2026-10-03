@@ -58,8 +58,7 @@ namespace CutList.Core.Nesting
             // Fall back to First Fit for large item counts
             if (validItems.Count > _maxItems)
             {
-                var fallbackResult = _fallbackEngine.Pack(request);
-                return fallbackResult;
+                return PackWithFallback(request);
             }
 
             // Sort items descending for better pruning
@@ -92,7 +91,7 @@ namespace CutList.Core.Nesting
             // them all, let the fallback engine place what fits and report the rest as not placed.
             if (bestSolution.BinCount == int.MaxValue)
             {
-                return _fallbackEngine.Pack(request);
+                return PackWithFallback(request);
             }
 
             // Build result from best solution
@@ -120,6 +119,13 @@ namespace CutList.Core.Nesting
             finalResult.AddBins(sortedBins);
 
             return finalResult;
+        }
+
+        private PackResult PackWithFallback(PackingRequest request)
+        {
+            var result = _fallbackEngine.Pack(request);
+            result.FallbackEngine = BuiltInPackingEngines.FirstFit;
+            return result;
         }
 
         private void Search(

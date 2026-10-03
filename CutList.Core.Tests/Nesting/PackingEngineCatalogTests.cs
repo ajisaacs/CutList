@@ -62,6 +62,13 @@ public class PackingEngineCatalogTests
     }
 
     [Fact]
+    public void Run_name_notes_a_fallback_engine()
+    {
+        Assert.Equal("Exhaustive", BuiltInPackingEngines.Exhaustive.RunName(null));
+        Assert.Equal("Exhaustive (First Fit fallback)", BuiltInPackingEngines.Exhaustive.RunName(BuiltInPackingEngines.FirstFit));
+    }
+
+    [Fact]
     public void Any_registered_engine_can_be_created_by_id()
     {
         var catalog = new PackingEngineCatalog(new[] { Registration("first"), Registration("custom") });

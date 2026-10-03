@@ -20,7 +20,7 @@ namespace CutList.Core.Nesting
         public static PackingEngineInfo Exhaustive { get; } = new(
             "exhaustive",
             "Exhaustive",
-            $"Searches every arrangement for the fewest bars. Uses First Fit for a stock length with more than {ExhaustiveSearchEngine.DefaultMaxItems} parts, when limited stock cannot hold every part, or when its search budget runs out first.");
+            $"Searches every arrangement for the fewest bars. Uses First Fit for a stock length with more than {ExhaustiveSearchEngine.DefaultMaxItems} parts, when limited stock cannot hold every part, or when its search budget runs out first; the reported engine name then says so.");
 
         /// <summary>Selectable engines in display order; the first is the default.</summary>
         public static IReadOnlyList<PackingEngineRegistration> All { get; } = new[]

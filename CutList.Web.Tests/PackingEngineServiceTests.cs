@@ -45,9 +45,25 @@ public sealed class PackingEngineServiceTests : IAsyncLifetime
         var result = await _packing.PackAsync(Parts(), 0.125m, UnlimitedStock(), engineId);
 
         Assert.Equal(engineId, result.EngineId);
+        Assert.Equal(_packing.Engines.Single(e => e.Id == engineId).DisplayName, result.EngineName);
         var material = Assert.Single(result.MaterialResults);
         Assert.Empty(material.PackResult.ItemsNotUsed);
         Assert.Equal(8, material.PackResult.Bins.Sum(b => b.Items.Count));
+    }
+
+    [Fact]
+    public async Task Exhaustive_run_that_falls_back_says_so_in_the_saved_engine_name()
+    {
+        // One 240" bar cannot hold eight 30" parts plus kerf, so the search falls back to First Fit.
+        List<JobStock> oneBar =
+            [new JobStock { MaterialId = _seed.FlatBarMaterialId, LengthInches = 240m, Quantity = 1, IsCustomLength = true, Priority = 1 }];
+
+        var result = await _packing.PackAsync(Parts(), 0.125m, oneBar, "exhaustive");
+        var loaded = await _packing.LoadSavedResultAsync(_packing.SerializeResult(result));
+
+        Assert.Equal("exhaustive", result.EngineId);
+        Assert.Equal("Exhaustive (First Fit fallback)", result.EngineName);
+        Assert.Equal("Exhaustive (First Fit fallback)", loaded!.EngineName);
     }
 
     [Fact]

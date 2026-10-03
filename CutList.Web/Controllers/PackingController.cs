@@ -127,7 +127,7 @@ public class PackingController : ControllerBase
         return Ok(new
         {
             Engine = engineInfo.Id,
-            EngineName = engineInfo.DisplayName,
+            EngineName = engineInfo.RunName(result.FallbackEngine),
             Bins = bins,
             ItemsNotPlaced = itemsNotPlaced,
             Summary = new
