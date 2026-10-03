@@ -3,12 +3,12 @@ using Xunit;
 
 namespace CutList.Core.Tests.Nesting;
 
-public class ExhaustiveFitEngineTests
+public class ExhaustiveSearchEngineTests
 {
     [Fact]
     public void Exhausted_search_budget_still_places_every_part()
     {
-        var engine = new ExhaustiveFitEngine(maxItems: int.MaxValue, maxSearchNodes: 1);
+        var engine = new ExhaustiveSearchEngine(maxItems: int.MaxValue, maxSearchNodes: 1);
         var items = Enumerable.Range(1, 6).Select(i => new BinItem($"P{i}", 10 + i)).ToList();
 
         var result = engine.Pack(new PackingRequest(items, 40, 0.125));
@@ -25,7 +25,7 @@ public class ExhaustiveFitEngineTests
         var request = new PackingRequest(items, 10, 0);
         var fallbackBars = new FirstFitEngine().Pack(request).Bins.Count;
 
-        var result = new ExhaustiveFitEngine(maxItems: int.MaxValue, maxSearchNodes: 1).Pack(request);
+        var result = new ExhaustiveSearchEngine(maxItems: int.MaxValue, maxSearchNodes: 1).Pack(request);
 
         Assert.Equal(3, fallbackBars);
         Assert.Equal(fallbackBars, result.Bins.Count);
@@ -38,7 +38,7 @@ public class ExhaustiveFitEngineTests
         // First-fit decreasing packs {4,4} {3,3,3} {3} = 3 bars; the optimum is {4,3,3} {4,3,3} = 2 bars.
         var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
 
-        var result = new ExhaustiveFitEngine().Pack(new PackingRequest(items, 10, 0));
+        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10, 0));
 
         Assert.Equal(2, result.Bins.Count);
         Assert.Equal(6, result.Bins.Sum(b => b.Items.Count));
@@ -51,7 +51,7 @@ public class ExhaustiveFitEngineTests
         // overrun, so {4,3,3} {4,3,3} = 2 bars is optimal.
         var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
 
-        var result = new ExhaustiveFitEngine().Pack(new PackingRequest(items, 10.25, 0.125));
+        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10.25, 0.125));
 
         Assert.Equal(2, result.Bins.Count);
         Assert.Equal(6, result.Bins.Sum(b => b.Items.Count));

@@ -57,7 +57,7 @@ public class PackingEngineCatalogTests
 
         Assert.IsType<FirstFitEngine>(catalog.Create(null));
         Assert.IsType<BestFitEngine>(catalog.Create("bestfit"));
-        Assert.IsType<ExhaustiveFitEngine>(catalog.Create("exhaustive"));
+        Assert.IsType<ExhaustiveSearchEngine>(catalog.Create("exhaustive"));
         Assert.NotSame(catalog.Create("bestfit"), catalog.Create("bestfit"));
     }
 

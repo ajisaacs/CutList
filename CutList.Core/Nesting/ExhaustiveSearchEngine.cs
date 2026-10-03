@@ -1,12 +1,12 @@
 namespace CutList.Core.Nesting
 {
     /// <summary>
-    /// Exhaustive bin packing engine that searches arrangements for the fewest bins (then least
-    /// waste). Falls back to FirstFitEngine when there are more items than the threshold, when
+    /// Exhaustive (branch-and-bound) bin packing engine that searches arrangements for the fewest
+    /// bins. Falls back to FirstFitEngine when there are more items than the threshold, when
     /// limited stock cannot hold every item, or when the search-node budget runs out before any
     /// complete packing is found.
     /// </summary>
-    public class ExhaustiveFitEngine : IEngine
+    public class ExhaustiveSearchEngine : IEngine
     {
         /// <summary>
         /// Default maximum number of items before falling back to FirstFitEngine.
@@ -25,7 +25,7 @@ namespace CutList.Core.Nesting
         private readonly int _maxItems;
         private readonly int _maxSearchNodes;
 
-        public ExhaustiveFitEngine() : this(DefaultMaxItems)
+        public ExhaustiveSearchEngine() : this(DefaultMaxItems)
         {
         }
 
@@ -34,7 +34,7 @@ namespace CutList.Core.Nesting
         /// </summary>
         /// <param name="maxItems">Maximum items before falling back. Use int.MaxValue to disable fallback.</param>
         /// <param name="maxSearchNodes">Search-node budget; see <see cref="DefaultMaxSearchNodes"/>.</param>
-        public ExhaustiveFitEngine(int maxItems, int maxSearchNodes = DefaultMaxSearchNodes)
+        public ExhaustiveSearchEngine(int maxItems, int maxSearchNodes = DefaultMaxSearchNodes)
         {
             _maxItems = maxItems;
             _maxSearchNodes = maxSearchNodes;
@@ -130,11 +130,11 @@ namespace CutList.Core.Nesting
             PackingRequest request,
             double[] suffixVolume)
         {
-            // All items placed - check if this is better
+            // All items placed - keep it if it uses fewer bins. Packings that place every item in the
+            // same number of bins all have the same total waste, so there is nothing else to compare.
             if (itemIndex >= items.Count)
             {
-                if (current.BinCount < best.BinCount ||
-                    (current.BinCount == best.BinCount && GetTotalWaste(current, request) < GetTotalWaste(best, request)))
+                if (current.BinCount < best.BinCount)
                 {
                     best.BinCount = current.BinCount;
                     best.Bins = current.Bins.Select(b => b.ToList()).ToList();
@@ -217,17 +217,6 @@ namespace CutList.Core.Nesting
                 return 0;
 
             return binItems.Sum(i => i.Length) + binItems.Count * spacing;
-        }
-
-        private double GetTotalWaste(SearchState state, PackingRequest request)
-        {
-            double totalWaste = 0;
-            foreach (var bin in state.Bins)
-            {
-                var used = GetBinUsedLength(bin, request.Spacing);
-                totalWaste += request.StockLength - used;
-            }
-            return totalWaste;
         }
 
         private class SearchState

@@ -20,14 +20,14 @@ namespace CutList.Core.Nesting
         public static PackingEngineInfo Exhaustive { get; } = new(
             "exhaustive",
             "Exhaustive",
-            $"Searches arrangements for the fewest bars, then least waste. Uses First Fit for a stock length with more than {ExhaustiveFitEngine.DefaultMaxItems} parts, when limited stock cannot hold every part, or when its search budget runs out first.");
+            $"Searches every arrangement for the fewest bars. Uses First Fit for a stock length with more than {ExhaustiveSearchEngine.DefaultMaxItems} parts, when limited stock cannot hold every part, or when its search budget runs out first.");
 
         /// <summary>Selectable engines in display order; the first is the default.</summary>
         public static IReadOnlyList<PackingEngineRegistration> All { get; } = new[]
         {
             new PackingEngineRegistration(FirstFit, () => new FirstFitEngine()),
             new PackingEngineRegistration(BestFit, () => new BestFitEngine()),
-            new PackingEngineRegistration(Exhaustive, () => new ExhaustiveFitEngine()),
+            new PackingEngineRegistration(Exhaustive, () => new ExhaustiveSearchEngine()),
         };
     }
 }
