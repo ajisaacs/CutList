@@ -5,7 +5,7 @@ namespace CutList.Core.Tests.Nesting;
 
 public class PackingEngineCatalogTests
 {
-    private sealed class FakeEngine : IEngine
+    private sealed class FakeEngine : IPackingEngine
     {
         public PackResult Pack(PackingRequest request) => new();
     }

@@ -8,7 +8,7 @@ namespace CutList.Core.Nesting
     /// leftover items to fill those limited bins tighter.
     /// This is a stateless engine that uses a composable pipeline of steps.
     /// </summary>
-    public class FirstFitEngine : IEngine
+    public class FirstFitEngine : IPackingEngine
     {
         private readonly PackingPipeline _pipeline;
 

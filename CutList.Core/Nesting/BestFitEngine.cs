@@ -5,7 +5,7 @@ namespace CutList.Core.Nesting
     /// Places each item in the bin with the least remaining space that can still fit it.
     /// This is a stateless engine - all state is passed via PackingRequest.
     /// </summary>
-    public class BestFitEngine : IEngine
+    public class BestFitEngine : IPackingEngine
     {
         /// <summary>
         /// Packs items into bins using the Best-Fit Decreasing algorithm.

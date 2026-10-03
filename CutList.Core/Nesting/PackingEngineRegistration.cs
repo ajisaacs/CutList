@@ -3,9 +3,9 @@ namespace CutList.Core.Nesting
     /// <summary>Pairs an engine's public description with a factory for fresh instances.</summary>
     public sealed class PackingEngineRegistration
     {
-        private readonly Func<IEngine> _create;
+        private readonly Func<IPackingEngine> _create;
 
-        public PackingEngineRegistration(PackingEngineInfo info, Func<IEngine> create)
+        public PackingEngineRegistration(PackingEngineInfo info, Func<IPackingEngine> create)
         {
             Info = info ?? throw new ArgumentNullException(nameof(info));
             if (string.IsNullOrWhiteSpace(info.Id) || info.Id != info.Id.Trim())
@@ -15,6 +15,6 @@ namespace CutList.Core.Nesting
 
         public PackingEngineInfo Info { get; }
 
-        public IEngine Create() => _create();
+        public IPackingEngine Create() => _create();
     }
 }

@@ -6,11 +6,11 @@ namespace CutList.Core.Nesting
     /// </summary>
     public class MultiBinPacker
     {
-        private readonly IEngine _engine;
+        private readonly IPackingEngine _engine;
         private readonly List<MultiBin> _bins = new();
 
         /// <param name="engine">Single-length engine, normally from <see cref="IPackingEngineCatalog.Create"/>.</param>
-        public MultiBinPacker(IEngine engine)
+        public MultiBinPacker(IPackingEngine engine)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         }

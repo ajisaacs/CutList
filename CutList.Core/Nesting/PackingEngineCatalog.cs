@@ -35,7 +35,7 @@ namespace CutList.Core.Nesting
 
         public PackingEngineInfo Resolve(string? engineId) => Find(engineId).Info;
 
-        public IEngine Create(string? engineId) => Find(engineId).Create();
+        public IPackingEngine Create(string? engineId) => Find(engineId).Create();
 
         private PackingEngineRegistration Find(string? engineId) =>
             string.IsNullOrWhiteSpace(engineId) ? _default : Lookup(engineId);

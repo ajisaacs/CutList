@@ -1,7 +1,7 @@
 namespace CutList.Core.Nesting
 {
     /// <summary>
-    /// The single list of selectable packing engines. To add an engine, implement IEngine and add a
+    /// The single list of selectable packing engines. To add an engine, implement IPackingEngine and add a
     /// registration here; EngineContractTests then checks it, and the web picker, REST API and MCP
     /// tools offer it automatically.
     /// </summary>

@@ -1,10 +1,10 @@
 namespace CutList.Core.Nesting
 {
     /// <summary>
-    /// Interface for bin packing engines.
+    /// A selectable packing engine: packs items into bins of one stock length.
     /// Engines are stateless - all configuration is passed via PackingRequest.
     /// </summary>
-    public interface IEngine
+    public interface IPackingEngine
     {
         /// <summary>
         /// Packs items into bins according to the request configuration.

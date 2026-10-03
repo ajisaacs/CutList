@@ -78,10 +78,10 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 - **Tool**: Cutting tool with kerf/blade width
 
 **Packing Engine**:
-- `IEngine` packs one stock length (`PackingRequest` -> `PackResult`); `MultiBinPacker(IEngine)` (not itself an engine) runs that engine across stock types in priority order (then shortest first)
+- `IPackingEngine` packs one stock length (`PackingRequest` -> `PackResult`); `MultiBinPacker(IPackingEngine)` (not itself an engine) runs that engine across stock types in priority order (then shortest first)
 - Built-in engines (`BuiltInPackingEngines.All`, the single list): `firstfit` (`FirstFitEngine`, first-fit decreasing; when bar quantity is limited, a swap pass fills those bars tighter; default), `bestfit` (`BestFitEngine`), `exhaustive` (`ExhaustiveSearchEngine`, branch-and-bound search for the fewest bars; falls back to First Fit above `DefaultMaxItems` parts per stock length, when limited stock cannot hold every part, or when its search-node budget runs out first)
 - `PackingEngineCatalog` (`IPackingEngineCatalog`) resolves ids case-insensitively, treats null/blank as the default, creates a fresh engine per run, and rejects unknown ids with `UnknownPackingEngineException` (message lists valid ids). Callers never reference concrete engine classes
-- **Adding an engine**: implement `IEngine` and add one `PackingEngineRegistration` to `BuiltInPackingEngines.All`. `CutList.Core.Tests/Nesting/EngineContractTests` then runs it through the shared contract (every part placed or reported as not placed, no overfilled bar, finite stock respected, `-1` = unlimited)
+- **Adding an engine**: implement `IPackingEngine` and add one `PackingEngineRegistration` to `BuiltInPackingEngines.All`. `CutList.Core.Tests/Nesting/EngineContractTests` then runs it through the shared contract (every part placed or reported as not placed, no overfilled bar, finite stock respected, `-1` = unlimited)
 - `PackingRequest.MaxBinCount`: negative values (e.g. `MultiBin` quantity `-1`) are normalized to unlimited (`int.MaxValue`)
 
 **Unit Handling**:

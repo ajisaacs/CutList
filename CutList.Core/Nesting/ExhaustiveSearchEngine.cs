@@ -6,7 +6,7 @@ namespace CutList.Core.Nesting
     /// limited stock cannot hold every item, or when the search-node budget runs out before any
     /// complete packing is found.
     /// </summary>
-    public class ExhaustiveSearchEngine : IEngine
+    public class ExhaustiveSearchEngine : IPackingEngine
     {
         /// <summary>
         /// Default maximum number of items before falling back to FirstFitEngine.
@@ -21,7 +21,7 @@ namespace CutList.Core.Nesting
         /// </summary>
         public const int DefaultMaxSearchNodes = 2_000_000;
 
-        private readonly IEngine _fallbackEngine;
+        private readonly IPackingEngine _fallbackEngine;
         private readonly int _maxItems;
         private readonly int _maxSearchNodes;
 

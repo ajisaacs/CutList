@@ -20,6 +20,6 @@ namespace CutList.Core.Nesting
 
         /// <summary>Creates a fresh engine instance for the id (null/blank = default).</summary>
         /// <exception cref="UnknownPackingEngineException">The id is not registered.</exception>
-        IEngine Create(string? engineId);
+        IPackingEngine Create(string? engineId);
     }
 }
