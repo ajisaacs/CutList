@@ -37,7 +37,7 @@ public sealed class PackingEngineServiceTests : IAsyncLifetime
         [new JobStock { MaterialId = _seed.FlatBarMaterialId, LengthInches = 240m, Quantity = -1, IsCustomLength = true, Priority = 1 }];
 
     [Theory]
-    [InlineData("advanced")]
+    [InlineData("firstfit")]
     [InlineData("bestfit")]
     [InlineData("exhaustive")]
     public async Task Pack_runs_the_requested_engine_and_places_every_part(string engineId)
@@ -81,12 +81,12 @@ public sealed class PackingEngineServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Result_saved_before_engine_selection_loads_as_advanced_fit()
+    public async Task Result_saved_before_engine_selection_loads_as_first_fit()
     {
         var loaded = await _packing.LoadSavedResultAsync("""{"OptimizedAt":"2026-09-01T00:00:00Z","MaterialResults":[]}""");
 
         Assert.NotNull(loaded);
-        Assert.Equal(BuiltInPackingEngines.AdvancedFit.Id, loaded.EngineId);
-        Assert.Equal(BuiltInPackingEngines.AdvancedFit.DisplayName, loaded.EngineName);
+        Assert.Equal(BuiltInPackingEngines.FirstFit.Id, loaded.EngineId);
+        Assert.Equal(BuiltInPackingEngines.FirstFit.DisplayName, loaded.EngineName);
     }
 }

@@ -43,7 +43,7 @@ public sealed class PackingEngineComponentTests : IAsyncLifetime
     {
         var page = await RenderResultsTabAsync(_seed.UnlockedJobId);
         var options = page.FindAll("select#packing-engine option").Select(o => o.GetAttribute("value"));
-        Assert.Equal(new[] { "advanced", "bestfit", "exhaustive" }, options);
+        Assert.Equal(new[] { "firstfit", "bestfit", "exhaustive" }, options);
 
         page.Find("select#packing-engine").Change(new ChangeEventArgs { Value = "bestfit" });
         await page.Find("#run-optimization").ClickAsync(new());
@@ -62,6 +62,29 @@ public sealed class PackingEngineComponentTests : IAsyncLifetime
         await page.Find("#run-optimization").ClickAsync(new());
 
         Assert.Contains("\"EngineId\":\"exhaustive\"", await SavedJsonAsync(_seed.UnlockedJobId));
+    }
+
+    [Fact]
+    public async Task Plan_saved_under_a_retired_engine_id_still_loads_and_reoptimizes_with_the_default()
+    {
+        // "advanced" was renamed to "firstfit" without an alias; plans saved under it must keep loading.
+        await SavePlanAsync(_seed.UnlockedJobId, "bestfit");
+        var retired = (await SavedJsonAsync(_seed.UnlockedJobId))!
+            .Replace("\"EngineId\":\"bestfit\"", "\"EngineId\":\"advanced\"")
+            .Replace("\"EngineName\":\"Best Fit\"", "\"EngineName\":\"Advanced Fit\"");
+        Assert.Contains("\"EngineId\":\"advanced\"", retired);
+        await using (var context = await _db.CreateContextAsync())
+        {
+            await context.Jobs.Where(j => j.Id == _seed.UnlockedJobId)
+                .ExecuteUpdateAsync(s => s.SetProperty(j => j.OptimizationResultJson, retired));
+        }
+
+        var page = await RenderResultsTabAsync(_seed.UnlockedJobId);
+        Assert.Contains("Engine: Advanced Fit", page.Find(".packing-engine-used").TextContent);
+
+        await page.Find("#run-optimization").ClickAsync(new());
+
+        Assert.Contains("\"EngineId\":\"firstfit\"", await SavedJsonAsync(_seed.UnlockedJobId));
     }
 
     [Fact]

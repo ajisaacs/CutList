@@ -322,7 +322,7 @@ public class SavedOptimizationResult
 {
     public DateTime OptimizedAt { get; set; }
 
-    // Null in results saved before engine selection existed; the job path always used Advanced Fit then.
+    // Null in results saved before engine selection existed; the job path always used First Fit then.
     public string? EngineId { get; set; }
     public string? EngineName { get; set; }
 
@@ -361,8 +361,8 @@ public class SavedOptimizationResult
     {
         var result = new MultiMaterialPackResult
         {
-            EngineId = EngineId ?? BuiltInPackingEngines.AdvancedFit.Id,
-            EngineName = EngineName ?? BuiltInPackingEngines.AdvancedFit.DisplayName
+            EngineId = EngineId ?? BuiltInPackingEngines.FirstFit.Id,
+            EngineName = EngineName ?? BuiltInPackingEngines.FirstFit.DisplayName
         };
 
         foreach (var savedMr in MaterialResults)

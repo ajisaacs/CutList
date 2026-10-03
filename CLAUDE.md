@@ -79,7 +79,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Packing Engine**:
 - `IEngine` packs one stock length (`PackingRequest` -> `PackResult`); `MultiBinEngine(IEngine)` runs that engine across stock types in priority order (then shortest first)
-- Built-in engines (`BuiltInPackingEngines.All`, the single list): `advanced` (`AdvancedFitEngine`, first-fit decreasing with optimization; default), `bestfit` (`BestFitEngine`), `exhaustive` (`ExhaustiveFitEngine`; falls back to Advanced Fit above `DefaultMaxItems` parts per stock length, when limited stock cannot hold every part, or when its search-node budget runs out first)
+- Built-in engines (`BuiltInPackingEngines.All`, the single list): `firstfit` (`FirstFitEngine`, first-fit decreasing; when bar quantity is limited, a swap pass fills those bars tighter; default), `bestfit` (`BestFitEngine`), `exhaustive` (`ExhaustiveFitEngine`; falls back to First Fit above `DefaultMaxItems` parts per stock length, when limited stock cannot hold every part, or when its search-node budget runs out first)
 - `PackingEngineCatalog` (`IPackingEngineCatalog`) resolves ids case-insensitively, treats null/blank as the default, creates a fresh engine per run, and rejects unknown ids with `UnknownPackingEngineException` (message lists valid ids). Callers never reference concrete engine classes
 - **Adding an engine**: implement `IEngine` and add one `PackingEngineRegistration` to `BuiltInPackingEngines.All`. `CutList.Core.Tests/Nesting/EngineContractTests` then runs it through the shared contract (every part placed or reported as not placed, no overfilled bar, finite stock respected, `-1` = unlimited)
 - `PackingRequest.MaxBinCount`: negative values (e.g. `MultiBin` quantity `-1`) are normalized to unlimited (`int.MaxValue`)
@@ -105,7 +105,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Database**: SQL Server via Entity Framework Core (connection string: `DefaultConnection`)
 
-**Service Registration** (Program.cs): All services registered as Scoped — MaterialService, StockItemService, JobService, CutListPackingService, ReportService, CatalogService. `IDbContextFactory<ApplicationDbContext>` is used (not a scoped `DbContext` directly) for Blazor Server circuit safety. `IPackingEngineCatalog` is a singleton built from `BuiltInPackingEngines.All` with the default from `Packing:DefaultEngine` (appsettings, `advanced`); an unknown configured id fails startup.
+**Service Registration** (Program.cs): All services registered as Scoped — MaterialService, StockItemService, JobService, CutListPackingService, ReportService, CatalogService. `IDbContextFactory<ApplicationDbContext>` is used (not a scoped `DbContext` directly) for Blazor Server circuit safety. `IPackingEngineCatalog` is a singleton built from `BuiltInPackingEngines.All` with the default from `Packing:DefaultEngine` (appsettings, `firstfit`); an unknown configured id fails startup.
 
 **REST API** (`Controllers/`): `JobsController`, `MaterialsController`, `StockItemsController`, `CuttingToolsController`, `PackingController`, `CatalogController` — Swagger/OpenAPI enabled in Development. This API is the integration surface `CutList.Mcp` calls into; the Blazor UI talks to the services directly and does not go through it. Packing engines: `GET /api/packing/engines` lists `{id, name, description, isDefault}`; `POST /api/jobs/{id}/pack` accepts an optional `Engine`; `POST /api/packing/optimize` accepts `Engine` (legacy alias `Strategy`). Both responses report the engine used, and an unknown id returns 400 listing the valid ids.
 
@@ -186,7 +186,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 ### CutListPackingService
 - `PackAsync(parts, kerfInches, jobStock?, engineId?)` — runs optimization per material group with the requested engine (null = configured default); an unknown id throws `UnknownPackingEngineException` before any database work
 - `Engines` / `DefaultEngine` expose the engine catalog for selection UIs
-- Results record `EngineId`/`EngineName`; `SavedOptimizationResult` persists them inside `OptimizationResultJson` (no schema change). Results saved before engine selection have no engine fields and load as Advanced Fit, the only engine the job path used then
+- Results record `EngineId`/`EngineName`; `SavedOptimizationResult` persists them inside `OptimizationResultJson` (no schema change). Results saved before engine selection have no engine fields and load as First Fit, the only engine the job path used then. Plans saved under the retired id `advanced` (the same algorithm) keep their stored engine name; the Results-tab picker then starts on the configured default
 - Separates results into `InStockBins` (from catalog-sourced job stock) and `ToBePurchasedBins`
 - `GetSummary(result)` — calculates total bins, pieces, waste, efficiency %
 - `SerializeResult(result)` / `LoadSavedResult(json)` — JSON round-trip via DTO layer (`SavedOptimizationResult` etc.)
@@ -250,7 +250,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 | File | Purpose |
 |------|---------|
-| `CutList.Core/Nesting/AdvancedFitEngine.cs` | Core 1D bin packing algorithm |
+| `CutList.Core/Nesting/FirstFitEngine.cs` | Default 1D bin packing algorithm (first-fit decreasing) |
 | `CutList.Core/Nesting/MultiBinEngine.cs` | Multi-bin type orchestration |
 | `CutList.Core/Nesting/BuiltInPackingEngines.cs` | The list of selectable packing engines |
 | `CutList.Core/Nesting/PackingEngineCatalog.cs` | Engine id resolution and creation |

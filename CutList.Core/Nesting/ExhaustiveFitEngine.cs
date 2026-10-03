@@ -2,14 +2,14 @@ namespace CutList.Core.Nesting
 {
     /// <summary>
     /// Exhaustive bin packing engine that searches arrangements for the fewest bins (then least
-    /// waste). Falls back to AdvancedFitEngine when there are more items than the threshold, when
+    /// waste). Falls back to FirstFitEngine when there are more items than the threshold, when
     /// limited stock cannot hold every item, or when the search-node budget runs out before any
     /// complete packing is found.
     /// </summary>
     public class ExhaustiveFitEngine : IEngine
     {
         /// <summary>
-        /// Default maximum number of items before falling back to AdvancedFitEngine.
+        /// Default maximum number of items before falling back to FirstFitEngine.
         /// Testing showed 25 items is safe (~84ms worst case), while 30+ can take seconds.
         /// </summary>
         public const int DefaultMaxItems = 25;
@@ -38,7 +38,7 @@ namespace CutList.Core.Nesting
         {
             _maxItems = maxItems;
             _maxSearchNodes = maxSearchNodes;
-            _fallbackEngine = new AdvancedFitEngine();
+            _fallbackEngine = new FirstFitEngine();
         }
 
         public PackResult Pack(PackingRequest request)
@@ -55,7 +55,7 @@ namespace CutList.Core.Nesting
                     validItems.Add(item);
             }
 
-            // Fall back to AdvancedFit for large item counts
+            // Fall back to First Fit for large item counts
             if (validItems.Count > _maxItems)
             {
                 var fallbackResult = _fallbackEngine.Pack(request);
