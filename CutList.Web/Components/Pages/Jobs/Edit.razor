@@ -514,6 +514,8 @@ else
     private bool optimizing;
     private bool lockingJob;
     private bool showLengthsInInches = true;
+    private string selectedEngineId = string.Empty;
+    private PackingEngineInfo? SelectedEngine => PackingService.Engines.FirstOrDefault(e => e.Id == selectedEngineId);
 
     private IEnumerable<MaterialShape> DistinctShapes => materials.Select(m => m.Shape).Distinct().OrderBy(s => s);
     private IEnumerable<Material> FilteredMaterials => !selectedShape.HasValue
@@ -600,6 +602,7 @@ else
     {
         try
         {
+            selectedEngineId = PackingService.DefaultEngine.Id;
             materials = await MaterialService.GetAllAsync();
             cuttingTools = await JobService.GetCuttingToolsAsync();
 
@@ -645,6 +648,12 @@ else
             if (packResult != null)
             {
                 summary = PackingService.GetSummary(packResult);
+
+                // Re-optimizing defaults to the engine that produced the saved plan, when still available.
+                if (PackingService.Engines.Any(e => e.Id == packResult.EngineId))
+                {
+                    selectedEngineId = packResult.EngineId;
+                }
             }
         }
         catch
@@ -1050,7 +1059,17 @@ else
         else
         {
             <div class="mb-3">
-                <button class="btn btn-success" @onclick="RunOptimization" disabled="@(optimizing || job.IsLocked)">
+                <div class="packing-engine-picker d-inline-flex align-items-center me-2 print-screen-only">
+                    <label class="form-label mb-0 me-2" for="packing-engine">Engine</label>
+                    <select id="packing-engine" class="form-select form-select-sm w-auto" @bind="selectedEngineId"
+                            disabled="@(optimizing || job.IsLocked)" title="@SelectedEngine?.Description">
+                        @foreach (var engine in PackingService.Engines)
+                        {
+                            <option value="@engine.Id">@engine.DisplayName</option>
+                        }
+                    </select>
+                </div>
+                <button id="run-optimization" class="btn btn-success" @onclick="RunOptimization" disabled="@(optimizing || job.IsLocked)">
                     @if (optimizing)
                     {
                         <span class="spinner-border spinner-border-sm me-1"></span>
@@ -1093,7 +1112,15 @@ else
                         Last optimized: @job.OptimizedAt.Value.ToLocalTime().ToString("g")
                     </span>
                 }
+                @if (packResult != null && !string.IsNullOrEmpty(packResult.EngineName))
+                {
+                    <span class="text-muted ms-3 packing-engine-used">Engine: @packResult.EngineName</span>
+                }
             </div>
+            @if (SelectedEngine != null)
+            {
+                <div class="form-text mb-3 print-screen-only packing-engine-description">@SelectedEngine.Description</div>
+            }
 
             @if (packResult != null && summary != null)
             {
@@ -1297,7 +1324,7 @@ else
         try
         {
             var kerf = job.CuttingTool?.KerfInches ?? 0.125m;
-            var result = await PackingService.PackAsync(job.Parts, kerf, job.Stock.Count > 0 ? job.Stock : null);
+            var result = await PackingService.PackAsync(job.Parts, kerf, job.Stock.Count > 0 ? job.Stock : null, selectedEngineId);
 
             // Save first; only show the new plan once it is persisted. If the job was locked in the
             // meantime, the provisional result is discarded and the saved (ordered) plan is shown.

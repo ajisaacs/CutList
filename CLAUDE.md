@@ -205,7 +205,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | `/` | Home | Welcome page with feature cards and workflow guide |
 | `/jobs` | Jobs/Index | Job list with pagination, lock icons, Quick Create, Duplicate, Delete |
 | `/jobs/new` | Jobs/Edit | New job form (details only) |
-| `/jobs/{Id}` | Jobs/Edit | Tabbed editor (Details, Parts, Stock, Results); locked jobs show banner + disable editing |
+| `/jobs/{Id}` | Jobs/Edit | Tabbed editor (Details, Parts, Stock, Results); locked jobs show banner + disable editing; Results tab has an engine picker (defaults to the saved plan's engine, else the configured default) and shows which engine produced the plan |
 | `/materials` | Materials/Index | Material list with MaterialFilter, pagination |
 | `/materials/new`, `/materials/{Id}` | Materials/Edit | Material + dimension form (varies by shape) |
 | `/stock` | Stock/Index | Stock items with MaterialFilter, pagination |
