@@ -38,11 +38,13 @@ public class EngineContractTests
         return data;
     }
 
-    // Task 6 switches these two helpers to the engine catalog.
-    private static IEnumerable<string> EngineIds() => Enum.GetNames<PackingStrategy>();
+    private static readonly PackingEngineCatalog Catalog = PackingEngineCatalog.CreateDefault();
+
+    // Every registered engine is checked; adding an engine to BuiltInPackingEngines.All adds its cases.
+    private static IEnumerable<string> EngineIds() => Catalog.Engines.Select(e => e.Id);
 
     private static MultiBinEngine CreatePacker(string engineId) =>
-        new() { Spacing = Kerf, Strategy = Enum.Parse<PackingStrategy>(engineId) };
+        new(Catalog.Create(engineId)) { Spacing = Kerf };
 
     [Theory]
     [MemberData(nameof(Cases))]

@@ -1,4 +1,5 @@
 using Bunit;
+using CutList.Core.Nesting;
 using CutList.Web.Data;
 using CutList.Web.Data.Entities;
 using CutList.Web.Services;
@@ -36,6 +37,7 @@ public sealed class JobLockingComponentTests : IAsyncLifetime
         _ctx = new BunitContext();
         _ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         _ctx.Services.AddSingleton(_db.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>());
+        _ctx.Services.AddSingleton(_db.Services.GetRequiredService<IPackingEngineCatalog>());
         _ctx.Services.AddScoped<JobService>();
         _ctx.Services.AddScoped<MaterialService>();
         _ctx.Services.AddScoped<CutListPackingService>();
@@ -252,7 +254,9 @@ public sealed class JobLockingComponentTests : IAsyncLifetime
     /// <summary>Stores a real serialized plan whose only part name is <paramref name="marker"/>.</summary>
     private async Task<string> SeedPersistedPlanAsync(int jobId, string marker)
     {
-        var packing = new CutListPackingService(_db.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>());
+        var packing = new CutListPackingService(
+            _db.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>(),
+            _db.Services.GetRequiredService<IPackingEngineCatalog>());
         var result = await packing.PackAsync(
             [new JobPart { MaterialId = _seed.FlatBarMaterialId, Name = marker, LengthInches = 50m, Quantity = 1 }],
             0.125m,

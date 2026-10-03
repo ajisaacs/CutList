@@ -78,9 +78,11 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 - **Tool**: Cutting tool with kerf/blade width
 
 **Packing Engine**:
-- `MultiBinEngine` coordinates packing across bin types
-- `AdvancedFitEngine` performs 1D bin packing (first-fit decreasing with optimization)
-- `PackingStrategy.AdvancedFit` is the standard strategy
+- `IEngine` packs one stock length (`PackingRequest` -> `PackResult`); `MultiBinEngine(IEngine)` runs that engine across stock types in priority order (then shortest first)
+- Built-in engines (`BuiltInPackingEngines.All`, the single list): `advanced` (`AdvancedFitEngine`, first-fit decreasing with optimization; default), `bestfit` (`BestFitEngine`), `exhaustive` (`ExhaustiveFitEngine`; falls back to Advanced Fit above `DefaultMaxItems` parts per stock length, when limited stock cannot hold every part, or when its search-node budget runs out first)
+- `PackingEngineCatalog` (`IPackingEngineCatalog`) resolves ids case-insensitively, treats null/blank as the default, creates a fresh engine per run, and rejects unknown ids with `UnknownPackingEngineException` (message lists valid ids). Callers never reference concrete engine classes
+- **Adding an engine**: implement `IEngine` and add one `PackingEngineRegistration` to `BuiltInPackingEngines.All`. `CutList.Core.Tests/Nesting/EngineContractTests` then runs it through the shared contract (every part placed or reported as not placed, no overfilled bar, finite stock respected, `-1` = unlimited)
+- `PackingRequest.MaxBinCount`: negative values (e.g. `MultiBin` quantity `-1`) are normalized to unlimited (`int.MaxValue`)
 
 **Unit Handling**:
 - `ArchUnits` — Converts feet/inches/fractions to decimal inches (accepts "12'", "6\"", "12 1/2\"", etc.)
@@ -89,7 +91,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Patterns**:
 - `Result<T>` for standardized error handling (Success/Failure instead of exceptions)
-- `IEngineFactory` for swappable algorithm implementations
+- `IPackingEngineCatalog` for swappable algorithm implementations (see Packing Engine)
 - Lower priority number = used first in bin selection
 
 ### CutList (WinForms) — Desktop UI
@@ -103,7 +105,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Database**: SQL Server via Entity Framework Core (connection string: `DefaultConnection`)
 
-**Service Registration** (Program.cs): All services registered as Scoped — MaterialService, StockItemService, JobService, CutListPackingService, ReportService, CatalogService. `IDbContextFactory<ApplicationDbContext>` is used (not a scoped `DbContext` directly) for Blazor Server circuit safety.
+**Service Registration** (Program.cs): All services registered as Scoped — MaterialService, StockItemService, JobService, CutListPackingService, ReportService, CatalogService. `IDbContextFactory<ApplicationDbContext>` is used (not a scoped `DbContext` directly) for Blazor Server circuit safety. `IPackingEngineCatalog` is a singleton built from `BuiltInPackingEngines.All` with the default from `Packing:DefaultEngine` (appsettings, `advanced`); an unknown configured id fails startup.
 
 **REST API** (`Controllers/`): `JobsController`, `MaterialsController`, `StockItemsController`, `CuttingToolsController`, `PackingController`, `CatalogController` — Swagger/OpenAPI enabled in Development. This API is the integration surface `CutList.Mcp` calls into; the Blazor UI talks to the services directly and does not go through it.
 
@@ -248,6 +250,8 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 |------|---------|
 | `CutList.Core/Nesting/AdvancedFitEngine.cs` | Core 1D bin packing algorithm |
 | `CutList.Core/Nesting/MultiBinEngine.cs` | Multi-bin type orchestration |
+| `CutList.Core/Nesting/BuiltInPackingEngines.cs` | The list of selectable packing engines |
+| `CutList.Core/Nesting/PackingEngineCatalog.cs` | Engine id resolution and creation |
 | `CutList.Core/ArchUnits.cs` | Architectural unit parsing/conversion |
 | `CutList.Core/Formatting/FormatHelper.cs` | Display formatting |
 | `CutList.Web/Data/ApplicationDbContext.cs` | EF Core context with all DbSets and configuration |

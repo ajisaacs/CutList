@@ -11,6 +11,9 @@ namespace CutList.Services
     /// </summary>
     public class CutListService
     {
+        // The desktop app uses the built-in default engine.
+        private static readonly PackingEngineCatalog Engines = PackingEngineCatalog.CreateDefault();
+
         /// <summary>
         /// Runs the bin packing algorithm to optimize cut lists.
         /// </summary>
@@ -25,7 +28,7 @@ namespace CutList.Services
                 var multiBins = ConvertToMultiBins(stockBins);
                 var binItems = ConvertToBinItems(parts);
 
-                var engine = new MultiBinEngine();
+                var engine = new MultiBinEngine(Engines.Create(null));
                 engine.SetBins(multiBins);
                 engine.Spacing = cuttingTool.Kerf;
 

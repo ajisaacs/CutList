@@ -41,7 +41,7 @@ public static class CutListTools
             if (binsError != null)
                 return new CutListResult { Success = false, Error = binsError };
 
-            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, ParseStrategy(strategy));
+            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, strategy);
 
             // Convert results
             var resultBins = new List<ResultBin>();
@@ -192,7 +192,7 @@ public static class CutListTools
             if (binsError != null)
                 return new CutListReportResult { Success = false, Error = binsError };
 
-            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, ParseStrategy(strategy));
+            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, strategy);
 
             // Determine file path
             var outputPath = string.IsNullOrWhiteSpace(filePath)
@@ -251,23 +251,15 @@ public static class CutListTools
         return (multiBins, null);
     }
 
-    private static PackResult RunPackingAlgorithm(List<BinItem> items, List<MultiBin> bins, double kerf, PackingStrategy packingStrategy = PackingStrategy.AdvancedFit)
+    // Built-in engines resolved in-process; these tools do not call CutList.Web.
+    private static readonly PackingEngineCatalog Engines = PackingEngineCatalog.CreateDefault();
+
+    private static PackResult RunPackingAlgorithm(List<BinItem> items, List<MultiBin> bins, double kerf, string? engineId)
     {
-        var engine = new MultiBinEngine();
+        var engine = new MultiBinEngine(Engines.Create(engineId));
         engine.SetBins(bins);
         engine.Spacing = kerf;
-        engine.Strategy = packingStrategy;
         return engine.Pack(items);
-    }
-
-    private static PackingStrategy ParseStrategy(string strategy)
-    {
-        return strategy?.ToLowerInvariant() switch
-        {
-            "bestfit" or "best" => PackingStrategy.BestFit,
-            "exhaustive" or "optimal" => PackingStrategy.Exhaustive,
-            _ => PackingStrategy.AdvancedFit
-        };
     }
 
     private static double ParseLength(string input)

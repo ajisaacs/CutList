@@ -1,22 +1,18 @@
 namespace CutList.Core.Nesting
 {
     /// <summary>
-    /// Engine that coordinates packing across multiple bin types with different sizes.
-    /// Uses priority ordering to determine which bin types to fill first.
+    /// Packs items across multiple stock types with different lengths, in priority order (then
+    /// shortest first), running one single-length engine for every stock type.
     /// </summary>
     public class MultiBinEngine
     {
-        private readonly IEngineFactory _engineFactory;
-        private readonly List<MultiBin> _bins;
+        private readonly IEngine _engine;
+        private readonly List<MultiBin> _bins = new();
 
-        public MultiBinEngine() : this(new EngineFactory())
+        /// <param name="engine">Single-length engine, normally from <see cref="IPackingEngineCatalog.Create"/>.</param>
+        public MultiBinEngine(IEngine engine)
         {
-        }
-
-        public MultiBinEngine(IEngineFactory engineFactory)
-        {
-            _engineFactory = engineFactory ?? throw new ArgumentNullException(nameof(engineFactory));
-            _bins = new List<MultiBin>();
+            _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         }
 
         /// <summary>
@@ -43,11 +39,6 @@ namespace CutList.Core.Nesting
         public double Spacing { get; set; }
 
         /// <summary>
-        /// The packing strategy to use for each bin type.
-        /// </summary>
-        public PackingStrategy Strategy { get; set; } = PackingStrategy.AdvancedFit;
-
-        /// <summary>
         /// Packs items across all configured bin types.
         /// </summary>
         public PackResult Pack(List<BinItem> items)
@@ -61,8 +52,6 @@ namespace CutList.Core.Nesting
             var result = new PackResult();
             var remainingItems = new List<BinItem>(items);
 
-            var engine = _engineFactory.CreateEngine(Strategy);
-
             foreach (var binType in sortedBinTypes)
             {
                 if (remainingItems.Count == 0)
@@ -75,7 +64,7 @@ namespace CutList.Core.Nesting
                     maxBinCount: binType.Quantity
                 );
 
-                var packResult = engine.Pack(request);
+                var packResult = _engine.Pack(request);
 
                 result.AddBins(packResult.Bins);
                 remainingItems = packResult.ItemsNotUsed.ToList();

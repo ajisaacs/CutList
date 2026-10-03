@@ -1,3 +1,4 @@
+using CutList.Core.Nesting;
 using CutList.Web.Components;
 using CutList.Web.Controllers;
 using CutList.Web.Data;
@@ -27,6 +28,11 @@ builder.Services.AddSwaggerGen();
 // Add Entity Framework (factory pattern for Blazor Server circuit safety)
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Packing engines: every engine in BuiltInPackingEngines.All is selectable by id. The default comes
+// from Packing:DefaultEngine; an unknown configured id fails startup instead of changing engines.
+builder.Services.AddSingleton<IPackingEngineCatalog>(
+    PackingEngineCatalog.CreateDefault(builder.Configuration["Packing:DefaultEngine"]));
 
 // Add application services
 builder.Services.AddScoped<MaterialService>();

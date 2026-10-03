@@ -9,10 +9,12 @@ namespace CutList.Web.Services;
 public class CutListPackingService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _factory;
+    private readonly IPackingEngineCatalog _engines;
 
-    public CutListPackingService(IDbContextFactory<ApplicationDbContext> factory)
+    public CutListPackingService(IDbContextFactory<ApplicationDbContext> factory, IPackingEngineCatalog engines)
     {
         _factory = factory;
+        _engines = engines;
     }
 
     public async Task<MultiMaterialPackResult> PackAsync(IEnumerable<JobPart> parts, decimal kerfInches)
@@ -87,9 +89,8 @@ public class CutListPackingService
             }
 
             // Run the packing algorithm
-            var engine = new MultiBinEngine();
+            var engine = new MultiBinEngine(_engines.Create(null));
             engine.Spacing = (double)kerfInches;
-            engine.Strategy = PackingStrategy.AdvancedFit;
 
             var multiBins = stockBins
                 .Select(b => new MultiBin((double)b.LengthInches, b.Quantity, b.Priority))

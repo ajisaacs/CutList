@@ -10,6 +10,13 @@ namespace CutList.Web.Controllers;
 [Route("api/[controller]")]
 public class PackingController : ControllerBase
 {
+    private readonly IPackingEngineCatalog _engines;
+
+    public PackingController(IPackingEngineCatalog engines)
+    {
+        _engines = engines;
+    }
+
     [HttpPost("optimize")]
     public ActionResult<object> Optimize(StandalonePackRequestDto dto)
     {
@@ -56,19 +63,21 @@ public class PackingController : ControllerBase
             multiBins.Add(new MultiBin(length, bin.Quantity, bin.Priority));
         }
 
-        // Select strategy
-        var strategy = dto.Strategy?.ToLowerInvariant() switch
+        // Select engine (unknown ids are rejected, never silently replaced)
+        IEngine packingEngine;
+        try
         {
-            "bestfit" => PackingStrategy.BestFit,
-            "exhaustive" => PackingStrategy.Exhaustive,
-            _ => PackingStrategy.AdvancedFit
-        };
+            packingEngine = _engines.Create(dto.Strategy);
+        }
+        catch (UnknownPackingEngineException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         // Run packing
-        var engine = new MultiBinEngine
+        var engine = new MultiBinEngine(packingEngine)
         {
-            Spacing = (double)dto.Kerf,
-            Strategy = strategy
+            Spacing = (double)dto.Kerf
         };
 
         engine.SetBins(multiBins);
