@@ -13,7 +13,7 @@ namespace CutList.Mcp;
 public static class CutListTools
 {
     /// <summary>
-    /// Creates an optimized cut list by packing parts into stock bins using a first-fit decreasing algorithm.
+    /// Creates an optimized cut list by packing parts into stock bins using the selected packing engine.
     /// Returns the optimal arrangement of cuts to minimize waste.
     /// </summary>
     /// <param name="parts">List of parts to cut. Each part has a name, length (in inches or architectural format like 12' 6"), and quantity.</param>
@@ -28,8 +28,8 @@ public static class CutListTools
         StockBinInput[] stockBins,
         [Description("Blade kerf/width in inches (default 0.125)")]
         double kerf = 0.125,
-        [Description("Packing strategy: 'advanced' (default), 'bestfit', or 'exhaustive' (optimal but slow, max 15 items)")]
-        string strategy = "advanced")
+        [Description("Packing engine id (see list_packing_engines). Omit for the built-in default engine.")]
+        string? strategy = null)
     {
         try
         {
@@ -41,7 +41,8 @@ public static class CutListTools
             if (binsError != null)
                 return new CutListResult { Success = false, Error = binsError };
 
-            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, strategy);
+            var engineInfo = Engines.Resolve(strategy);
+            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, engineInfo.Id);
 
             // Convert results
             var resultBins = new List<ResultBin>();
@@ -82,6 +83,7 @@ public static class CutListTools
             return new CutListResult
             {
                 Success = true,
+                EngineId = engineInfo.Id,
                 Bins = resultBins,
                 UnusedItems = unusedItems,
                 Summary = new CutListSummary
@@ -179,8 +181,8 @@ public static class CutListTools
         double kerf = 0.125,
         [Description("File path to save the report. If not provided, saves to a temp file.")]
         string? filePath = null,
-        [Description("Packing strategy: 'advanced' (default), 'bestfit', or 'exhaustive' (optimal but slow, max 15 items)")]
-        string strategy = "advanced")
+        [Description("Packing engine id (see list_packing_engines). Omit for the built-in default engine.")]
+        string? strategy = null)
     {
         try
         {
@@ -192,7 +194,8 @@ public static class CutListTools
             if (binsError != null)
                 return new CutListReportResult { Success = false, Error = binsError };
 
-            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, strategy);
+            var engineInfo = Engines.Resolve(strategy);
+            var packResult = RunPackingAlgorithm(binItems!, multiBins!, kerf, engineInfo.Id);
 
             // Determine file path
             var outputPath = string.IsNullOrWhiteSpace(filePath)
@@ -206,6 +209,7 @@ public static class CutListTools
             return new CutListReportResult
             {
                 Success = true,
+                EngineId = engineInfo.Id,
                 FilePath = Path.GetFullPath(outputPath),
                 TotalBins = packResult.Bins.Count,
                 TotalParts = binItems!.Count - packResult.ItemsNotUsed.Count,

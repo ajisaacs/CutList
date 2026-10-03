@@ -322,22 +322,26 @@ public class JobTools
 
     #region Optimization
 
-    [McpServerTool(Name = "optimize_job"), Description("Runs bin packing optimization on a job. The job must have parts defined, and stock must be explicitly configured on the job (via add_job_stock) for each material used by its parts - there is no fallback to inventory; parts with no matching stock configured come back as items not placed. Returns optimized cut layouts per material with efficiency stats. This is a preview: it does not save results to the job and works on locked jobs without changing them.")]
+    [McpServerTool(Name = "optimize_job"), Description("Runs bin packing optimization on a job. The job must have parts defined, and stock must be explicitly configured on the job (via add_job_stock) for each material used by its parts - there is no fallback to inventory; parts with no matching stock configured come back as items not placed. Returns optimized cut layouts per material with efficiency stats. This is a preview: it does not save results to the job and works on locked jobs without changing them. Pass engine to choose a packing engine (see list_packing_engines); the result reports which engine ran.")]
     public async Task<OptimizeJobResult> OptimizeJob(
         [Description("Job ID")]
         int jobId,
         [Description("Optional kerf override in inches (e.g., 0.125). If not set, uses the job's cutting tool kerf.")]
-        double? kerfOverride = null)
+        double? kerfOverride = null,
+        [Description("Optional packing engine id from list_packing_engines. Omit to use the server's default engine.")]
+        string? engine = null)
     {
         try
         {
-            var result = await _api.PackJobAsync(jobId, kerfOverride.HasValue ? (decimal)kerfOverride.Value : null);
+            var result = await _api.PackJobAsync(jobId, kerfOverride.HasValue ? (decimal)kerfOverride.Value : null, engine);
             if (result == null)
                 return new OptimizeJobResult { Success = false, Error = "Optimization returned no results" };
 
             return new OptimizeJobResult
             {
                 Success = true,
+                EngineId = result.EngineId,
+                EngineName = result.EngineName,
                 Materials = result.Materials.Select(m => new OptMaterialResultDto
                 {
                     MaterialId = m.MaterialId,
@@ -364,6 +368,12 @@ public class JobTools
         {
             return new OptimizeJobResult { Success = false, Error = ex.Message };
         }
+    }
+
+    [McpServerTool(Name = "list_packing_engines"), Description("Lists the packing engines optimize_job accepts (id, name, description) and which one is the server default. create_cutlist and create_cutlist_report accept the same ids.")]
+    public async Task<List<ApiPackingEngineDto>> ListPackingEngines()
+    {
+        return await _api.GetPackingEnginesAsync();
     }
 
     #endregion
@@ -593,6 +603,8 @@ public class OptimizeJobResult
 {
     public bool Success { get; set; }
     public string? Error { get; set; }
+    public string? EngineId { get; set; }
+    public string? EngineName { get; set; }
     public List<OptMaterialResultDto> Materials { get; set; } = new();
     public OptSummaryDto? Summary { get; set; }
 }

@@ -166,11 +166,28 @@ public class ApiClient
         await EnsureJobSuccessAsync(response);
     }
 
-    public async Task<ApiPackResponseDto?> PackJobAsync(int jobId, decimal? kerfOverride = null)
+    public async Task<ApiPackResponseDto?> PackJobAsync(int jobId, decimal? kerfOverride = null, string? engine = null)
     {
-        var response = await _http.PostAsJsonAsync($"api/jobs/{jobId}/pack", new { KerfOverride = kerfOverride });
-        response.EnsureSuccessStatusCode();
+        var response = await _http.PostAsJsonAsync($"api/jobs/{jobId}/pack", new { KerfOverride = kerfOverride, Engine = engine });
+        await EnsurePackSuccessAsync(response);
         return await response.Content.ReadFromJsonAsync<ApiPackResponseDto>();
+    }
+
+    public async Task<List<ApiPackingEngineDto>> GetPackingEnginesAsync()
+    {
+        return await _http.GetFromJsonAsync<List<ApiPackingEngineDto>>("api/packing/engines") ?? [];
+    }
+
+    /// <summary>A 400 from the pack route (e.g. unknown engine) keeps the server's explanation.</summary>
+    private static async Task EnsurePackSuccessAsync(HttpResponseMessage response)
+    {
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var detail = (await response.Content.ReadAsStringAsync()).Trim().Trim('"');
+            throw new HttpRequestException(detail.Length > 500 ? detail[..500] : detail, null, response.StatusCode);
+        }
+
+        response.EnsureSuccessStatusCode();
     }
 
     /// <summary>
@@ -312,8 +329,18 @@ public class ApiCuttingToolDto
 
 public class ApiPackResponseDto
 {
+    public string EngineId { get; set; } = string.Empty;
+    public string EngineName { get; set; } = string.Empty;
     public List<ApiMaterialPackResultDto> Materials { get; set; } = new();
     public ApiPackingSummaryDto Summary { get; set; } = new();
+}
+
+public class ApiPackingEngineDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool IsDefault { get; set; }
 }
 
 public class ApiMaterialPackResultDto

@@ -124,9 +124,9 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 Stdio-transport MCP server (`ModelContextProtocol` SDK) exposing CutList.Web's REST API as tools for Claude Code. Registers tools via `WithToolsFromAssembly`; logging is disabled entirely so it doesn't interfere with the stdio transport.
 
 - `ApiClient.cs` — typed `HttpClient` wrapper for CutList.Web's REST API (`BaseAddress` hardcoded to `http://localhost:5270`). Job mutations use `EnsureJobSuccessAsync`: a `job_locked`/`job_changed` problem response becomes an `HttpRequestException` with the server's detail and 409 status; other failures keep the generic status error. Duplicate material/stock 409s still raise `ApiConflictException`.
-- `JobTools.cs` — job CRUD, parts/stock, optimization (`OptimizeJob`), cutting tools. `list_jobs`/`get_job` expose `IsLocked`/`LockedAt`; mutation tools return `Success = false` with the lock explanation; `add_job_parts` stops at the first job conflict and reports how many parts were really added. `optimize_job` is a non-persisting preview (works on locked jobs). There is deliberately no lock/unlock tool and no automatic retry.
+- `JobTools.cs` — job CRUD, parts/stock, optimization (`OptimizeJob`), cutting tools. `list_jobs`/`get_job` expose `IsLocked`/`LockedAt`; mutation tools return `Success = false` with the lock explanation; `add_job_parts` stops at the first job conflict and reports how many parts were really added. `optimize_job` is a non-persisting preview (works on locked jobs). There is deliberately no lock/unlock tool and no automatic retry. `optimize_job` accepts an optional `engine` id and reports `EngineId`/`EngineName`; `list_packing_engines` returns the server's engine list (`GET /api/packing/engines`).
 - `InventoryTools.cs` — materials, stock items (`add_stock`, etc.)
-- `CutListTools.cs` — static helpers shared across tool classes
+- `CutListTools.cs` — `create_cutlist` / `create_cutlist_report`: pack in-process with CutList.Core's built-in engine catalog (optional `strategy` = engine id; default is the built-in default, not CutList.Web's `Packing:DefaultEngine`; unknown ids return an error listing valid ids; results report `EngineId`), plus shared conversion helpers
 - `Models.cs` — shared DTOs distinct from CutList.Web's own DTOs (kept intentionally thin for MCP tool responses)
 
 ## CutList.Web Entities
