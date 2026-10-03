@@ -12,7 +12,7 @@ namespace CutList.Core.Nesting
         /// <param name="items">The items to be packed.</param>
         /// <param name="stockLength">The length of stock bins.</param>
         /// <param name="spacing">The spacing/kerf between items (default 0).</param>
-        /// <param name="maxBinCount">Maximum number of bins to create (default unlimited).</param>
+        /// <param name="maxBinCount">Maximum number of bins to create. Negative values (e.g. -1) and int.MaxValue mean unlimited.</param>
         public PackingRequest(
             IReadOnlyList<BinItem> items,
             double stockLength,
@@ -25,7 +25,8 @@ namespace CutList.Core.Nesting
             Items = items ?? throw new ArgumentNullException(nameof(items));
             StockLength = stockLength;
             Spacing = spacing;
-            MaxBinCount = maxBinCount;
+            // MultiBin uses -1 for unlimited stock; engines only ever see int.MaxValue.
+            MaxBinCount = maxBinCount < 0 ? int.MaxValue : maxBinCount;
         }
 
         /// <summary>
@@ -44,7 +45,7 @@ namespace CutList.Core.Nesting
         public double Spacing { get; }
 
         /// <summary>
-        /// Maximum number of bins to create. Use int.MaxValue for unlimited.
+        /// Maximum number of bins to create; int.MaxValue means unlimited (negative inputs are normalized to it).
         /// </summary>
         public int MaxBinCount { get; }
     }

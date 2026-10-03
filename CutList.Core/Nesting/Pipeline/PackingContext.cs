@@ -58,9 +58,6 @@ namespace CutList.Core.Nesting.Pipeline
         /// </summary>
         public bool CanAddMoreBins()
         {
-            if (MaxBinCount == -1)
-                return true;
-
             return Bins.Count < MaxBinCount;
         }
 

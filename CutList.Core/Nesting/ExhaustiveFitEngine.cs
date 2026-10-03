@@ -1,9 +1,9 @@
 namespace CutList.Core.Nesting
 {
     /// <summary>
-    /// Exhaustive bin packing engine that tries all possible combinations
-    /// to find the optimal solution. Falls back to AdvancedFitEngine for
-    /// item counts exceeding the threshold due to exponential complexity.
+    /// Exhaustive bin packing engine that searches arrangements for the fewest bins (then least
+    /// waste). Falls back to AdvancedFitEngine when there are more items than the threshold, or
+    /// when limited stock cannot hold every item.
     /// </summary>
     public class ExhaustiveFitEngine : IEngine
     {
@@ -77,6 +77,13 @@ namespace CutList.Core.Nesting
 
             Search(sortedItems, 0, currentState, bestSolution, request, suffixVolume);
 
+            // The search only scores packings that place every part. When limited stock cannot hold
+            // them all, let the fallback engine place what fits and report the rest as not placed.
+            if (bestSolution.BinCount == int.MaxValue)
+            {
+                return _fallbackEngine.Pack(request);
+            }
+
             // Build result from best solution
             var result = new PackResult();
             result.AddItemsNotUsed(oversizedItems);
@@ -126,10 +133,6 @@ namespace CutList.Core.Nesting
 
             // Pruning: if we already have more bins than best, stop
             if (current.BinCount >= best.BinCount)
-                return;
-
-            // Respect max bin count
-            if (current.BinCount >= request.MaxBinCount)
                 return;
 
             // Lower-bound pruning: remaining items need at least this many additional bins

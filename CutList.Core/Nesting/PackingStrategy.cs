@@ -24,7 +24,7 @@ namespace CutList.Core.Nesting
         /// <summary>
         /// Exhaustive search that tries all possible combinations.
         /// Guarantees optimal solution but has exponential time complexity.
-        /// Automatically falls back to AdvancedFit for more than 15 items.
+        /// Automatically falls back to AdvancedFit for more than 25 items or when limited stock cannot hold every item.
         /// </summary>
         Exhaustive
     }
