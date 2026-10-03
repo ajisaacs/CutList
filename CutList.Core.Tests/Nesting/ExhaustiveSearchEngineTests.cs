@@ -53,9 +53,9 @@ public class ExhaustiveSearchEngineTests
     [Fact]
     public void Packer_records_a_fallback_from_any_stock_length()
     {
-        // One 48" bar cannot hold both 40" parts, so that stock length falls back to First Fit; the
-        // unlimited 120" stock then takes the leftover part with a completed search.
-        var packer = new MultiBinPacker(new ExhaustiveSearchEngine()) { Spacing = 0.125 };
+        // A one-step budget runs out on the limited 48" stock, so that length keeps First Fit's plan and
+        // reports the fallback; the 120" stock's First Fit plan is proven optimal without searching.
+        var packer = new MultiBinPacker(new ExhaustiveSearchEngine(searchBudget: 1)) { Spacing = 0.125 };
         packer.SetBins(new[] { new MultiBin(48, 1, 1), new MultiBin(120, -1, 2) });
 
         var result = packer.Pack(new List<BinItem> { new("A", 40), new("B", 40) });
@@ -95,18 +95,45 @@ public class ExhaustiveSearchEngineTests
     }
 
     [Fact]
-    public void Limited_stock_too_short_for_every_part_gets_the_first_fit_result()
+    public void Limited_stock_too_short_keeps_first_fit_when_it_is_already_fullest()
     {
-        // 1/16" shorter than the exact fit above, so no complete packing exists.
+        // 1/16" shorter than the exact fit above, so no complete packing exists. Two bars hold at most
+        // {3,3,3} + {4,4} = 17", which is First Fit's plan, so it is kept without a fallback.
         var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
         var request = new PackingRequest(items, 10.1875, 0.125, maxBinCount: 2);
 
         var result = new ExhaustiveSearchEngine().Pack(request);
         var firstFit = new FirstFitEngine().Pack(request);
 
-        Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
+        Assert.Null(result.FallbackEngine);
         Assert.Equal(firstFit.Bins.Select(b => b.Items.Count), result.Bins.Select(b => b.Items.Count));
         Assert.Equal(firstFit.ItemsNotUsed.Count, result.ItemsNotUsed.Count);
+    }
+
+    [Fact]
+    public void Limited_stock_gets_its_fullest_bars()
+    {
+        // One 10" bar: First Fit cuts {5,4} = 9"; the fullest bar is {4,3,3} = 10".
+        var items = new[] { 5.0, 4, 3, 3 }.Select((l, i) => new BinItem($"P{i}", l)).ToList();
+
+        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10, 0, maxBinCount: 1));
+
+        Assert.Equal(new[] { 4.0, 3, 3 }, Assert.Single(result.Bins).Items.Select(i => i.Length));
+        Assert.Equal(5.0, Assert.Single(result.ItemsNotUsed).Length);
+        Assert.Null(result.FallbackEngine);
+    }
+
+    [Fact]
+    public void Keeps_first_fit_when_the_fullest_bar_strands_parts_that_need_more_bars()
+    {
+        // One 20" bar. The fullest cut is {7,6,4,3} = 20", but it leaves 15,15,15,12,9,9,8,7, which need
+        // 6 more bars; First Fit's {15,4} = 19" leaves parts that need 5.
+        var items = new[] { 15.0, 12, 7, 9, 6, 8, 15, 7, 9, 15, 4, 3 }.Select((l, i) => new BinItem($"P{i}", l)).ToList();
+
+        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 20, 0, maxBinCount: 1));
+
+        Assert.Equal(new[] { 15.0, 4 }, Assert.Single(result.Bins).Items.Select(i => i.Length));
+        Assert.Null(result.FallbackEngine);
     }
 
     [Fact]

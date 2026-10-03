@@ -52,18 +52,45 @@ public sealed class PackingEngineServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Exhaustive_run_that_falls_back_says_so_in_the_saved_engine_name()
+    public async Task Exhaustive_on_limited_stock_fills_the_bars_without_a_fallback()
     {
-        // One 240" bar cannot hold eight 30" parts plus kerf, so the search falls back to First Fit.
+        // One 240" bar holds seven 30" parts plus kerf; the eighth is not placed.
         List<JobStock> oneBar =
             [new JobStock { MaterialId = _seed.FlatBarMaterialId, LengthInches = 240m, Quantity = 1, IsCustomLength = true, Priority = 1 }];
 
         var result = await _packing.PackAsync(Parts(), 0.125m, oneBar, "exhaustive");
-        var loaded = await _packing.LoadSavedResultAsync(_packing.SerializeResult(result));
 
-        Assert.Equal("exhaustive", result.EngineId);
-        Assert.Equal("Exhaustive (First Fit fallback)", result.EngineName);
-        Assert.Equal("Exhaustive (First Fit fallback)", loaded!.EngineName);
+        Assert.Equal("Exhaustive", result.EngineName);
+        var material = Assert.Single(result.MaterialResults);
+        Assert.Equal(7, Assert.Single(material.PackResult.Bins).Items.Count);
+        Assert.Single(material.PackResult.ItemsNotUsed);
+    }
+
+    private sealed class FallingBackEngine : IPackingEngine
+    {
+        public PackResult Pack(PackingRequest request)
+        {
+            var result = new FirstFitEngine().Pack(request);
+            result.FallbackEngine = BuiltInPackingEngines.FirstFit;
+            return result;
+        }
+    }
+
+    [Fact]
+    public async Task Engine_fallback_is_named_in_results_and_saved_plans()
+    {
+        var catalog = new PackingEngineCatalog(new[]
+        {
+            new PackingEngineRegistration(new PackingEngineInfo("fake", "Fake", "Always falls back."), () => new FallingBackEngine())
+        });
+        var packing = new CutListPackingService(_db.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>(), catalog);
+
+        var result = await packing.PackAsync(Parts(), 0.125m, UnlimitedStock(), "fake");
+        var loaded = await packing.LoadSavedResultAsync(packing.SerializeResult(result));
+
+        Assert.Equal("fake", result.EngineId);
+        Assert.Equal("Fake (First Fit fallback)", result.EngineName);
+        Assert.Equal("Fake (First Fit fallback)", loaded!.EngineName);
     }
 
     [Fact]

@@ -76,9 +76,9 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
     }
 
     [Fact]
-    public void Create_cutlist_reports_an_exhaustive_fallback()
+    public void Create_cutlist_fills_limited_stock_without_a_fallback()
     {
-        // One 96" bar cannot hold five 24" parts, so the search falls back to First Fit.
+        // One 96" bar holds three 24" parts plus kerf; the other two are not placed.
         var result = CutListTools.CreateCutList(
             [new PartInput { Name = "A", Length = "24", Quantity = 5 }],
             [new StockBinInput { Length = "96", Quantity = 1, Priority = 1 }],
@@ -87,7 +87,8 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
 
         Assert.True(result.Success, result.Error);
         Assert.Equal("exhaustive", result.EngineId);
-        Assert.Equal("Exhaustive (First Fit fallback)", result.EngineName);
+        Assert.Equal("Exhaustive", result.EngineName);
+        Assert.Equal(2, result.UnusedItems.Count);
     }
 
     [Fact]
