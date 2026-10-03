@@ -1,0 +1,65 @@
+namespace CutList.Core.Nesting.Search
+{
+    /// <summary>
+    /// Most part length on a fixed number of identical bars that cannot hold every part. Branch and
+    /// bound over maximal patterns; bars are filled in non-increasing order of placed length (any
+    /// optimum can be rearranged that way), which also bounds every later bar.
+    /// </summary>
+    internal sealed class MaxFillSearch
+    {
+        private readonly CutDemand _d;
+        private readonly SearchBudget _budget;
+        private double _best;
+        private List<int[]>? _bestPatterns;
+
+        public MaxFillSearch(CutDemand d, SearchBudget budget)
+        {
+            _d = d;
+            _budget = budget;
+        }
+
+        /// <summary>True when the search finished, so its result (or the incumbent) is optimal.</summary>
+        public bool Completed { get; private set; }
+
+        /// <summary>Patterns placing more length than <paramref name="incumbentLength"/>, or null.</summary>
+        public List<int[]>? Solve(int bars, double incumbentLength)
+        {
+            _best = incumbentLength;
+            try
+            {
+                Search((int[])_d.Counts.Clone(), bars, 0, double.MaxValue, new List<int[]>());
+                Completed = true;
+            }
+            catch (SearchBudgetExceededException)
+            {
+            }
+            return _bestPatterns;
+        }
+
+        private void Search(int[] remaining, int barsLeft, double placed, double previousFill, List<int[]> stack)
+        {
+            _budget.Charge();
+            if (placed > _best + CutDemand.Eps)
+            {
+                _best = placed;
+                _bestPatterns = stack.Select(p => (int[])p.Clone()).ToList();
+            }
+            if (barsLeft == 0 || remaining.All(c => c == 0)) return;
+
+            double remainingLength = 0;
+            for (int i = 0; i < remaining.Length; i++) remainingLength += remaining[i] * _d.Lengths[i];
+            if (placed + remainingLength <= _best + CutDemand.Eps) return;
+
+            foreach (var (pattern, length) in CutPatterns.Maximal(_d, remaining, -1, previousFill, _budget))
+            {
+                // Sorted longest first, and later bars hold no more than this one.
+                if (placed + barsLeft * length <= _best + CutDemand.Eps) return;
+                for (int i = 0; i < pattern.Length; i++) remaining[i] -= pattern[i];
+                stack.Add(pattern);
+                Search(remaining, barsLeft - 1, placed + length, length, stack);
+                stack.RemoveAt(stack.Count - 1);
+                for (int i = 0; i < pattern.Length; i++) remaining[i] += pattern[i];
+            }
+        }
+    }
+}
