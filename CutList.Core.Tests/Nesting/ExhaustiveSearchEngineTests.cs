@@ -137,6 +137,23 @@ public class ExhaustiveSearchEngineTests
     }
 
     [Fact]
+    public void Exactly_full_decimal_bars_report_no_negative_waste()
+    {
+        // Ten {4,3,3} bars of 10.2" with 0.1" kerf are exactly full (the last kerf runs off the end).
+        var items = Enumerable.Repeat(4.0, 10).Concat(Enumerable.Repeat(3.0, 20))
+            .Select((length, i) => new BinItem($"P{i}", length)).ToList();
+
+        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10.2, 0.1));
+
+        Assert.Equal(10, result.Bins.Count);
+        Assert.All(result.Bins, b =>
+        {
+            Assert.Equal(0, b.RemainingLength);
+            Assert.Equal(1, b.Utilization);
+        });
+    }
+
+    [Fact]
     public void Lower_bound_lets_the_last_kerf_run_off_the_bar()
     {
         // 4 + 3 + 3 plus two 0.125" kerfs fills a 10.25" bar exactly; the kerf after the last cut may
