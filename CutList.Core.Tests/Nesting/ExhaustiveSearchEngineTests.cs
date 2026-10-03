@@ -8,7 +8,7 @@ public class ExhaustiveSearchEngineTests
     [Fact]
     public void Exhausted_search_budget_still_places_every_part()
     {
-        var engine = new ExhaustiveSearchEngine(maxItems: int.MaxValue, maxSearchNodes: 1);
+        var engine = new ExhaustiveSearchEngine(searchBudget: 1);
         var items = Enumerable.Range(1, 6).Select(i => new BinItem($"P{i}", 10 + i)).ToList();
 
         var result = engine.Pack(new PackingRequest(items, 40, 0.125));
@@ -25,7 +25,7 @@ public class ExhaustiveSearchEngineTests
         var request = new PackingRequest(items, 10, 0);
         var fallbackBars = new FirstFitEngine().Pack(request).Bins.Count;
 
-        var result = new ExhaustiveSearchEngine(maxItems: int.MaxValue, maxSearchNodes: 1).Pack(request);
+        var result = new ExhaustiveSearchEngine(searchBudget: 1).Pack(request);
 
         Assert.Equal(3, fallbackBars);
         Assert.Equal(fallbackBars, result.Bins.Count);
@@ -34,14 +34,20 @@ public class ExhaustiveSearchEngineTests
     }
 
     [Fact]
-    public void Above_the_part_threshold_the_fallback_is_recorded()
+    public void Searches_jobs_with_more_than_25_parts()
     {
-        var items = new[] { 4.0, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
+        // 10 x 4" and 20 x 3" on 10" bars: First Fit cuts {4,4} five times and {3,3,3}/{3,3} seven
+        // times (12 bars); {4,3,3} ten times uses 10.
+        var items = Enumerable.Repeat(4.0, 10).Concat(Enumerable.Repeat(3.0, 20))
+            .Select((length, i) => new BinItem($"P{i}", length)).ToList();
+        var request = new PackingRequest(items, 10, 0);
 
-        var result = new ExhaustiveSearchEngine(maxItems: 2).Pack(new PackingRequest(items, 10, 0));
+        var result = new ExhaustiveSearchEngine().Pack(request);
 
-        Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
-        Assert.Equal(3, result.Bins.Sum(b => b.Items.Count));
+        Assert.Equal(12, new FirstFitEngine().Pack(request).Bins.Count);
+        Assert.Equal(10, result.Bins.Count);
+        Assert.Empty(result.ItemsNotUsed);
+        Assert.Null(result.FallbackEngine);
     }
 
     [Fact]

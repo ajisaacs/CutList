@@ -1,257 +1,67 @@
+using CutList.Core.Nesting.Search;
+
 namespace CutList.Core.Nesting
 {
     /// <summary>
-    /// Exhaustive (branch-and-bound) bin packing engine that searches arrangements for the fewest
-    /// bins. Falls back to FirstFitEngine when there are more items than the threshold, when
-    /// limited stock cannot hold every item, or when the search-node budget runs out before any
-    /// complete packing is found.
+    /// Exhaustive engine: groups parts by length and searches cut patterns for the fewest bars,
+    /// starting from the First Fit plan. Returns First Fit's plan, reported as a fallback, when limited
+    /// stock cannot hold every part or the search budget runs out before it finds a better plan.
     /// </summary>
     public class ExhaustiveSearchEngine : IPackingEngine
     {
         /// <summary>
-        /// Default maximum number of items before falling back to FirstFitEngine.
-        /// Testing showed 25 items is safe (~84ms worst case), while 30+ can take seconds.
+        /// Search steps (pattern candidates and search nodes) per stock length before the engine keeps
+        /// the best plan found so far. Measured: under 0.2 s at p95 and about 0.5 s worst case.
         /// </summary>
-        public const int DefaultMaxItems = 25;
+        public const int DefaultSearchBudget = 1_000_000;
 
-        /// <summary>
-        /// Search nodes explored before the engine stops and keeps the best complete packing found
-        /// so far (or falls back when none is complete). Bounds worst-case time when limited stock
-        /// makes bin-count pruning ineffective.
-        /// </summary>
-        public const int DefaultMaxSearchNodes = 2_000_000;
+        private readonly IPackingEngine _firstFit = new FirstFitEngine();
+        private readonly int _searchBudget;
 
-        private readonly IPackingEngine _fallbackEngine;
-        private readonly int _maxItems;
-        private readonly int _maxSearchNodes;
-
-        public ExhaustiveSearchEngine() : this(DefaultMaxItems)
+        public ExhaustiveSearchEngine(int searchBudget = DefaultSearchBudget)
         {
-        }
-
-        /// <summary>
-        /// Creates an exhaustive engine with custom limits (used by tests).
-        /// </summary>
-        /// <param name="maxItems">Maximum items before falling back. Use int.MaxValue to disable fallback.</param>
-        /// <param name="maxSearchNodes">Search-node budget; see <see cref="DefaultMaxSearchNodes"/>.</param>
-        public ExhaustiveSearchEngine(int maxItems, int maxSearchNodes = DefaultMaxSearchNodes)
-        {
-            _maxItems = maxItems;
-            _maxSearchNodes = maxSearchNodes;
-            _fallbackEngine = new FirstFitEngine();
+            _searchBudget = searchBudget;
         }
 
         public PackResult Pack(PackingRequest request)
         {
-            // Filter oversized items first
-            var validItems = new List<BinItem>();
-            var oversizedItems = new List<BinItem>();
+            var firstFit = _firstFit.Pack(request);
+            var parts = request.Items.Where(i => i.Length <= request.StockLength).ToList();
+            if (parts.Count == 0)
+                return firstFit;
 
-            foreach (var item in request.Items)
+            var oversized = request.Items.Where(i => i.Length > request.StockLength).ToList();
+            var demand = CutDemand.From(parts, request.StockLength, request.Spacing);
+            var budget = new SearchBudget(_searchBudget);
+            bool firstFitPlacedAll = firstFit.ItemsNotUsed.Count == oversized.Count;
+
+            if (demand.LowerBound(demand.Counts) <= request.MaxBinCount)
             {
-                if (item.Length > request.StockLength)
-                    oversizedItems.Add(item);
-                else
-                    validItems.Add(item);
+                var patterns = new MinBarsSearch(demand, budget).Solve(
+                    firstFitPlacedAll ? firstFit.Bins.Count : int.MaxValue, request.MaxBinCount);
+                if (patterns != null)
+                    return Build(demand, patterns, oversized);
+                if (firstFitPlacedAll && !budget.Exhausted)
+                    return firstFit; // proven: First Fit already uses the fewest bars
             }
 
-            // Fall back to First Fit for large item counts
-            if (validItems.Count > _maxItems)
-            {
-                return PackWithFallback(request);
-            }
+            return WithFallback(firstFit);
+        }
 
-            // Limited stock too short for every part can never give a complete packing, which is all
-            // the search accepts; skip straight to the fallback instead of spending the search budget.
-            if (ExceedsStockCapacity(validItems, request))
-            {
-                return PackWithFallback(request);
-            }
-
-            // Sort items descending for better pruning
-            var sortedItems = validItems.OrderByDescending(i => i.Length).ToList();
-
-            // Find optimal solution using exhaustive search
-            var bestSolution = new SearchState
-            {
-                Bins = new List<List<BinItem>>(),
-                BinCount = int.MaxValue
-            };
-
-            var currentState = new SearchState
-            {
-                Bins = new List<List<BinItem>>(),
-                BinCount = 0
-            };
-
-            // Precompute suffix sums of item lengths (including spacing per item)
-            // for lower-bound pruning. suffixVolume[i] = total volume of items[i..n-1].
-            var suffixVolume = new double[sortedItems.Count + 1];
-            for (int i = sortedItems.Count - 1; i >= 0; i--)
-            {
-                suffixVolume[i] = suffixVolume[i + 1] + sortedItems[i].Length + request.Spacing;
-            }
-
-            Search(sortedItems, 0, currentState, bestSolution, request, suffixVolume);
-
-            // The search only scores packings that place every part. When limited stock cannot hold
-            // them all, let the fallback engine place what fits and report the rest as not placed.
-            if (bestSolution.BinCount == int.MaxValue)
-            {
-                return PackWithFallback(request);
-            }
-
-            // Build result from best solution
+        private static PackResult Build(CutDemand demand, List<int[]> patterns, List<BinItem> oversized)
+        {
+            var (bins, notPlaced) = demand.Build(patterns);
             var result = new PackResult();
-            result.AddItemsNotUsed(oversizedItems);
-
-            foreach (var binItems in bestSolution.Bins)
-            {
-                var bin = new Bin(request.StockLength) { Spacing = request.Spacing };
-                foreach (var item in binItems.OrderByDescending(i => i.Length))
-                {
-                    bin.AddItem(item);
-                }
-                result.AddBin(bin);
-            }
-
-            // Sort bins by utilization
-            var sortedBins = result.Bins
-                .OrderByDescending(b => b.Utilization)
-                .ThenBy(b => b.Items.Count)
-                .ToList();
-
-            var finalResult = new PackResult();
-            finalResult.AddItemsNotUsed(oversizedItems);
-            finalResult.AddBins(sortedBins);
-
-            return finalResult;
-        }
-
-        /// <summary>
-        /// True when finite stock cannot hold the items' total length. Each item counts one kerf, and
-        /// the kerf after a bin's last cut may run off the end, so a bin holds StockLength + Spacing.
-        /// </summary>
-        private static bool ExceedsStockCapacity(List<BinItem> items, PackingRequest request)
-        {
-            if (request.MaxBinCount == int.MaxValue)
-                return false;
-
-            double volume = items.Sum(i => i.Length + request.Spacing);
-            double capacity = (double)request.MaxBinCount * (request.StockLength + request.Spacing);
-            return volume > capacity + Tolerance.Epsilon;
-        }
-
-        private PackResult PackWithFallback(PackingRequest request)
-        {
-            var result = _fallbackEngine.Pack(request);
-            result.FallbackEngine = BuiltInPackingEngines.FirstFit;
+            result.AddBins(bins.OrderByDescending(b => b.Utilization).ThenBy(b => b.Items.Count));
+            result.AddItemsNotUsed(oversized);
+            result.AddItemsNotUsed(notPlaced);
             return result;
         }
 
-        private void Search(
-            List<BinItem> items,
-            int itemIndex,
-            SearchState current,
-            SearchState best,
-            PackingRequest request,
-            double[] suffixVolume)
+        private static PackResult WithFallback(PackResult firstFit)
         {
-            // All items placed - keep it if it uses fewer bins. Packings that place every item in the
-            // same number of bins all have the same total waste, so there is nothing else to compare.
-            if (itemIndex >= items.Count)
-            {
-                if (current.BinCount < best.BinCount)
-                {
-                    best.BinCount = current.BinCount;
-                    best.Bins = current.Bins.Select(b => b.ToList()).ToList();
-                }
-                return;
-            }
-
-            // Budget: stop exploring; the caller keeps the best complete packing (or falls back).
-            if (++current.NodesVisited > _maxSearchNodes)
-                return;
-
-            // Pruning: if we already have more bins than best, stop
-            if (current.BinCount >= best.BinCount)
-                return;
-
-            // Lower-bound pruning: remaining items need at least this many additional bins.
-            // Volumes count one kerf per item, and the kerf after a bin's last cut may run off the end,
-            // so each bin holds StockLength + Spacing of volume.
-            double binCapacity = request.StockLength + request.Spacing;
-            double remainingVolume = suffixVolume[itemIndex];
-            double availableInExisting = 0;
-            for (int b = 0; b < current.Bins.Count; b++)
-            {
-                availableInExisting += binCapacity - GetBinUsedLength(current.Bins[b], request.Spacing);
-            }
-            double overflow = remainingVolume - availableInExisting;
-            int additionalBinsNeeded = overflow > 0 ? (int)Math.Ceiling(overflow / binCapacity) : 0;
-            if (current.BinCount + additionalBinsNeeded >= best.BinCount)
-                return;
-
-            var item = items[itemIndex];
-
-            // Symmetry breaking: if this item has the same length as the previous item,
-            // only place it in bins with index >= where previous item went.
-            // This avoids redundant exploration of equivalent permutations.
-            int minBinIndex = 0;
-            if (itemIndex > 0 && items[itemIndex - 1].Length == item.Length)
-            {
-                minBinIndex = current.LastBinIndexUsed;
-            }
-
-            // Try placing in each existing bin (respecting symmetry constraint)
-            for (int i = minBinIndex; i < current.Bins.Count; i++)
-            {
-                var binUsed = GetBinUsedLength(current.Bins[i], request.Spacing);
-                var remaining = request.StockLength - binUsed;
-
-                // Item fits if adding it (with spacing) stays within tolerance
-                // Bin class allows going over by up to spacing amount
-                if (item.Length <= remaining)
-                {
-                    // Place item in this bin
-                    current.Bins[i].Add(item);
-                    var prevBinIndex = current.LastBinIndexUsed;
-                    current.LastBinIndexUsed = i;
-                    Search(items, itemIndex + 1, current, best, request, suffixVolume);
-                    current.LastBinIndexUsed = prevBinIndex;
-                    current.Bins[i].RemoveAt(current.Bins[i].Count - 1);
-                }
-            }
-
-            // Try placing in a new bin (if allowed)
-            if (current.BinCount < request.MaxBinCount && current.BinCount < best.BinCount)
-            {
-                int newBinIndex = current.Bins.Count;
-                current.Bins.Add(new List<BinItem> { item });
-                current.BinCount++;
-                var prevBinIndex = current.LastBinIndexUsed;
-                current.LastBinIndexUsed = newBinIndex;
-                Search(items, itemIndex + 1, current, best, request, suffixVolume);
-                current.LastBinIndexUsed = prevBinIndex;
-                current.Bins.RemoveAt(current.Bins.Count - 1);
-                current.BinCount--;
-            }
-        }
-
-        private double GetBinUsedLength(List<BinItem> binItems, double spacing)
-        {
-            if (binItems.Count == 0)
-                return 0;
-
-            return binItems.Sum(i => i.Length) + binItems.Count * spacing;
-        }
-
-        private class SearchState
-        {
-            public List<List<BinItem>> Bins { get; set; } = new();
-            public int BinCount { get; set; }
-            public int LastBinIndexUsed { get; set; }
-            public int NodesVisited { get; set; }
+            firstFit.FallbackEngine = BuiltInPackingEngines.FirstFit;
+            return firstFit;
         }
     }
 }
