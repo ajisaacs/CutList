@@ -1,11 +1,12 @@
 namespace CutList.Core.Nesting.Pipeline
 {
     /// <summary>
-    /// Attempts to improve bin utilization by swapping items.
-    /// For each bin, tries replacing a packed item with unpacked items
-    /// to achieve better space utilization.
+    /// Fills limited bins tighter by swapping a packed item for leftover items.
+    /// For each bin, tries replacing a packed item with one or more items that are still unplaced,
+    /// keeping the swap when it leaves less room in the bin. Only acts when items are left over,
+    /// i.e. after the bin limit has been reached.
     /// </summary>
-    public class OptimizationStep : IPackingStep
+    public class SwapInLeftoversStep : IPackingStep
     {
         public void Execute(PackingContext context)
         {

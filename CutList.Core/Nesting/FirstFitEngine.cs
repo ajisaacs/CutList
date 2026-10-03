@@ -18,7 +18,7 @@ namespace CutList.Core.Nesting
                 .AddStep(new FilterOversizedItemsStep())
                 .AddStep(new SortItemsDescendingStep())
                 .AddStep(new FirstFitDecreasingStep())
-                .AddStep(new OptimizationStep())
+                .AddStep(new SwapInLeftoversStep())
                 .AddStep(new SortBinItemsStep())
                 .AddStep(new DuplicateBinsStep())
                 .AddStep(new SortBinsByUtilizationStep());
