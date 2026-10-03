@@ -30,6 +30,16 @@
     </div>
 }
 
+@if (!string.IsNullOrEmpty(conflictMessage))
+{
+    <div id="job-conflict-alert" class="alert alert-danger d-flex justify-content-between align-items-start mb-3 print-screen-only" role="alert">
+        <div>
+            <i class="bi bi-exclamation-octagon me-2"></i>@conflictMessage
+        </div>
+        <button type="button" class="btn-close" aria-label="Dismiss" @onclick="() => conflictMessage = null"></button>
+    </div>
+}
+
 @if (!string.IsNullOrEmpty(loadError))
 {
     <div class="alert alert-danger">
@@ -516,11 +526,72 @@ else
         ? ArchUnits.FormatInches(inches)
         : ArchUnits.FormatFromInches(inches);
 
+    // Set when JobService rejects a change because the job was locked or changed in another session.
+    private string? conflictMessage;
+
+    /// <summary>
+    /// Runs a persisted job change. JobService is authoritative for lock enforcement; if it rejects
+    /// the change because the job is locked (or changed) elsewhere, reload the persisted job and its
+    /// saved result instead of letting the exception end the circuit.
+    /// </summary>
+    /// <param name="progress">Optional description of partial progress for multi-row operations.</param>
+    private async Task<bool> TryJobChangeAsync(Func<Task> change, Func<string?>? progress = null)
+    {
+        conflictMessage = null;
+        try
+        {
+            await change();
+            return true;
+        }
+        catch (JobLockedException ex)
+        {
+            await RecoverFromConflictAsync(ex.Message, progress?.Invoke());
+        }
+        catch (JobMutationConflictException ex)
+        {
+            await RecoverFromConflictAsync(ex.Message, progress?.Invoke());
+        }
+        return false;
+    }
+
+    private async Task RecoverFromConflictAsync(string reason, string? progress)
+    {
+        // Close stale editors; their input was not saved.
+        showPartForm = false;
+        editingPart = null;
+        showStockModal = false;
+        editingStock = null;
+        importCandidates.Clear();
+
+        conflictMessage = string.Join(" ", new[]
+        {
+            reason,
+            progress,
+            progress == null
+                ? "Your change was not saved; the job has been reloaded to show its saved state."
+                : "The job has been reloaded to show its saved state."
+        }.Where(text => !string.IsNullOrWhiteSpace(text)));
+
+        var current = await JobService.GetByIdAsync(Id!.Value);
+        if (current == null)
+        {
+            Navigation.NavigateTo("jobs");
+            return;
+        }
+
+        job = current;
+        packResult = null;
+        summary = null;
+        if (job.OptimizationResultJson != null)
+        {
+            await LoadSavedResultsAsync();
+        }
+    }
+
     private async Task UnlockJob()
     {
-        if (Id.HasValue)
+        if (Id.HasValue && await TryJobChangeAsync(() => JobService.UnlockAsync(Id.Value)))
         {
-            await JobService.UnlockAsync(Id.Value);
             job = (await JobService.GetByIdAsync(Id.Value))!;
         }
     }
@@ -721,9 +792,8 @@ else
                 var created = await JobService.CreateAsync(job);
                 Navigation.NavigateTo($"jobs/{created.Id}");
             }
-            else
+            else if (await TryJobChangeAsync(() => JobService.UpdateAsync(job)))
             {
-                await JobService.UpdateAsync(job);
                 job = (await JobService.GetByIdAsync(Id!.Value))!;
                 // Clear in-memory results since they were invalidated
                 packResult = null;
@@ -821,7 +891,8 @@ else
             }
 
             newPart.MaterialId = partSelectedMaterialId;
-            await JobService.UpdatePartAsync(newPart);
+            if (!await TryJobChangeAsync(() => JobService.UpdatePartAsync(newPart)))
+                return;
         }
         else
         {
@@ -841,18 +912,27 @@ else
                 }
             }
 
-            foreach (var row in partRows)
+            // Rows are saved one at a time; stop at a lock and report what was saved.
+            var rowsAdded = 0;
+            var rowCount = partRows.Count;
+            var added = await TryJobChangeAsync(async () =>
             {
-                var part = new JobPart
+                foreach (var row in partRows)
                 {
-                    JobId = Id!.Value,
-                    MaterialId = partSelectedMaterialId,
-                    LengthInches = row.LengthInches,
-                    Quantity = row.Quantity,
-                    Name = row.Name ?? string.Empty
-                };
-                await JobService.AddPartAsync(part);
-            }
+                    var part = new JobPart
+                    {
+                        JobId = Id!.Value,
+                        MaterialId = partSelectedMaterialId,
+                        LengthInches = row.LengthInches,
+                        Quantity = row.Quantity,
+                        Name = row.Name ?? string.Empty
+                    };
+                    await JobService.AddPartAsync(part);
+                    rowsAdded++;
+                }
+            }, () => rowCount > 1 ? $"{rowsAdded} of {rowCount} part rows were saved before that happened." : null);
+            if (!added)
+                return;
         }
 
         job = (await JobService.GetByIdAsync(Id!.Value))!;
@@ -865,7 +945,8 @@ else
 
     private async Task DeletePart(JobPart part)
     {
-        await JobService.DeletePartAsync(part.Id);
+        if (!await TryJobChangeAsync(() => JobService.DeletePartAsync(part.Id)))
+            return;
         job = (await JobService.GetByIdAsync(Id!.Value))!;
         packResult = null;
         summary = null;
@@ -1216,12 +1297,16 @@ else
         try
         {
             var kerf = job.CuttingTool?.KerfInches ?? 0.125m;
-            packResult = await PackingService.PackAsync(job.Parts, kerf, job.Stock.Count > 0 ? job.Stock : null);
-            summary = PackingService.GetSummary(packResult);
+            var result = await PackingService.PackAsync(job.Parts, kerf, job.Stock.Count > 0 ? job.Stock : null);
 
-            // Save to database
-            var json = PackingService.SerializeResult(packResult);
-            await JobService.SaveOptimizationResultAsync(Id!.Value, json, DateTime.UtcNow);
+            // Save first; only show the new plan once it is persisted. If the job was locked in the
+            // meantime, the provisional result is discarded and the saved (ordered) plan is shown.
+            var json = PackingService.SerializeResult(result);
+            if (!await TryJobChangeAsync(() => JobService.SaveOptimizationResultAsync(Id!.Value, json, DateTime.UtcNow)))
+                return;
+
+            packResult = result;
+            summary = PackingService.GetSummary(result);
 
             // Refresh job to get updated OptimizedAt
             job = (await JobService.GetByIdAsync(Id!.Value))!;
@@ -1237,8 +1322,10 @@ else
         lockingJob = true;
         try
         {
-            await JobService.LockAsync(Id!.Value);
-            job = (await JobService.GetByIdAsync(Id!.Value))!;
+            if (await TryJobChangeAsync(() => JobService.LockAsync(Id!.Value)))
+            {
+                job = (await JobService.GetByIdAsync(Id!.Value))!;
+            }
         }
         finally
         {
@@ -1372,14 +1459,12 @@ else
         newStock.LengthInches = selectedStock.LengthInches;
         newStock.IsCustomLength = false;
 
-        if (editingStock == null)
-        {
-            await JobService.AddStockAsync(newStock);
-        }
-        else
-        {
-            await JobService.UpdateStockAsync(newStock);
-        }
+        var stockToSave = newStock;
+        var saved = await TryJobChangeAsync(() => editingStock == null
+            ? JobService.AddStockAsync(stockToSave)
+            : JobService.UpdateStockAsync(stockToSave));
+        if (!saved)
+            return;
 
         job = (await JobService.GetByIdAsync(Id!.Value))!;
         showStockModal = false;
@@ -1419,14 +1504,12 @@ else
         newStock.StockItemId = null;
         newStock.IsCustomLength = true;
 
-        if (editingStock == null)
-        {
-            await JobService.AddStockAsync(newStock);
-        }
-        else
-        {
-            await JobService.UpdateStockAsync(newStock);
-        }
+        var stockToSave = newStock;
+        var saved = await TryJobChangeAsync(() => editingStock == null
+            ? JobService.AddStockAsync(stockToSave)
+            : JobService.UpdateStockAsync(stockToSave));
+        if (!saved)
+            return;
 
         job = (await JobService.GetByIdAsync(Id!.Value))!;
         showStockModal = false;
@@ -1437,7 +1520,8 @@ else
 
     private async Task DeleteStock(JobStock stock)
     {
-        await JobService.DeleteStockAsync(stock.Id);
+        if (!await TryJobChangeAsync(() => JobService.DeleteStockAsync(stock.Id)))
+            return;
         job = (await JobService.GetByIdAsync(Id!.Value))!;
         packResult = null;
         summary = null;
@@ -1501,20 +1585,28 @@ else
 
         try
         {
-            foreach (var candidate in selected)
+            // Items are saved one at a time; stop at a lock and report what was saved.
+            var imported = 0;
+            var completed = await TryJobChangeAsync(async () =>
             {
-                var jobStock = new JobStock
+                foreach (var candidate in selected)
                 {
-                    JobId = Id!.Value,
-                    MaterialId = candidate.StockItem.MaterialId,
-                    StockItemId = candidate.StockItem.Id,
-                    LengthInches = candidate.StockItem.LengthInches,
-                    Quantity = candidate.Quantity,
-                    Priority = candidate.Priority,
-                    IsCustomLength = false
-                };
-                await JobService.AddStockAsync(jobStock);
-            }
+                    var jobStock = new JobStock
+                    {
+                        JobId = Id!.Value,
+                        MaterialId = candidate.StockItem.MaterialId,
+                        StockItemId = candidate.StockItem.Id,
+                        LengthInches = candidate.StockItem.LengthInches,
+                        Quantity = candidate.Quantity,
+                        Priority = candidate.Priority,
+                        IsCustomLength = false
+                    };
+                    await JobService.AddStockAsync(jobStock);
+                    imported++;
+                }
+            }, () => selected.Count > 1 ? $"{imported} of {selected.Count} stock items were imported before that happened." : null);
+            if (!completed)
+                return;
 
             job = (await JobService.GetByIdAsync(Id!.Value))!;
             showStockModal = false;

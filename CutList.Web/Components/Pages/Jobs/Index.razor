@@ -23,6 +23,14 @@
     assign stock materials, then run the optimizer to generate an efficient cut list that minimizes waste.
 </p>
 
+@if (!string.IsNullOrEmpty(deleteError))
+{
+    <div class="alert alert-danger d-flex justify-content-between align-items-start" role="alert">
+        <div>@deleteError</div>
+        <button type="button" class="btn-close" aria-label="Dismiss" @onclick="() => deleteError = null"></button>
+    </div>
+}
+
 @if (loading)
 {
     <p><em>Loading...</em></p>
@@ -65,7 +73,14 @@ else
                         <div class="table-actions">
                             <a href="jobs/@job.Id" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
                             <button class="btn btn-sm btn-outline-secondary" @onclick="() => DuplicateJob(job)" title="Copy"><i class="bi bi-copy"></i></button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(job)" title="Delete"><i class="bi bi-trash"></i></button>
+                            @if (job.IsLocked)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" disabled title="Delete unavailable — unlock the job first"><i class="bi bi-trash"></i></button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(job)" title="Delete"><i class="bi bi-trash"></i></button>
+                            }
                         </div>
                     </td>
                 </tr>
@@ -91,6 +106,7 @@ else
     private ConfirmDialog deleteDialog = null!;
     private Job? jobToDelete;
     private string deleteMessage = "";
+    private string? deleteError;
 
     private IEnumerable<Job> pagedJobs => jobs.Skip((currentPage - 1) * pageSize).Take(pageSize);
 
@@ -123,15 +139,33 @@ else
 
     private async Task DeleteConfirmed()
     {
-        if (jobToDelete != null)
+        if (jobToDelete == null)
+            return;
+
+        deleteError = null;
+        try
         {
             await JobService.DeleteAsync(jobToDelete.Id);
-            jobs = await JobService.GetAllAsync();
-
-            var totalPages = (int)Math.Ceiling((double)jobs.Count / pageSize);
-            if (currentPage > totalPages && totalPages > 0)
-                currentPage = totalPages;
         }
+        catch (JobLockedException ex)
+        {
+            // Locked in another session after the confirmation opened; the service kept it.
+            deleteError = $"\"{jobToDelete.DisplayName}\" was not deleted. {ex.Message}";
+        }
+        catch (JobMutationConflictException ex)
+        {
+            deleteError = $"\"{jobToDelete.DisplayName}\" was not deleted. {ex.Message}";
+        }
+        finally
+        {
+            jobToDelete = null;
+        }
+
+        jobs = await JobService.GetAllAsync();
+
+        var totalPages = (int)Math.Ceiling((double)jobs.Count / pageSize);
+        if (currentPage > totalPages && totalPages > 0)
+            currentPage = totalPages;
     }
 
     private void OnPageChanged(int page) => currentPage = page;
