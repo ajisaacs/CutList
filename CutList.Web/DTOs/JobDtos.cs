@@ -13,6 +13,12 @@ public class JobDto
     public DateTime? UpdatedAt { get; set; }
     public int PartCount { get; set; }
     public int StockCount { get; set; }
+
+    /// <summary>Read-only: true when materials have been ordered and the job cannot be changed.</summary>
+    public bool IsLocked { get; set; }
+
+    /// <summary>Read-only: when the job was locked (UTC), or null when unlocked.</summary>
+    public DateTime? LockedAt { get; set; }
 }
 
 public class JobDetailDto : JobDto

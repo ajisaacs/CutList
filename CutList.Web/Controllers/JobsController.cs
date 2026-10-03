@@ -340,6 +340,10 @@ public class JobsController : ControllerBase
 
     // --- Mapping helpers ---
 
+    // Lock timestamps are stored as UTC; label them so clients do not read them as local time.
+    private static DateTime? AsUtc(DateTime? value) =>
+        value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
+
     private static JobDto MapToDto(Job j) => new()
     {
         Id = j.Id,
@@ -352,7 +356,9 @@ public class JobsController : ControllerBase
         CreatedAt = j.CreatedAt,
         UpdatedAt = j.UpdatedAt,
         PartCount = j.Parts?.Count ?? 0,
-        StockCount = j.Stock?.Count ?? 0
+        StockCount = j.Stock?.Count ?? 0,
+        IsLocked = j.IsLocked,
+        LockedAt = AsUtc(j.LockedAt)
     };
 
     private static JobDetailDto MapToDetailDto(Job j) => new()
@@ -368,6 +374,8 @@ public class JobsController : ControllerBase
         UpdatedAt = j.UpdatedAt,
         PartCount = j.Parts?.Count ?? 0,
         StockCount = j.Stock?.Count ?? 0,
+        IsLocked = j.IsLocked,
+        LockedAt = AsUtc(j.LockedAt),
         Parts = j.Parts?.Select(MapPartToDto).ToList() ?? new(),
         Stock = j.Stock?.Select(MapStockToDto).ToList() ?? new()
     };

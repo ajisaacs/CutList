@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Net;
 using ModelContextProtocol.Server;
 
 namespace CutList.Mcp;
@@ -19,7 +20,7 @@ public class JobTools
 
     #region Jobs
 
-    [McpServerTool(Name = "list_jobs"), Description("Lists all jobs in the system with summary info (job number, name, customer, part/stock counts).")]
+    [McpServerTool(Name = "list_jobs"), Description("Lists all jobs in the system with summary info (job number, name, customer, part/stock counts, lock state).")]
     public async Task<JobListResult> ListJobs()
     {
         var jobs = await _api.GetJobsAsync();
@@ -39,12 +40,14 @@ public class JobTools
                 CreatedAt = j.CreatedAt,
                 UpdatedAt = j.UpdatedAt,
                 PartCount = j.PartCount,
-                StockCount = j.StockCount
+                StockCount = j.StockCount,
+                IsLocked = j.IsLocked,
+                LockedAt = j.LockedAt
             }).ToList()
         };
     }
 
-    [McpServerTool(Name = "get_job"), Description("Gets full job details including all parts and stock assignments.")]
+    [McpServerTool(Name = "get_job"), Description("Gets full job details including all parts and stock assignments, and whether the job is locked.")]
     public async Task<JobDetailResult> GetJob(
         [Description("Job ID")]
         int jobId)
@@ -96,7 +99,7 @@ public class JobTools
         }
     }
 
-    [McpServerTool(Name = "update_job"), Description("Updates job details (name, customer, cutting tool, notes). Only provided fields are updated.")]
+    [McpServerTool(Name = "update_job"), Description("Updates job details (name, customer, cutting tool, notes). Only provided fields are updated. Fails without changes if the job is locked (materials ordered); it must be unlocked in the CutList web UI first.")]
     public async Task<JobDetailResult> UpdateJob(
         [Description("Job ID")]
         int jobId,
@@ -127,7 +130,7 @@ public class JobTools
         }
     }
 
-    [McpServerTool(Name = "delete_job"), Description("Deletes a job and all its parts and stock assignments.")]
+    [McpServerTool(Name = "delete_job"), Description("Deletes a job and all its parts and stock assignments. Fails without changes if the job is locked (materials ordered); it must be unlocked in the CutList web UI first.")]
     public async Task<SimpleResult> DeleteJob(
         [Description("Job ID")]
         int jobId)
@@ -147,7 +150,7 @@ public class JobTools
 
     #region Parts
 
-    [McpServerTool(Name = "add_job_part"), Description("Adds a single part to a job.")]
+    [McpServerTool(Name = "add_job_part"), Description("Adds a single part to a job. Fails without changes if the job is locked (materials ordered); it must be unlocked in the CutList web UI first.")]
     public async Task<JobPartResult> AddJobPart(
         [Description("Job ID")]
         int jobId,
@@ -178,7 +181,7 @@ public class JobTools
         }
     }
 
-    [McpServerTool(Name = "add_job_parts"), Description("Batch adds multiple parts to a job. Ideal for entering a full BOM (bill of materials). Returns the complete job state after all parts are added.")]
+    [McpServerTool(Name = "add_job_parts"), Description("Batch adds multiple parts to a job, one at a time. Ideal for entering a full BOM (bill of materials). Returns the complete job state afterwards. If the job is or becomes locked (materials ordered), it stops at that part; parts added before the lock remain and the error reports how many were added.")]
     public async Task<JobDetailResult> AddJobParts(
         [Description("Job ID")]
         int jobId,
@@ -186,6 +189,7 @@ public class JobTools
         PartEntry[] parts)
     {
         var errors = new List<string>();
+        string? stopped = null;
         int added = 0;
 
         foreach (var part in parts)
@@ -194,6 +198,13 @@ public class JobTools
             {
                 await _api.AddJobPartAsync(jobId, part.MaterialId, part.Name, part.Length, part.Quantity);
                 added++;
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+            {
+                // The job is locked (or changed): every remaining part would be rejected too.
+                // Parts are added one request at a time, so earlier parts stay added.
+                stopped = $"Stopped at '{part.Name}': {ex.Message}";
+                break;
             }
             catch (HttpRequestException ex)
             {
@@ -210,12 +221,19 @@ public class JobTools
 
             var result = new JobDetailResult
             {
-                Success = errors.Count == 0,
+                Success = errors.Count == 0 && stopped == null,
                 Job = MapJobDetail(job)
             };
 
-            if (errors.Count > 0)
-                result.Error = $"Added {added}/{parts.Length} parts. Errors: {string.Join("; ", errors)}";
+            if (!result.Success)
+            {
+                var details = new List<string>();
+                if (errors.Count > 0)
+                    details.Add($"Errors: {string.Join("; ", errors)}");
+                if (stopped != null)
+                    details.Add(stopped);
+                result.Error = $"Added {added}/{parts.Length} parts. {string.Join(" ", details)}";
+            }
 
             return result;
         }
@@ -225,7 +243,7 @@ public class JobTools
         }
     }
 
-    [McpServerTool(Name = "delete_job_part"), Description("Removes a part from a job.")]
+    [McpServerTool(Name = "delete_job_part"), Description("Removes a part from a job. Fails without changes if the job is locked (materials ordered); it must be unlocked in the CutList web UI first.")]
     public async Task<SimpleResult> DeleteJobPart(
         [Description("Job ID")]
         int jobId,
@@ -247,7 +265,7 @@ public class JobTools
 
     #region Stock
 
-    [McpServerTool(Name = "add_job_stock"), Description("Adds a stock material assignment to a job. Stock defines what material lengths are available for cutting.")]
+    [McpServerTool(Name = "add_job_stock"), Description("Adds a stock material assignment to a job. Stock defines what material lengths are available for cutting. Fails without changes if the job is locked (materials ordered); it must be unlocked in the CutList web UI first.")]
     public async Task<JobStockResult> AddJobStock(
         [Description("Job ID")]
         int jobId,
@@ -282,7 +300,7 @@ public class JobTools
         }
     }
 
-    [McpServerTool(Name = "delete_job_stock"), Description("Removes a stock assignment from a job.")]
+    [McpServerTool(Name = "delete_job_stock"), Description("Removes a stock assignment from a job. Fails without changes if the job is locked (materials ordered); it must be unlocked in the CutList web UI first.")]
     public async Task<SimpleResult> DeleteJobStock(
         [Description("Job ID")]
         int jobId,
@@ -304,7 +322,7 @@ public class JobTools
 
     #region Optimization
 
-    [McpServerTool(Name = "optimize_job"), Description("Runs bin packing optimization on a job. The job must have parts defined, and stock must be explicitly configured on the job (via add_job_stock) for each material used by its parts - there is no fallback to inventory; parts with no matching stock configured come back as items not placed. Returns optimized cut layouts per material with efficiency stats.")]
+    [McpServerTool(Name = "optimize_job"), Description("Runs bin packing optimization on a job. The job must have parts defined, and stock must be explicitly configured on the job (via add_job_stock) for each material used by its parts - there is no fallback to inventory; parts with no matching stock configured come back as items not placed. Returns optimized cut layouts per material with efficiency stats. This is a preview: it does not save results to the job and works on locked jobs without changing them.")]
     public async Task<OptimizeJobResult> OptimizeJob(
         [Description("Job ID")]
         int jobId,
@@ -390,6 +408,8 @@ public class JobTools
         UpdatedAt = j.UpdatedAt,
         PartCount = j.PartCount,
         StockCount = j.StockCount,
+        IsLocked = j.IsLocked,
+        LockedAt = j.LockedAt,
         Parts = j.Parts.Select(MapPart).ToList(),
         Stock = j.Stock.Select(MapStock).ToList()
     };
@@ -473,6 +493,10 @@ public class JobSummaryDto
     public DateTime? UpdatedAt { get; set; }
     public int PartCount { get; set; }
     public int StockCount { get; set; }
+    [Description("True when materials have been ordered; the job cannot be changed until it is unlocked in the CutList web UI.")]
+    public bool IsLocked { get; set; }
+    [Description("When the job was locked (UTC), or null when unlocked.")]
+    public DateTime? LockedAt { get; set; }
 }
 
 public class JobDetailDto
@@ -488,6 +512,10 @@ public class JobDetailDto
     public DateTime? UpdatedAt { get; set; }
     public int PartCount { get; set; }
     public int StockCount { get; set; }
+    [Description("True when materials have been ordered; the job cannot be changed until it is unlocked in the CutList web UI.")]
+    public bool IsLocked { get; set; }
+    [Description("When the job was locked (UTC), or null when unlocked.")]
+    public DateTime? LockedAt { get; set; }
     public List<JobPartSummaryDto> Parts { get; set; } = new();
     public List<JobStockSummaryDto> Stock { get; set; } = new();
 }

@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace CutList.Mcp;
 
@@ -113,34 +115,34 @@ public class ApiClient
     public async Task<ApiJobDetailDto?> UpdateJobAsync(int id, string? name, string? customer, int? cuttingToolId, string? notes)
     {
         var response = await _http.PutAsJsonAsync($"api/jobs/{id}", new { Name = name, Customer = customer, CuttingToolId = cuttingToolId, Notes = notes });
-        response.EnsureSuccessStatusCode();
+        await EnsureJobSuccessAsync(response);
         return await response.Content.ReadFromJsonAsync<ApiJobDetailDto>();
     }
 
     public async Task DeleteJobAsync(int id)
     {
         var response = await _http.DeleteAsync($"api/jobs/{id}");
-        response.EnsureSuccessStatusCode();
+        await EnsureJobSuccessAsync(response);
     }
 
     public async Task<ApiJobPartDto?> AddJobPartAsync(int jobId, int materialId, string name, string length, int quantity)
     {
         var response = await _http.PostAsJsonAsync($"api/jobs/{jobId}/parts", new { MaterialId = materialId, Name = name, Length = length, Quantity = quantity });
-        response.EnsureSuccessStatusCode();
+        await EnsureJobSuccessAsync(response);
         return await response.Content.ReadFromJsonAsync<ApiJobPartDto>();
     }
 
     public async Task<ApiJobPartDto?> UpdateJobPartAsync(int jobId, int partId, int? materialId, string? name, string? length, int? quantity)
     {
         var response = await _http.PutAsJsonAsync($"api/jobs/{jobId}/parts/{partId}", new { MaterialId = materialId, Name = name, Length = length, Quantity = quantity });
-        response.EnsureSuccessStatusCode();
+        await EnsureJobSuccessAsync(response);
         return await response.Content.ReadFromJsonAsync<ApiJobPartDto>();
     }
 
     public async Task DeleteJobPartAsync(int jobId, int partId)
     {
         var response = await _http.DeleteAsync($"api/jobs/{jobId}/parts/{partId}");
-        response.EnsureSuccessStatusCode();
+        await EnsureJobSuccessAsync(response);
     }
 
     public async Task<ApiJobStockDto?> AddJobStockAsync(int jobId, int materialId, int? stockItemId, string length, int quantity, bool isCustomLength, int priority)
@@ -154,14 +156,14 @@ public class ApiClient
             IsCustomLength = isCustomLength,
             Priority = priority
         });
-        response.EnsureSuccessStatusCode();
+        await EnsureJobSuccessAsync(response);
         return await response.Content.ReadFromJsonAsync<ApiJobStockDto>();
     }
 
     public async Task DeleteJobStockAsync(int jobId, int stockId)
     {
         var response = await _http.DeleteAsync($"api/jobs/{jobId}/stock/{stockId}");
-        response.EnsureSuccessStatusCode();
+        await EnsureJobSuccessAsync(response);
     }
 
     public async Task<ApiPackResponseDto?> PackJobAsync(int jobId, decimal? kerfOverride = null)
@@ -169,6 +171,48 @@ public class ApiClient
         var response = await _http.PostAsJsonAsync($"api/jobs/{jobId}/pack", new { KerfOverride = kerfOverride });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ApiPackResponseDto>();
+    }
+
+    /// <summary>
+    /// Like EnsureSuccessStatusCode, but a recognized job conflict (job_locked / job_changed problem
+    /// response) becomes an HttpRequestException carrying the server's explanation and 409 status.
+    /// Anything else keeps the generic status-code error.
+    /// </summary>
+    private static async Task EnsureJobSuccessAsync(HttpResponseMessage response)
+    {
+        if (response.IsSuccessStatusCode)
+            return;
+
+        if (response.StatusCode == HttpStatusCode.Conflict && await TryReadJobConflictAsync(response) is { } conflict)
+            throw new HttpRequestException(conflict, null, response.StatusCode);
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    private static async Task<string?> TryReadJobConflictAsync(HttpResponseMessage response)
+    {
+        if (response.Content.Headers.ContentType?.MediaType != "application/problem+json")
+            return null;
+
+        try
+        {
+            var problem = await response.Content.ReadFromJsonAsync<JobConflictProblem>();
+            if (problem is not { Code: "job_locked" or "job_changed" } || string.IsNullOrWhiteSpace(problem.Detail))
+                return null;
+
+            var detail = problem.Detail.Length > 500 ? problem.Detail[..500] : problem.Detail;
+            return $"{detail} ({problem.Code})";
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private sealed class JobConflictProblem
+    {
+        public string? Code { get; set; }
+        public string? Detail { get; set; }
     }
 
     #endregion
@@ -219,6 +263,8 @@ public class ApiJobDto
     public DateTime? UpdatedAt { get; set; }
     public int PartCount { get; set; }
     public int StockCount { get; set; }
+    public bool IsLocked { get; set; }
+    public DateTime? LockedAt { get; set; }
 }
 
 public class ApiJobDetailDto : ApiJobDto
