@@ -114,4 +114,7 @@ public class QuickCreateJobDto
 public class PackJobRequestDto
 {
     public decimal? KerfOverride { get; set; }
+
+    /// <summary>Packing engine id (see GET /api/packing/engines); null uses the configured default.</summary>
+    public string? Engine { get; set; }
 }

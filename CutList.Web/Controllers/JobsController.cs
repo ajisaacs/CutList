@@ -1,4 +1,5 @@
 using CutList.Core.Formatting;
+using CutList.Core.Nesting;
 using CutList.Web.Data.Entities;
 using CutList.Web.DTOs;
 using CutList.Web.Services;
@@ -332,7 +333,15 @@ public class JobsController : ControllerBase
             ?? (await _jobService.GetDefaultCuttingToolAsync())?.KerfInches
             ?? 0.125m;
 
-        var result = await _packingService.PackAsync(job.Parts, kerf, job.Stock.Any() ? job.Stock : null);
+        MultiMaterialPackResult result;
+        try
+        {
+            result = await _packingService.PackAsync(job.Parts, kerf, job.Stock.Any() ? job.Stock : null, dto?.Engine);
+        }
+        catch (UnknownPackingEngineException ex)
+        {
+            return BadRequest(ex.Message);
+        }
         var summary = _packingService.GetSummary(result);
 
         return Ok(MapPackResult(result, summary));
@@ -410,7 +419,11 @@ public class JobsController : ControllerBase
 
     private static PackResponseDto MapPackResult(MultiMaterialPackResult result, MultiMaterialPackingSummary summary)
     {
-        var response = new PackResponseDto();
+        var response = new PackResponseDto
+        {
+            EngineId = result.EngineId,
+            EngineName = result.EngineName
+        };
 
         foreach (var mr in result.MaterialResults)
         {

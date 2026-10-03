@@ -2,6 +2,8 @@ namespace CutList.Web.DTOs;
 
 public class PackResponseDto
 {
+    public string EngineId { get; set; } = string.Empty;
+    public string EngineName { get; set; } = string.Empty;
     public List<MaterialPackResultDto> Materials { get; set; } = new();
     public PackingSummaryDto Summary { get; set; } = new();
 }

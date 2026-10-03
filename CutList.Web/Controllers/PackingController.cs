@@ -17,6 +17,18 @@ public class PackingController : ControllerBase
         _engines = engines;
     }
 
+    [HttpGet("engines")]
+    public ActionResult<List<PackingEngineDto>> GetEngines()
+    {
+        return Ok(_engines.Engines.Select(e => new PackingEngineDto
+        {
+            Id = e.Id,
+            Name = e.DisplayName,
+            Description = e.Description,
+            IsDefault = e.Id == _engines.Default.Id
+        }).ToList());
+    }
+
     [HttpPost("optimize")]
     public ActionResult<object> Optimize(StandalonePackRequestDto dto)
     {
@@ -63,11 +75,11 @@ public class PackingController : ControllerBase
             multiBins.Add(new MultiBin(length, bin.Quantity, bin.Priority));
         }
 
-        // Select engine (unknown ids are rejected, never silently replaced)
-        IEngine packingEngine;
+        // Select engine (Engine wins over the legacy Strategy field; unknown ids are rejected)
+        PackingEngineInfo engineInfo;
         try
         {
-            packingEngine = _engines.Create(dto.Strategy);
+            engineInfo = _engines.Resolve(dto.Engine ?? dto.Strategy);
         }
         catch (UnknownPackingEngineException ex)
         {
@@ -75,7 +87,7 @@ public class PackingController : ControllerBase
         }
 
         // Run packing
-        var engine = new MultiBinEngine(packingEngine)
+        var engine = new MultiBinEngine(_engines.Create(engineInfo.Id))
         {
             Spacing = (double)dto.Kerf
         };
@@ -114,6 +126,8 @@ public class PackingController : ControllerBase
 
         return Ok(new
         {
+            Engine = engineInfo.Id,
+            EngineName = engineInfo.DisplayName,
             Bins = bins,
             ItemsNotPlaced = itemsNotPlaced,
             Summary = new

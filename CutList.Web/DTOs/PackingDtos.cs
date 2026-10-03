@@ -5,7 +5,20 @@ public class StandalonePackRequestDto
     public List<PartInputDto> Parts { get; set; } = new();
     public List<StockBinInputDto> StockBins { get; set; } = new();
     public decimal Kerf { get; set; } = 0.125m;
-    public string Strategy { get; set; } = "advanced";
+
+    /// <summary>Packing engine id (see GET /api/packing/engines); null uses the configured default.</summary>
+    public string? Engine { get; set; }
+
+    /// <summary>Legacy name for <see cref="Engine"/>; used only when Engine is not set.</summary>
+    public string? Strategy { get; set; }
+}
+
+public class PackingEngineDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool IsDefault { get; set; }
 }
 
 public class PartInputDto

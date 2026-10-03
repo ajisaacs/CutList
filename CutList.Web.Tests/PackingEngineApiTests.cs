@@ -43,4 +43,60 @@ public sealed class PackingEngineApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("Available engines: advanced, bestfit, exhaustive", await response.Content.ReadAsStringAsync());
     }
+
+    [Fact]
+    public async Task Engines_endpoint_lists_every_engine_with_one_default()
+    {
+        var engines = await _client.GetFromJsonAsync<List<PackingEngineDto>>("/api/packing/engines");
+
+        Assert.NotNull(engines);
+        Assert.Equal(new[] { "advanced", "bestfit", "exhaustive" }, engines.Select(e => e.Id));
+        Assert.Equal("advanced", Assert.Single(engines, e => e.IsDefault).Id);
+        Assert.All(engines, e => Assert.False(string.IsNullOrWhiteSpace(e.Description)));
+    }
+
+    [Theory]
+    [InlineData("bestfit", "bestfit")]
+    [InlineData(null, "advanced")]
+    public async Task Job_pack_runs_requested_or_default_engine(string? requested, string expected)
+    {
+        var response = await _client.PostAsJsonAsync($"/api/jobs/{_seed.UnlockedJobId}/pack", new PackJobRequestDto { Engine = requested });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<PackResponseDto>();
+        Assert.Equal(expected, result!.EngineId);
+        Assert.Equal(0, result.Summary.TotalItemsNotPlaced);
+    }
+
+    [Fact]
+    public async Task Job_pack_rejects_unknown_engine_and_changes_nothing()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+
+        var response = await _client.PostAsJsonAsync($"/api/jobs/{_seed.UnlockedJobId}/pack", new PackJobRequestDto { Engine = "fastest" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Unknown packing engine 'fastest'", await response.Content.ReadAsStringAsync());
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Theory]
+    [InlineData("exhaustive", null)]   // Engine field
+    [InlineData(null, "exhaustive")]   // legacy Strategy field
+    public async Task Standalone_optimize_runs_and_reports_the_selected_engine(string? engine, string? strategy)
+    {
+        var response = await _client.PostAsJsonAsync("/api/packing/optimize", new StandalonePackRequestDto
+        {
+            Parts = { new PartInputDto { Name = "A", Length = "24", Quantity = 3 } },
+            StockBins = { new StockBinInputDto { Length = "96", Quantity = -1, Priority = 1 } },
+            Engine = engine,
+            Strategy = strategy
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("exhaustive", body.RootElement.GetProperty("engine").GetString());
+        Assert.Equal(1, body.RootElement.GetProperty("summary").GetProperty("totalBins").GetInt32());
+        Assert.Equal(0, body.RootElement.GetProperty("summary").GetProperty("itemsNotPlaced").GetInt32());
+    }
 }
