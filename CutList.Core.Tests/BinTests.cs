@@ -16,4 +16,15 @@ public class BinTests
         Assert.Equal(0, bin.RemainingLength);
         Assert.Equal(1, bin.Utilization);
     }
+
+    [Fact]
+    public void Bar_cut_full_within_the_tolerance_reports_no_negative_waste()
+    {
+        // 4.000009996 + 3 + 3 plus two 0.1" kerfs is 10.200009996": within 0.00001" of the 10.2" bar.
+        var bin = new Bin(10.2) { Spacing = 0.1 };
+        bin.AddItems(new[] { new BinItem("A", 4.000009996), new BinItem("B", 3), new BinItem("C", 3) });
+
+        Assert.Equal(10.2, bin.UsedLength);
+        Assert.Equal(0, bin.RemainingLength);
+    }
 }

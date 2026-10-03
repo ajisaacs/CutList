@@ -44,10 +44,9 @@ namespace CutList.Core
             {
                 var usedLength = Math.Round(Items.Sum(i => i.Length) + Spacing * Items.Count, 8);
 
-                // The kerf after the last cut may run off the end of the bar. Tolerance.Epsilon (the
-                // same geometry tolerance as OpenNest) absorbs floating-point error in that overrun,
-                // so an exactly full bar never reports negative waste.
-                if (usedLength > Length && (usedLength - Length) <= Spacing + Tolerance.Epsilon)
+                // The kerf after the last cut may run off the end of the bar: parts that fit by CutFit's
+                // rule (exact units, Tolerance.Epsilon allowed) fill it, never leaving negative waste.
+                if (usedLength > Length && CutFit.Fits(Items.Select(i => i.Length), Length, Spacing))
                     return Length;
 
                 return Math.Round(Items.Sum(i => i.Length) + Spacing * Items.Count, 8);

@@ -71,7 +71,7 @@ namespace CutList.Core.Nesting
         private PackResult FillLimitedStock(
             PackingRequest request, CutDemand demand, SearchBudget budget, PackResult firstFit, List<BinItem> oversized)
         {
-            double firstFitLength = firstFit.Bins.Sum(b => b.Items.Sum(i => i.Length));
+            long firstFitLength = firstFit.Bins.Sum(b => b.Items.Sum(i => CutFit.Units(i.Length)));
             var search = new MaxFillSearch(demand, budget, MaxSearchBars);
             var patterns = search.Solve(request.MaxBinCount, firstFitLength);
             if (patterns == null)

@@ -198,6 +198,20 @@ public class ExhaustiveSearchEngineTests
     }
 
     [Fact]
+    public void Parts_that_fill_a_bar_to_the_tolerance_share_it()
+    {
+        // {4,3,3} plus two 0.1" kerfs is 10.2", exactly the 10.19999" bar plus the 0.00001" tolerance.
+        var items = Enumerable.Repeat(4.0, 10).Concat(Enumerable.Repeat(3.0, 20))
+            .Select((length, i) => new BinItem($"P{i}", length)).ToList();
+
+        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10.19999, 0.1));
+
+        Assert.Equal(10, result.Bins.Count);
+        Assert.All(result.Bins, b => Assert.Equal(0, b.RemainingLength));
+        Assert.Null(result.FallbackEngine);
+    }
+
+    [Fact]
     public void Lower_bound_lets_the_last_kerf_run_off_the_bar()
     {
         // 4 + 3 + 3 plus two 0.125" kerfs fills a 10.25" bar exactly; the kerf after the last cut may

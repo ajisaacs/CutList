@@ -15,8 +15,8 @@ public class CutDemandTests
 
         Assert.Equal(new[] { 4.0, 3.0 }, d.Lengths);
         Assert.Equal(new[] { 2, 4 }, d.Counts);
-        Assert.Equal(new[] { 4.125, 3.125 }, d.Sizes);
-        Assert.Equal(10.375, d.Capacity);
+        Assert.Equal(new[] { CutFit.Size(4, 0.125), CutFit.Size(3, 0.125) }, d.Sizes);
+        Assert.Equal(CutFit.Capacity(10.25, 0.125), d.Capacity);
     }
 
     [Theory]

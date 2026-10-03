@@ -10,8 +10,6 @@ namespace CutList.Core.Tests.Nesting;
 public class EngineContractTests
 {
     private const double Kerf = 0.125;
-    // A cut may exceed the bar by the fit tolerance shared with Bin and the pattern search.
-    private const double OverfillAllowance = Tolerance.Epsilon;
 
     public sealed record Scenario(
         string Name,
@@ -81,10 +79,9 @@ public class EngineContractTests
             Assert.NotEmpty(bin.Items);
             Assert.Equal(Kerf, bin.Spacing);
             Assert.Contains(scenario.Stock, s => s.Length == bin.Length);
-            // The kerf after the last cut may run off the end of the bar.
-            var cutLength = bin.Items.Sum(i => i.Length) + (bin.Items.Count - 1) * Kerf;
-            Assert.True(cutLength <= bin.Length + OverfillAllowance,
-                $"{engineId} overfilled a {bin.Length}\" bar ({cutLength}\")");
+            // CutFit's rule: the kerf after the last cut may run off the end, plus Tolerance.Epsilon.
+            Assert.True(CutFit.Fits(bin.Items.Select(i => i.Length), bin.Length, Kerf),
+                $"{engineId} overfilled a {bin.Length}\" bar ({string.Join(", ", bin.Items.Select(i => i.Length))})");
         }
 
         foreach (var finite in scenario.Stock.Where(s => s.Quantity > 0).GroupBy(s => s.Length))

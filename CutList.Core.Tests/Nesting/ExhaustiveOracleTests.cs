@@ -19,18 +19,18 @@ public class ExhaustiveOracleTests
 
             var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, stock, kerf));
 
-            var sizes = items.Where(i => i.Length <= stock).Select(i => i.Length + kerf).ToArray();
-            Assert.Equal(BruteForceFewestBars(sizes, stock + kerf), result.Bins.Count);
+            var sizes = items.Where(i => i.Length <= stock).Select(i => CutFit.Size(i.Length, kerf)).ToArray();
+            Assert.Equal(BruteForceFewestBars(sizes, CutFit.Capacity(stock, kerf)), result.Bins.Count);
             Assert.Equal(items.Count - sizes.Length, result.ItemsNotUsed.Count);
         }
     }
 
-    // Tries every assignment of parts (longest first) to bars.
-    private static int BruteForceFewestBars(double[] sizes, double capacity)
+    // Tries every assignment of parts (longest first) to bars, with CutFit's fit rule.
+    private static int BruteForceFewestBars(long[] sizes, long capacity)
     {
         var s = sizes.OrderByDescending(x => x).ToArray();
         int best = s.Length;
-        var bins = new List<double>();
+        var bins = new List<long>();
         Go(0);
         return best;
 
@@ -40,7 +40,7 @@ public class ExhaustiveOracleTests
             if (i == s.Length) { best = bins.Count; return; }
             for (int b = 0; b < bins.Count; b++)
             {
-                if (bins[b] + s[i] > capacity + Tolerance.Epsilon) continue; // the engine's fit rule
+                if (bins[b] + s[i] > capacity) continue;
                 bins[b] += s[i];
                 Go(i + 1);
                 bins[b] -= s[i];

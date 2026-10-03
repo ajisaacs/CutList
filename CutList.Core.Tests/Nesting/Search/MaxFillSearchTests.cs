@@ -13,7 +13,7 @@ public class MaxFillSearchTests
     {
         var search = new MaxFillSearch(Demand(10, 0, 5, 4, 3, 3), new SearchBudget(1_000_000));
 
-        var patterns = search.Solve(bars: 1, incumbentLength: 9); // First Fit cuts {5,4}
+        var patterns = search.Solve(bars: 1, incumbentLength: CutFit.Units(9)); // First Fit cuts {5,4}
 
         Assert.True(search.Completed);
         Assert.Equal(new[] { 0, 1, 2 }, Assert.Single(patterns!)); // {4,3,3} = 10
@@ -24,7 +24,7 @@ public class MaxFillSearchTests
     {
         var search = new MaxFillSearch(Demand(10, 0, 5, 4, 3, 3), new SearchBudget(1_000_000));
 
-        Assert.Null(search.Solve(bars: 1, incumbentLength: 10));
+        Assert.Null(search.Solve(bars: 1, incumbentLength: CutFit.Units(10)));
         Assert.True(search.Completed);
     }
 
@@ -53,31 +53,34 @@ public class MaxFillSearchTests
 
             var search = new MaxFillSearch(d, new SearchBudget(50_000_000));
             var patterns = search.Solve(bars, incumbentLength: 0) ?? new List<int[]>();
-            double placed = patterns.Sum(p => p.Select((n, g) => n * d.Lengths[g]).Sum());
+            long placed = patterns.Sum(p => p.Select((n, g) => n * d.LengthUnits[g]).Sum());
 
             Assert.True(search.Completed);
             Assert.True(patterns.Count <= bars);
-            Assert.Equal(BruteForceMostLength(lengths.Where(l => l <= stock).ToArray(), kerf, stock + kerf, bars), placed, 9);
+            Assert.Equal(BruteForceMostLength(lengths.Where(l => l <= stock).ToArray(), kerf, stock, bars), placed);
         }
     }
 
-    private static double BruteForceMostLength(double[] lengths, double kerf, double capacity, int bars)
+    // Tries every assignment of parts to bars (or to no bar), with CutFit's fit rule.
+    private static long BruteForceMostLength(double[] lengths, double kerf, double stock, int bars)
     {
-        double best = 0;
-        var used = new double[bars];
+        long capacity = CutFit.Capacity(stock, kerf);
+        long best = 0;
+        var used = new long[bars];
         Go(0, 0);
         return best;
 
-        void Go(int i, double placed)
+        void Go(int i, long placed)
         {
             if (i == lengths.Length) { best = Math.Max(best, placed); return; }
             Go(i + 1, placed);
+            long size = CutFit.Size(lengths[i], kerf);
             for (int b = 0; b < bars; b++)
             {
-                if (used[b] + lengths[i] + kerf > capacity + Tolerance.Epsilon) continue; // the engine's fit rule
-                used[b] += lengths[i] + kerf;
-                Go(i + 1, placed + lengths[i]);
-                used[b] -= lengths[i] + kerf;
+                if (used[b] + size > capacity) continue;
+                used[b] += size;
+                Go(i + 1, placed + CutFit.Units(lengths[i]));
+                used[b] -= size;
             }
         }
     }

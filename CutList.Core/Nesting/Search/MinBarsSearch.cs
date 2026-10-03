@@ -63,7 +63,7 @@ namespace CutList.Core.Nesting.Search
             var key = string.Join(',', remaining) + "|" + barsLeft;
             if (_failed.Contains(key)) return false;
 
-            foreach (var (pattern, _) in CutPatterns.Maximal(_d, remaining, largest, double.MaxValue, _budget))
+            foreach (var (pattern, _) in CutPatterns.Maximal(_d, remaining, largest, long.MaxValue, _budget))
             {
                 _budget.Charge();
                 for (int i = 0; i < pattern.Length; i++) remaining[i] -= pattern[i];

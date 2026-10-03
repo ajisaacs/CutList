@@ -13,10 +13,10 @@ public class CutPatternsTests
     {
         var d = Demand(4, 4, 3, 3, 3, 3);
 
-        var patterns = CutPatterns.Maximal(d, d.Counts, mustInclude: 0, maxLength: double.MaxValue, new SearchBudget(1000));
+        var patterns = CutPatterns.Maximal(d, d.Counts, mustInclude: 0, maxLength: long.MaxValue, new SearchBudget(1000));
 
         Assert.Equal(new[] { new[] { 1, 2 }, new[] { 2, 0 } }, patterns.Select(p => p.Pattern));
-        Assert.Equal(new[] { 10.0, 8.0 }, patterns.Select(p => p.Length));
+        Assert.Equal(new[] { CutFit.Units(10), CutFit.Units(8) }, patterns.Select(p => p.Length));
     }
 
     [Fact]
@@ -24,7 +24,7 @@ public class CutPatternsTests
     {
         var d = Demand(4, 4, 3, 3, 3, 3);
 
-        var patterns = CutPatterns.Maximal(d, d.Counts, mustInclude: -1, maxLength: 9, new SearchBudget(1000));
+        var patterns = CutPatterns.Maximal(d, d.Counts, mustInclude: -1, maxLength: CutFit.Units(9), new SearchBudget(1000));
 
         // {4,3} still has room for a 3, so it is not maximal; {4,3,3} is longer than 9.
         Assert.Equal(new[] { new[] { 0, 3 }, new[] { 2, 0 } }, patterns.Select(p => p.Pattern));
@@ -37,7 +37,7 @@ public class CutPatternsTests
     {
         var d = Demand(longPart, 4);
 
-        var patterns = CutPatterns.Maximal(d, d.Counts, mustInclude: -1, maxLength: double.MaxValue, new SearchBudget(1000));
+        var patterns = CutPatterns.Maximal(d, d.Counts, mustInclude: -1, maxLength: long.MaxValue, new SearchBudget(1000));
 
         Assert.Equal(fitsTogether, patterns.Any(p => p.Pattern.SequenceEqual(new[] { 1, 1 })));
     }
