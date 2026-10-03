@@ -20,7 +20,6 @@ namespace CutList.Core.Nesting
                 .AddStep(new FirstFitDecreasingStep())
                 .AddStep(new SwapInLeftoversStep())
                 .AddStep(new SortBinItemsStep())
-                .AddStep(new DuplicateBinsStep())
                 .AddStep(new SortBinsByUtilizationStep());
         }
 
