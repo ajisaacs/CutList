@@ -150,15 +150,18 @@ namespace CutList.Core.Nesting
             if (current.BinCount >= best.BinCount)
                 return;
 
-            // Lower-bound pruning: remaining items need at least this many additional bins
+            // Lower-bound pruning: remaining items need at least this many additional bins.
+            // Volumes count one kerf per item, and the kerf after a bin's last cut may run off the end,
+            // so each bin holds StockLength + Spacing of volume.
+            double binCapacity = request.StockLength + request.Spacing;
             double remainingVolume = suffixVolume[itemIndex];
             double availableInExisting = 0;
             for (int b = 0; b < current.Bins.Count; b++)
             {
-                availableInExisting += request.StockLength - GetBinUsedLength(current.Bins[b], request.Spacing);
+                availableInExisting += binCapacity - GetBinUsedLength(current.Bins[b], request.Spacing);
             }
             double overflow = remainingVolume - availableInExisting;
-            int additionalBinsNeeded = overflow > 0 ? (int)Math.Ceiling(overflow / request.StockLength) : 0;
+            int additionalBinsNeeded = overflow > 0 ? (int)Math.Ceiling(overflow / binCapacity) : 0;
             if (current.BinCount + additionalBinsNeeded >= best.BinCount)
                 return;
 

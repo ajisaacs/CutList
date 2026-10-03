@@ -28,4 +28,17 @@ public class ExhaustiveFitEngineTests
         Assert.Equal(2, result.Bins.Count);
         Assert.Equal(6, result.Bins.Sum(b => b.Items.Count));
     }
+
+    [Fact]
+    public void Lower_bound_lets_the_last_kerf_run_off_the_bar()
+    {
+        // 4 + 3 + 3 plus two 0.125" kerfs fills a 10.25" bar exactly; the kerf after the last cut may
+        // overrun, so {4,3,3} {4,3,3} = 2 bars is optimal.
+        var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
+
+        var result = new ExhaustiveFitEngine().Pack(new PackingRequest(items, 10.25, 0.125));
+
+        Assert.Equal(2, result.Bins.Count);
+        Assert.Equal(6, result.Bins.Sum(b => b.Items.Count));
+    }
 }
