@@ -120,7 +120,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Overview**: The root page uses `OverviewService` to show recently created jobs, headline planning counts, and the five stock configurations most frequently specified across job stock. The stock ranking is a planning-demand signal (distinct jobs configured for a material/length), not a count of on-hand inventory.
 
-**Material list semantics**: The Results tab labels lengths not covered by the job's configured stock as a **Material List**, not a purchase list. It identifies required material; purchasing remains a separate decision outside the cut-list result.
+**Material list semantics**: The Results **Material List** contains all and only stock bars actually used in the saved/displayed cutting plan, catalog and custom alike. Derive rows only from each material result's `PackResult.Bins`, grouped by material identity and numeric length, ordered by material display and descending length; never add the legacy source partitions again or infer use from configured stock quantities. `Total Bars Used` is the sum of those rows. This is neither on-hand inventory nor a purchasing recommendation. Unplaced parts retain their warning even when no bars were used. Screen and print share these rows.
 
 ### CutList.Mcp — MCP Server
 
@@ -190,7 +190,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - `PackAsync(parts, kerfInches, jobStock?, engineId?)` — runs optimization per material group with the requested engine (null = configured default); an unknown id throws `UnknownPackingEngineException` before any database work
 - `Engines` / `DefaultEngine` expose the engine catalog for selection UIs
 - Results record `EngineId`/`EngineName` (the name notes an engine fallback in any material group; `PackingEngineServiceTests` checks this with a fake engine that always falls back); `SavedOptimizationResult` persists them inside `OptimizationResultJson` (no schema change). Results saved before engine selection have no engine fields and load as First Fit, the only engine the job path used then. Plans saved under the retired id `advanced` (the same algorithm) keep their stored engine name; the Results-tab picker then starts on the configured default
-- Separates results into `InStockBins` (from catalog-sourced job stock) and `ToBePurchasedBins`
+- Retains legacy source partitions `InStockBins` (catalog-sourced job stock) and `ToBePurchasedBins` (custom-source stock) for saved/API compatibility. These are not true inventory/purchasing decisions. Both are already represented in canonical `PackResult.Bins`; the UI must not double-count them.
 - `GetSummary(result)` — calculates total bins, pieces, waste, efficiency %
 - `SerializeResult(result)` / `LoadSavedResult(json)` — JSON round-trip via DTO layer (`SavedOptimizationResult` etc.)
 
@@ -236,7 +236,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - **ConfirmDialog** — All destructive actions use the shared `ConfirmDialog` component
 - **Material selection flow** — Shape dropdown -> Size dropdown -> Length input -> Quantity (conditional dropdowns)
 - **Stock priority** — Lower number = used first; `-1` quantity = unlimited
-- **Job stock** — Jobs must have stock explicitly configured (catalog-sourced `StockItem` rows or custom-length rows); there is no fallback to auto-discovered inventory
+- **Job stock** — Jobs must have stock explicitly configured (catalog-sourced `StockItem` rows or custom-length rows); there is no fallback to auto-discovered inventory. The job Stock workflow says `Catalog`/`From Catalog`, not `Inventory`; public API/MCP field names are unchanged.
 - **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`, including the engine used; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
 - **Job lock flow** — Optimize job -> review/print results -> Lock Job (manual action beside Print Report on the Results tab, available whether or not purchases are needed) -> job becomes read-only until Unlock
 - **Printed cut badges** — Print styles intentionally remove color fills; cut badges therefore force black text and a black part-number/length divider so both remain legible on paper. The print-only tool line shows the selected cut method and kerf immediately below the summary.
