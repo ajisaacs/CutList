@@ -130,6 +130,29 @@ class JobResultsActionsTests(unittest.TestCase):
         self.assertRegex(css, r"\.notes-section p\s*\{[^}]*white-space: pre-wrap;")
         self.assertRegex(printed, r"\.print-job-notes p\s*\{[^}]*overflow-wrap: anywhere;")
 
+    def test_print_material_summary_rows_stay_intact_while_the_list_can_paginate(self) -> None:
+        css = (REPO_ROOT / "CutList.Web/wwwroot/css/report.css").read_text()
+        printed = re.sub(r"/\*.*?\*/", "", css.split("@media print {", 1)[1], flags=re.DOTALL)
+        print_rules: dict[str, dict[str, str]] = {}
+        for selectors, block in re.findall(r"([^{}]+)\{([^{}]*)\}", printed):
+            declarations = dict(
+                (name.strip(), value.strip())
+                for name, value in (declaration.split(":", 1) for declaration in block.split(";") if ":" in declaration)
+            )
+            # Match whole selectors, including comma-separated groups, not substrings.
+            for selector in selectors.split(","):
+                print_rules.setdefault(selector.strip(), {}).update(declarations)
+
+        for selector, expected in (
+            (".print-material-list", "auto"),
+            (".print-material-list tbody tr", "avoid"),
+            (".cutlist-material-card tbody tr", "avoid"),
+        ):
+            with self.subTest(selector=selector):
+                self.assertIn(selector, print_rules, f"Missing print style for {selector}")
+                self.assertEqual(expected, print_rules[selector].get("break-inside"))
+                self.assertEqual(expected, print_rules[selector].get("page-break-inside"))
+
     def test_browser_refreshes_every_timestamp_on_native_and_repeated_cancelled_prints(self) -> None:
         app = (REPO_ROOT / "CutList.Web/Components/App.razor").read_text()
         script = re.search(r"<script>(.*?)</script>", app, re.DOTALL)

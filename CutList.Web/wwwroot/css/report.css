@@ -432,7 +432,8 @@
         padding: 0 !important;
     }
 
-    /* Keep each stock-bar result, its cuts, and its waste on one printed page. */
+    /* Keep each material summary row and stock-bar result on one printed page. */
+    .print-material-list tbody tr,
     .cutlist-material-card tbody tr {
         break-inside: avoid;
         page-break-inside: avoid;
