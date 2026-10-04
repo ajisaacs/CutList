@@ -402,6 +402,84 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
         JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
     }
 
+    [Theory]
+    [InlineData(false, "Exhaustive")]
+    [InlineData(true, "Exhaustive")]
+    [InlineData(false, "Exhaustive (First Fit fallback)")]
+    [InlineData(true, "Exhaustive (First Fit fallback)")]
+    public async Task Printed_results_include_saved_metadata_and_safe_multiline_notes_without_duplicate_title(bool locked, string engineName)
+    {
+        const string notes = "Check both ends.\n<script>window.injected = true</script>\nUse <b>labels</b> & keep drops.";
+        var jobId = await CreateSavedJobAsync(locked: locked, engineName: engineName, customer: "Print customer", notes: notes);
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var savedJob = before.Job(jobId);
+        var page = await RenderEditorAsync(jobId);
+        await ClickTabAsync(page, "Results");
+
+        // A different picker selection must not relabel the already-saved plan.
+        if (!locked)
+            await page.Find("#packing-engine").ChangeAsync(new() { Value = "bestfit" });
+        var title = Assert.Single(page.FindAll("h1.job-title"));
+        Assert.Equal($"{savedJob.JobNumber} - {savedJob.Name}", title.TextContent);
+        var metadata = Assert.Single(page.FindAll(".print-job-metadata"));
+        Assert.Empty(metadata.QuerySelectorAll("h1, h2"));
+        Assert.Equal("Customer: Print customer", NormalizeWhitespace(metadata.QuerySelector(".print-customer")!.TextContent));
+        Assert.Equal($"Engine: {engineName}", NormalizeWhitespace(metadata.QuerySelector(".print-engine-used")!.TextContent));
+        Assert.Equal(NormalizeWhitespace($"Last optimized: {savedJob.OptimizedAt!.Value.ToLocalTime():g}"),
+            NormalizeWhitespace(metadata.QuerySelector(".print-optimized-at")!.TextContent));
+        var timestamp = Assert.Single(metadata.QuerySelectorAll("time[data-print-timestamp]"));
+        Assert.Equal(string.Empty, timestamp.TextContent);
+        Assert.False(timestamp.HasAttribute("datetime")); // The browser fills this on every print attempt, not page load.
+        Assert.True(page.Markup.IndexOf("class=\"print-job-metadata\"", StringComparison.Ordinal)
+            < page.Markup.IndexOf("class=\"row mb-4 print-summary\"", StringComparison.Ordinal));
+        Assert.Contains("print-screen-only", page.Find(".results-optimized-at").ClassList);
+        Assert.Contains("print-screen-only", page.Find(".packing-engine-used").ClassList);
+        var method = Assert.Single(page.FindAll(".print-cut-method"));
+        Assert.Equal("Cut Method: Bandsaw Kerf: 1/16\"", NormalizeWhitespace(method.TextContent));
+
+        var printedNotes = Assert.Single(page.FindAll(".print-job-notes"));
+        Assert.Equal("Notes", printedNotes.QuerySelector("h3")!.TextContent);
+        Assert.Equal(notes, printedNotes.QuerySelector("p")!.TextContent);
+        Assert.Empty(printedNotes.QuerySelectorAll("script, b"));
+        Assert.Contains("&lt;script&gt;", printedNotes.InnerHtml);
+        Assert.Same(printedNotes, page.Find(".tab-content").LastElementChild);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" \n\t ")]
+    public async Task Printed_results_omit_blank_customer_and_notes(string? blank)
+    {
+        var jobId = await CreateSavedJobAsync(customer: blank, notes: blank);
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var page = await RenderEditorAsync(jobId);
+        await ClickTabAsync(page, "Results");
+
+        Assert.Single(page.FindAll(".print-job-metadata"));
+        Assert.Empty(page.FindAll(".print-customer, .print-job-notes"));
+        Assert.Single(page.FindAll("time[data-print-timestamp]"));
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Repeated_print_actions_preserve_the_entire_saved_job(bool locked)
+    {
+        var jobId = await CreateSavedJobAsync(locked: locked, customer: "Repeat print", notes: "Keep this note.");
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var page = await RenderEditorAsync(jobId);
+        await ClickTabAsync(page, "Results");
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            await page.FindAll("button").Single(b => b.TextContent.Trim() == "Print Report").ClickAsync(new());
+            _ctx.JSInterop.VerifyInvoke("printWithTitle", attempt);
+            JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+        }
+    }
+
     private static void AssertUsedMaterialRows(
         IRenderedComponent<EditJobPage> page, MultiMaterialPackResult result,
         (int MaterialId, double Length, int Quantity)[] expected, bool feetAndInches)
@@ -502,11 +580,11 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
 
     private async Task<int> CreateSavedJobAsync(
         int quantity = 1, bool hasStock = true, decimal partLength = 144.0000m, decimal stockLength = 240.0000m,
-        bool locked = true, string? engineName = null, bool catalogStock = false)
+        bool locked = true, string? engineName = null, bool catalogStock = false, string? customer = null, string? notes = null)
     {
         var jobs = _ctx.Services.GetRequiredService<JobService>();
         var packing = _ctx.Services.GetRequiredService<CutListPackingService>();
-        var job = await jobs.CreateAsync(new Job { Name = "Presentation fixture", CuttingToolId = 1 });
+        var job = await jobs.CreateAsync(new Job { Name = "Presentation fixture", CuttingToolId = 1, Customer = customer, Notes = notes });
         await jobs.AddPartAsync(new JobPart
         {
             JobId = job.Id,

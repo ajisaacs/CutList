@@ -1111,14 +1111,14 @@ else
                 }
                 @if (job.OptimizedAt.HasValue)
                 {
-                    <span class="text-muted results-optimized-at">
+                    <span class="text-muted results-optimized-at print-screen-only">
                         Last optimized: @job.OptimizedAt.Value.ToLocalTime().ToString("g")
                     </span>
                 }
                 @if (packResult != null && !string.IsNullOrEmpty(packResult.EngineName))
                 {
                     var engineNameParts = packResult.EngineName.Split(' ', 2);
-                    <span class="text-muted packing-engine-used"><span class="packing-engine-used-prefix">Engine: @engineNameParts[0]</span>@(engineNameParts.Length > 1 ? $" {engineNameParts[1]}" : string.Empty)</span>
+                    <span class="text-muted packing-engine-used print-screen-only"><span class="packing-engine-used-prefix">Engine: @engineNameParts[0]</span>@(engineNameParts.Length > 1 ? $" {engineNameParts[1]}" : string.Empty)</span>
                 }
             </div>
             @if (SelectedEngine != null)
@@ -1138,6 +1138,22 @@ else
                         <p class="mb-0">Some items could not be placed. This usually means no stock lengths are configured for the material, or parts are too long.</p>
                     </div>
                 }
+
+                <div class="print-job-metadata">
+                    @if (!string.IsNullOrWhiteSpace(job.Customer))
+                    {
+                        <div class="print-customer"><strong>Customer:</strong> @job.Customer</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(packResult.EngineName))
+                    {
+                        <div class="print-engine-used"><strong>Engine:</strong> @packResult.EngineName</div>
+                    }
+                    @if (job.OptimizedAt.HasValue)
+                    {
+                        <div class="print-optimized-at"><strong>Last optimized:</strong> @job.OptimizedAt.Value.ToLocalTime().ToString("g")</div>
+                    }
+                    <div><strong>Printed:</strong> <time data-print-timestamp></time></div>
+                </div>
 
                 <!-- Overall Summary Cards -->
                 <div class="row mb-4 print-summary">
@@ -1315,6 +1331,14 @@ else
                             </div>
                         </div>
                     </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(job.Notes))
+                {
+                    <section class="notes-section print-job-notes">
+                        <h3>Notes</h3>
+                        <p>@job.Notes</p>
+                    </section>
                 }
             }
             else if (!optimizing)
