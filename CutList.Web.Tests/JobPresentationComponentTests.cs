@@ -233,9 +233,272 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
         Assert.DoesNotContain(toolbar.QuerySelectorAll("button"), b => NormalizeWhitespace(b.TextContent) == "Print Report");
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Material_list_includes_every_used_bar_once_in_material_and_descending_length_order(
+        bool newlyPacked, bool legacy)
+    {
+        var fixture = await CreateMixedSourceJobAsync(save: !newlyPacked, legacy: legacy);
+        var beforeRender = await JobSnapshot.CaptureAsync(_db);
+        var page = await RenderEditorAsync(fixture.JobId);
+        JobSnapshot.AssertUnchanged(beforeRender, await JobSnapshot.CaptureAsync(_db));
+        await ClickTabAsync(page, "Results");
+        JobSnapshot.AssertUnchanged(beforeRender, await JobSnapshot.CaptureAsync(_db));
+        if (newlyPacked)
+        {
+            await page.Find("#packing-engine").ChangeAsync(new() { Value = "firstfit" });
+            await page.Find("#run-optimization").ClickAsync(new());
+        }
+
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var savedJson = before.Job(fixture.JobId).OptimizationResultJson!;
+        var packing = _ctx.Services.GetRequiredService<CutListPackingService>();
+        var loaded = (await packing.LoadSavedResultAsync(savedJson))!;
+        AssertMixedPlanSources(loaded, fixture.DuplicateMaterialId);
+        Assert.Equal("firstfit", loaded.EngineId);
+        Assert.Equal("First Fit", loaded.EngineName);
+        if (legacy)
+        {
+            Assert.DoesNotContain("EngineId", savedJson);
+            Assert.DoesNotContain("EngineName", savedJson);
+        }
+        else
+        {
+            Assert.Contains("\"EngineId\":\"firstfit\"", savedJson);
+        }
+        Assert.Contains("\"InStockBins\"", savedJson);
+        Assert.Contains("\"ToBePurchasedBins\"", savedJson);
+        Assert.Equal(!newlyPacked, before.Job(fixture.JobId).LockedAt.HasValue);
+        Assert.Contains(before.StockOf(fixture.JobId), s => s.Quantity == -1 && s.Priority == 3 && s.StockItemId == null);
+        Assert.Contains(before.StockOf(fixture.JobId), s => s.Quantity == 2 && s.Priority == 2 && s.StockItemId == _seed.FlatBarStockItemId);
+        var expectedRows = new[]
+        {
+            (MaterialId: _seed.RoundTubeMaterialId, Length: 288d, Quantity: 1),
+            (MaterialId: _seed.FlatBarMaterialId, Length: 240d, Quantity: 4),
+            (MaterialId: _seed.FlatBarMaterialId, Length: 120d, Quantity: 1),
+            (MaterialId: fixture.DuplicateMaterialId, Length: 240d, Quantity: 1)
+        };
+        AssertUsedMaterialRows(page, loaded, expectedRows, feetAndInches: false);
+        Assert.Equal("7 bars", page.Find(".print-material-list tfoot td.text-end").TextContent.Trim());
+        Assert.Equal("Total Bars Used", page.Find(".print-material-list tfoot td:first-child").TextContent.Trim());
+        Assert.Equal("Stock bars used in this cutting plan.", page.Find(".print-material-list .material-list-scope").TextContent.Trim());
+        Assert.Contains(page.FindAll(".cutlist-material-card .alert-danger strong"), e => e.TextContent.Trim() == "1 item not placed");
+        Assert.Contains("Items Not Placed", page.Markup);
+        Assert.DoesNotContain("360\"", page.Find(".print-material-list").TextContent);
+
+        // Screen and print use one shared table, not two independently filtered summaries.
+        var list = Assert.Single(page.FindAll(".print-material-list"));
+        Assert.DoesNotContain("print-screen-only", list.ClassList);
+        Assert.DoesNotContain("print-only", list.ClassList);
+        Assert.Empty(list.QuerySelectorAll("table .print-screen-only, table .print-only"));
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Print Report").ClickAsync(new());
+        _ctx.JSInterop.VerifyInvoke("printWithTitle");
+        AssertUsedMaterialRows(page, loaded, expectedRows, feetAndInches: false);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Show feet + inches").ClickAsync(new());
+        AssertUsedMaterialRows(page, loaded, expectedRows, feetAndInches: true);
+        Assert.Equal("7 bars", page.Find(".print-material-list tfoot td.text-end").TextContent.Trim());
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Show all inches").ClickAsync(new());
+        AssertUsedMaterialRows(page, loaded, expectedRows, feetAndInches: false);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Theory]
+    [InlineData(false, 1, "1 bar")]
+    [InlineData(false, 2, "2 bars")]
+    [InlineData(true, 1, "1 bar")]
+    [InlineData(true, 2, "2 bars")]
+    public async Task Material_list_handles_catalog_only_and_custom_only_used_bars(bool custom, int quantity, string total)
+    {
+        var jobId = await CreateSavedJobAsync(quantity, catalogStock: !custom);
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var packing = _ctx.Services.GetRequiredService<CutListPackingService>();
+        var loaded = (await packing.LoadSavedResultAsync(before.Job(jobId).OptimizationResultJson!))!;
+        var material = Assert.Single(loaded.MaterialResults);
+        Assert.Equal(quantity, material.PackResult.Bins.Count);
+        Assert.Equal(custom ? 0 : quantity, material.InStockBins.Count);
+        Assert.Equal(custom ? quantity : 0, material.ToBePurchasedBins.Count);
+        var page = await RenderEditorAsync(jobId);
+        await ClickTabAsync(page, "Results");
+
+        AssertUsedMaterialRows(page, loaded, [(_seed.FlatBarMaterialId, 240d, quantity)], feetAndInches: false);
+        Assert.Equal(total, page.Find(".print-material-list tfoot td.text-end").TextContent.Trim());
+        Assert.Equal("Total Bars Used", page.Find(".print-material-list tfoot td:first-child").TextContent.Trim());
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task Material_list_zero_used_plan_has_the_exact_empty_message_and_keeps_unplaced_warnings()
+    {
+        var jobId = await CreateSavedJobAsync(partLength: 300m);
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var page = await RenderEditorAsync(jobId);
+        await ClickTabAsync(page, "Results");
+
+        Assert.Equal("Stock bars used in this cutting plan.", page.Find(".print-material-list .material-list-scope").TextContent.Trim());
+        Assert.Equal("No stock bars were used in this plan.", page.Find(".print-material-list .card-body p:last-child").TextContent.Trim());
+        Assert.Empty(page.FindAll(".print-material-list tbody tr"));
+        Assert.Equal("1 item not placed", page.Find(".cutlist-material-card .alert-danger strong").TextContent.Trim());
+        Assert.Contains("Items Not Placed", page.Markup);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Fact]
+    public async Task Stock_source_and_empty_catalog_modal_use_catalog_terminology_without_mutation()
+    {
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var page = await RenderEditorAsync(_seed.UnlockedJobId);
+        await ClickTabAsync(page, "Stock");
+
+        Assert.Equal("Catalog", page.Find(".tab-content tbody td:nth-child(5) .badge").TextContent.Trim());
+        Assert.DoesNotContain("inventory", page.Markup, StringComparison.OrdinalIgnoreCase);
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Add Stock").ClickAsync(new());
+        Assert.Equal("From Catalog", page.Find(".modal .nav-link.active").TextContent.Trim());
+        Assert.Contains("No matching catalog stock found.", page.Find(".modal").TextContent);
+        Assert.DoesNotContain("inventory", page.Markup, StringComparison.OrdinalIgnoreCase);
+        await page.FindAll(".modal button").Single(b => b.TextContent.Trim() == "Cancel").ClickAsync(new());
+        await page.Find(".tab-content button[title='Edit']").ClickAsync(new());
+        Assert.Equal(_seed.FlatBarStockItemId.ToString(), page.FindAll(".modal select")[2].GetAttribute("value"));
+        Assert.DoesNotContain("inventory", page.Markup, StringComparison.OrdinalIgnoreCase);
+        await page.FindAll(".modal button").Single(b => b.TextContent.Trim() == "Cancel").ClickAsync(new());
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Stock_empty_help_and_add_modal_use_catalog_terminology(bool hasParts)
+    {
+        var jobs = _ctx.Services.GetRequiredService<JobService>();
+        var job = await jobs.CreateAsync(new Job { Name = "Catalog help fixture", CuttingToolId = 1 });
+        if (hasParts)
+        {
+            await jobs.AddPartAsync(new JobPart
+            {
+                JobId = job.Id, MaterialId = _seed.FlatBarMaterialId, Name = "Brace", LengthInches = 30m, Quantity = 1
+            });
+        }
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var page = await RenderEditorAsync(job.Id);
+        await ClickTabAsync(page, "Stock");
+        Assert.Contains("Add stock from your catalog or define custom lengths.", page.Find(".tab-content").TextContent);
+        Assert.Contains("there is no automatic fallback to catalog.", page.Find(".tab-content").TextContent);
+        Assert.DoesNotContain("inventory", page.Markup, StringComparison.OrdinalIgnoreCase);
+        await page.FindAll("button").Single(b => b.TextContent.Trim() == "Add Stock").ClickAsync(new());
+        var catalogTab = page.FindAll(".modal .nav-link").Single(e => e.TextContent.Trim() == "From Catalog");
+        Assert.Equal(!hasParts, catalogTab.HasAttribute("disabled"));
+        Assert.Equal(hasParts ? "" : "Add parts first to match against catalog", catalogTab.GetAttribute("title"));
+        if (hasParts)
+        {
+            Assert.Contains("active", catalogTab.ClassList);
+            Assert.Single(page.FindAll(".modal tbody tr"));
+            Assert.Equal("-1", page.Find(".modal input[type='number']").GetAttribute("value"));
+        }
+        Assert.DoesNotContain("inventory", page.Markup, StringComparison.OrdinalIgnoreCase);
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    private static void AssertUsedMaterialRows(
+        IRenderedComponent<EditJobPage> page, MultiMaterialPackResult result,
+        (int MaterialId, double Length, int Quantity)[] expected, bool feetAndInches)
+    {
+        var rows = page.FindAll(".print-material-list tbody tr");
+        Assert.Equal(expected.Length, rows.Count);
+        for (var i = 0; i < expected.Length; i++)
+        {
+            var row = expected[i];
+            var cells = rows[i].QuerySelectorAll("td");
+            Assert.Equal(result.MaterialResults.Single(m => m.Material.Id == row.MaterialId).Material.DisplayName, cells[0].TextContent.Trim());
+            Assert.Equal(feetAndInches
+                ? CutList.Core.Formatting.ArchUnits.FormatFromInches(row.Length)
+                : CutList.Core.Formatting.ArchUnits.FormatInches(row.Length), cells[1].TextContent.Trim());
+            Assert.Equal(row.Quantity.ToString(), cells[2].TextContent.Trim());
+        }
+    }
+
+    private void AssertMixedPlanSources(MultiMaterialPackResult result, int duplicateMaterialId)
+    {
+        Assert.Equal(new[] { _seed.RoundTubeMaterialId, _seed.FlatBarMaterialId, duplicateMaterialId },
+            result.MaterialResults.Select(m => m.Material.Id));
+        Assert.Equal(7, result.MaterialResults.Sum(m => m.PackResult.Bins.Count));
+        var flat = result.MaterialResults.Single(m => m.Material.Id == _seed.FlatBarMaterialId);
+        Assert.Equal(2, flat.InStockBins.Count(b => b.Length == 240));
+        Assert.Equal(2, flat.ToBePurchasedBins.Count(b => b.Length == 240));
+        Assert.Single(flat.ToBePurchasedBins, b => b.Length == 120);
+        Assert.Equal(new[] { 120d, 240d, 240d, 240d, 240d }, flat.PackResult.Bins.Select(b => b.Length).Order());
+        Assert.Equal(500d, Assert.Single(flat.PackResult.ItemsNotUsed).Length);
+        Assert.Equal(flat.Material.DisplayName, result.MaterialResults.Single(m => m.Material.Id == duplicateMaterialId).Material.DisplayName);
+        Assert.All(result.MaterialResults, material =>
+        {
+            Assert.Equal(material.PackResult.Bins.Count, material.InStockBins.Count + material.ToBePurchasedBins.Count);
+            Assert.All(material.InStockBins.Concat(material.ToBePurchasedBins), bin => Assert.Contains(bin, material.PackResult.Bins));
+        });
+    }
+
+    private async Task<(int JobId, int DuplicateMaterialId)> CreateMixedSourceJobAsync(bool save, bool legacy)
+    {
+        await using var context = await _db.CreateContextAsync();
+        var duplicate = new Material
+        {
+            Shape = MaterialShape.FlatBar, Type = MaterialType.Aluminum, Grade = "6061",
+            Size = "1/4 x 2", SortOrder = 2000
+        };
+        context.Materials.Add(duplicate);
+        await context.SaveChangesAsync();
+        var jobs = _ctx.Services.GetRequiredService<JobService>();
+        var job = await jobs.CreateAsync(new Job { Name = "Seven actually used bars", CuttingToolId = 1 });
+        foreach (var part in new[]
+        {
+            new JobPart { MaterialId = _seed.RoundTubeMaterialId, Name = "Tube", LengthInches = 180m, Quantity = 1 },
+            new JobPart { MaterialId = _seed.FlatBarMaterialId, Name = "Rail", LengthInches = 150m, Quantity = 4 },
+            new JobPart { MaterialId = _seed.FlatBarMaterialId, Name = "Brace", LengthInches = 90m, Quantity = 1 },
+            new JobPart { MaterialId = _seed.FlatBarMaterialId, Name = "Too long", LengthInches = 500m, Quantity = 1 },
+            new JobPart { MaterialId = duplicate.Id, Name = "Other grade", LengthInches = 150m, Quantity = 1 }
+        })
+        {
+            part.JobId = job.Id;
+            await jobs.AddPartAsync(part);
+        }
+        foreach (var stock in new[]
+        {
+            new JobStock { MaterialId = _seed.RoundTubeMaterialId, StockItemId = _seed.RoundTubeStockItemId, LengthInches = 288m, Quantity = -1, Priority = 5 },
+            new JobStock { MaterialId = _seed.FlatBarMaterialId, IsCustomLength = true, LengthInches = 120m, Quantity = 1, Priority = 1 },
+            new JobStock { MaterialId = _seed.FlatBarMaterialId, StockItemId = _seed.FlatBarStockItemId, LengthInches = 240m, Quantity = 2, Priority = 2 },
+            new JobStock { MaterialId = _seed.FlatBarMaterialId, IsCustomLength = true, LengthInches = 240m, Quantity = -1, Priority = 3 },
+            new JobStock { MaterialId = _seed.FlatBarMaterialId, IsCustomLength = true, LengthInches = 360m, Quantity = -1, Priority = 4 },
+            new JobStock { MaterialId = duplicate.Id, IsCustomLength = true, LengthInches = 240m, Quantity = -1, Priority = 7 }
+        })
+        {
+            stock.JobId = job.Id;
+            await jobs.AddStockAsync(stock);
+        }
+        job = (await jobs.GetByIdAsync(job.Id))!;
+        var packing = _ctx.Services.GetRequiredService<CutListPackingService>();
+        var result = await packing.PackAsync(job.Parts, job.CuttingTool!.KerfInches, job.Stock, "firstfit");
+        AssertMixedPlanSources(result, duplicate.Id);
+        if (save)
+        {
+            var json = packing.SerializeResult(result);
+            if (legacy)
+            {
+                var legacyJson = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+                legacyJson.Remove("EngineId");
+                legacyJson.Remove("EngineName");
+                json = legacyJson.ToJsonString();
+            }
+            await jobs.SaveOptimizationResultAsync(job.Id, json, DateTime.UtcNow);
+            await jobs.LockAsync(job.Id);
+        }
+        return (job.Id, duplicate.Id);
+    }
+
     private async Task<int> CreateSavedJobAsync(
         int quantity = 1, bool hasStock = true, decimal partLength = 144.0000m, decimal stockLength = 240.0000m,
-        bool locked = true, string? engineName = null)
+        bool locked = true, string? engineName = null, bool catalogStock = false)
     {
         var jobs = _ctx.Services.GetRequiredService<JobService>();
         var packing = _ctx.Services.GetRequiredService<CutListPackingService>();
@@ -254,21 +517,22 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
             {
                 JobId = job.Id,
                 MaterialId = _seed.FlatBarMaterialId,
-                StockItemId = null,
-                IsCustomLength = true,
+                StockItemId = catalogStock ? _seed.FlatBarStockItemId : null,
+                IsCustomLength = !catalogStock,
                 LengthInches = stockLength,
                 Quantity = quantity,
                 Priority = 1
             });
         }
 
-        // Pack freshly loaded persisted rows and save the actual custom-source plan.
+        // Pack freshly loaded persisted rows and save the actual source partitions.
         job = (await jobs.GetByIdAsync(job.Id))!;
         var result = await packing.PackAsync(job.Parts, job.CuttingTool!.KerfInches, job.Stock);
         var materialResult = Assert.Single(result.MaterialResults);
-        Assert.Empty(materialResult.InStockBins);
-        Assert.Equal(hasStock ? quantity : 0, materialResult.ToBePurchasedBins.Count);
-        Assert.Equal(hasStock ? 0 : quantity, materialResult.PackResult.ItemsNotUsed.Count);
+        var usedBars = hasStock && partLength <= stockLength ? quantity : 0;
+        Assert.Equal(catalogStock ? usedBars : 0, materialResult.InStockBins.Count);
+        Assert.Equal(catalogStock ? 0 : usedBars, materialResult.ToBePurchasedBins.Count);
+        Assert.Equal(usedBars > 0 ? 0 : quantity, materialResult.PackResult.ItemsNotUsed.Count);
         if (engineName != null)
         {
             // Exercise saved display metadata, including the real catalog's longest fallback name;

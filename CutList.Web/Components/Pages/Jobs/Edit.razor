@@ -254,11 +254,11 @@ else
                     {
                         <ul class="nav nav-tabs mb-3" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link @(stockModalTab == StockModalTab.Inventory ? "active" : "")"
+                                <button class="nav-link @(stockModalTab == StockModalTab.Catalog ? "active" : "")"
                                         type="button" disabled="@(job.Parts.Count == 0)"
-                                        title="@(job.Parts.Count == 0 ? "Add parts first to match against inventory" : "")"
-                                        @onclick="() => stockModalTab = StockModalTab.Inventory">
-                                    From Inventory
+                                        title="@(job.Parts.Count == 0 ? "Add parts first to match against catalog" : "")"
+                                        @onclick="() => stockModalTab = StockModalTab.Catalog">
+                                    From Catalog
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
@@ -271,7 +271,7 @@ else
                         </ul>
                     }
 
-                    @if (stockModalTab == StockModalTab.Inventory && editingStock == null)
+                    @if (stockModalTab == StockModalTab.Catalog && editingStock == null)
                     {
                         @if (loadingImport)
                         {
@@ -283,7 +283,7 @@ else
                         else if (importCandidates.Count == 0)
                         {
                             <div class="text-center py-4 text-muted">
-                                <p class="mb-2">No matching inventory stock found.</p>
+                                <p class="mb-2">No matching catalog stock found.</p>
                                 <p class="small">Either no stock items exist for the materials in your parts, or they have already been added to this job.</p>
                             </div>
                         }
@@ -341,7 +341,7 @@ else
                             <div class="alert alert-danger mt-3 mb-0">@importErrorMessage</div>
                         }
                     }
-                    else if (stockModalTab == StockModalTab.Inventory && editingStock != null)
+                    else if (stockModalTab == StockModalTab.Catalog && editingStock != null)
                     {
                         <div class="row g-3">
                             <div class="col-md-3">
@@ -441,7 +441,7 @@ else
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CloseStockModal">Cancel</button>
-                    @if (stockModalTab == StockModalTab.Inventory && editingStock == null)
+                    @if (stockModalTab == StockModalTab.Catalog && editingStock == null)
                     {
                         @if (importCandidates.Count > 0)
                         {
@@ -451,9 +451,9 @@ else
                             </button>
                         }
                     }
-                    else if (stockModalTab == StockModalTab.Inventory && editingStock != null)
+                    else if (stockModalTab == StockModalTab.Catalog && editingStock != null)
                     {
-                        <button type="button" class="btn btn-primary" @onclick="SaveStockFromInventoryAsync">Save Changes</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveStockFromCatalogAsync">Save Changes</button>
                     }
                     else
                     {
@@ -494,10 +494,10 @@ else
     private int partSelectedMaterialId;
     private List<PartRow> partRows = new();
 
-    // Stock modal (unified add/edit, both inventory-sourced and custom-length)
-    private enum StockModalTab { Inventory, Custom }
+    // Stock modal (unified add/edit, both catalog-sourced and custom-length)
+    private enum StockModalTab { Catalog, Custom }
     private bool showStockModal;
-    private StockModalTab stockModalTab = StockModalTab.Inventory;
+    private StockModalTab stockModalTab = StockModalTab.Catalog;
     private JobStock newStock = new();
     private JobStock? editingStock;
     private string? stockErrorMessage;
@@ -980,8 +980,8 @@ else
                 {
                     <div class="text-center py-4 text-muted">
                         <p class="mb-2">No stock configured for this job.</p>
-                        <p class="small">Add stock from your inventory or define custom lengths.</p>
-                        <p class="small">Stock must be explicitly added here before you can optimize — there is no automatic fallback to inventory.</p>
+                        <p class="small">Add stock from your catalog or define custom lengths.</p>
+                        <p class="small">Stock must be explicitly added here before you can optimize — there is no automatic fallback to catalog.</p>
                     </div>
                 }
                 else
@@ -1021,7 +1021,7 @@ else
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">Inventory</span>
+                                    <span class="badge bg-secondary">Catalog</span>
                                 }
                             </td>
                             <td>
@@ -1183,7 +1183,8 @@ else
                     </div>
                 }
 
-                <!-- Material List: required stock lengths not covered by job stock -->
+                <!-- Material List: all actually used bars, independent of source partition -->
+                var totalBarsUsed = packResult.MaterialResults.Sum(mr => mr.PackResult.Bins.Count);
                 <div class="card mb-4 print-material-list">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Material List</h5>
@@ -1193,9 +1194,10 @@ else
                         }
                     </div>
                     <div class="card-body">
-                        @if (summary.TotalToBePurchasedBins == 0)
+                        <p class="text-muted material-list-scope">Stock bars used in this cutting plan.</p>
+                        @if (totalBarsUsed == 0)
                         {
-                            <p class="text-muted mb-0">No additional material lengths are required beyond the stock configured for this job.</p>
+                            <p class="text-muted mb-0">No stock bars were used in this plan.</p>
                         }
                         else
                         {
@@ -1209,12 +1211,12 @@ else
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var materialResult in packResult.MaterialResults.Where(mr => mr.ToBePurchasedBins.Count > 0))
+                                        @foreach (var materialGroup in packResult.MaterialResults.GroupBy(mr => mr.Material.Id))
                                         {
-                                            @foreach (var group in materialResult.ToBePurchasedBins.GroupBy(b => b.Length).OrderByDescending(g => g.Key))
+                                            @foreach (var group in materialGroup.SelectMany(mr => mr.PackResult.Bins).GroupBy(b => b.Length).OrderByDescending(g => g.Key))
                                             {
                                                 <tr>
-                                                    <td>@materialResult.Material.DisplayName</td>
+                                                    <td>@materialGroup.First().Material.DisplayName</td>
                                                     <td>@FormatResultLength(group.Key)</td>
                                                     <td class="text-end">@group.Count()</td>
                                                 </tr>
@@ -1223,8 +1225,8 @@ else
                                     </tbody>
                                     <tfoot>
                                         <tr class="fw-bold">
-                                            <td colspan="2">Total Required</td>
-                                            <td class="text-end">@CountLabel(summary.TotalToBePurchasedBins, "bar", "bars")</td>
+                                            <td colspan="2">Total Bars Used</td>
+                                            <td class="text-end">@CountLabel(totalBarsUsed, "bar", "bars")</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -1383,7 +1385,7 @@ else
         stockErrorMessage = null;
         importErrorMessage = null;
         importCandidates.Clear();
-        stockModalTab = job.Parts.Count > 0 ? StockModalTab.Inventory : StockModalTab.Custom;
+        stockModalTab = job.Parts.Count > 0 ? StockModalTab.Catalog : StockModalTab.Custom;
         showStockModal = true;
 
         if (job.Parts.Count > 0)
@@ -1435,7 +1437,7 @@ else
         stockSelectedShape = stock.Material?.Shape;
         stockSelectedMaterialId = stock.MaterialId;
         stockErrorMessage = null;
-        stockModalTab = stock.IsCustomLength ? StockModalTab.Custom : StockModalTab.Inventory;
+        stockModalTab = stock.IsCustomLength ? StockModalTab.Custom : StockModalTab.Catalog;
         showStockModal = true;
 
         if (!stock.IsCustomLength)
@@ -1454,7 +1456,7 @@ else
             : new List<StockItem>();
     }
 
-    private async Task SaveStockFromInventoryAsync()
+    private async Task SaveStockFromCatalogAsync()
     {
         stockErrorMessage = null;
 
@@ -1561,7 +1563,7 @@ else
         summary = null;
     }
 
-    // Loads inventory stock candidates for the modal's "From Inventory" tab
+    // Loads catalog stock candidates for the modal's "From Catalog" tab
     private async Task LoadImportCandidatesAsync()
     {
         importErrorMessage = null;
