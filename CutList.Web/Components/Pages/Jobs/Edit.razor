@@ -1061,10 +1061,10 @@ else
         }
         else
         {
-            <div class="mb-3">
-                <div class="packing-engine-picker d-inline-flex align-items-center me-2 print-screen-only">
-                    <label class="form-label mb-0 me-2" for="packing-engine">Engine</label>
-                    <select id="packing-engine" class="form-select form-select-sm w-auto" @bind="selectedEngineId"
+            <div class="results-toolbar mb-3">
+                <div class="packing-engine-picker print-screen-only">
+                    <label class="form-label mb-0" for="packing-engine">Engine</label>
+                    <select id="packing-engine" class="form-select form-select-sm" @bind="selectedEngineId"
                             disabled="@(optimizing || job.IsLocked)" title="@SelectedEngine?.Description">
                         @foreach (var engine in PackingService.Engines)
                         {
@@ -1091,16 +1091,16 @@ else
                 </button>
                 @if (packResult != null)
                 {
-                    <button class="btn btn-outline-secondary ms-2" @onclick="PrintReport">
+                    <button class="btn btn-outline-secondary" @onclick="PrintReport">
                         <i class="bi bi-printer me-1"></i> Print Report
                     </button>
-                    <button class="btn btn-outline-secondary ms-2" @onclick="() => showLengthsInInches = !showLengthsInInches"
+                    <button class="btn btn-outline-secondary" @onclick="() => showLengthsInInches = !showLengthsInInches"
                             aria-pressed="@showLengthsInInches">
                         @(showLengthsInInches ? "Show feet + inches" : "Show all inches")
                     </button>
                     @if (!job.IsLocked)
                     {
-                        <button class="btn btn-warning ms-2" @onclick="LockJob" disabled="@lockingJob">
+                        <button class="btn btn-warning" @onclick="LockJob" disabled="@lockingJob">
                             @if (lockingJob)
                             {
                                 <span class="spinner-border spinner-border-sm me-1"></span>
@@ -1111,18 +1111,22 @@ else
                 }
                 @if (job.OptimizedAt.HasValue)
                 {
-                    <span class="text-muted ms-3">
+                    <span class="text-muted results-optimized-at">
                         Last optimized: @job.OptimizedAt.Value.ToLocalTime().ToString("g")
                     </span>
                 }
                 @if (packResult != null && !string.IsNullOrEmpty(packResult.EngineName))
                 {
-                    <span class="text-muted ms-3 packing-engine-used">Engine: @packResult.EngineName</span>
+                    var engineNameParts = packResult.EngineName.Split(' ', 2);
+                    <span class="text-muted packing-engine-used"><span class="packing-engine-used-prefix">Engine: @engineNameParts[0]</span>@(engineNameParts.Length > 1 ? $" {engineNameParts[1]}" : string.Empty)</span>
                 }
             </div>
             @if (SelectedEngine != null)
             {
-                <div class="form-text mb-3 print-screen-only packing-engine-description">@SelectedEngine.Description</div>
+                <details class="packing-engine-help form-text mb-3 print-screen-only">
+                    <summary>About this engine</summary>
+                    <p class="packing-engine-description mb-0">@SelectedEngine.Description</p>
+                </details>
             }
 
             @if (packResult != null && summary != null)

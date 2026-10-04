@@ -139,8 +139,103 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
         JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Results_toolbar_keeps_complete_controls_as_direct_items(bool locked)
+    {
+        var jobId = await CreateSavedJobAsync(locked: locked);
+        var before = await JobSnapshot.CaptureAsync(_db);
+        var page = await RenderEditorAsync(jobId);
+        await ClickTabAsync(page, "Results");
+
+        var toolbar = page.Find(".results-toolbar");
+        var picker = toolbar.QuerySelector(":scope > .packing-engine-picker")!;
+        Assert.NotNull(picker);
+        Assert.Equal("Engine", picker.QuerySelector("label[for='packing-engine']")!.TextContent.Trim());
+        Assert.Equal(locked, picker.QuerySelector("#packing-engine")!.HasAttribute("disabled"));
+        var optimize = toolbar.QuerySelector(":scope > #run-optimization")!;
+        Assert.NotNull(optimize);
+        Assert.Equal("Re-Optimize", NormalizeWhitespace(optimize.TextContent));
+        Assert.Equal(locked, optimize.HasAttribute("disabled"));
+        var buttons = toolbar.QuerySelectorAll(":scope > button");
+        Assert.Contains(buttons, b => NormalizeWhitespace(b.TextContent) == "Print Report");
+        var units = Assert.Single(buttons, b => NormalizeWhitespace(b.TextContent) == "Show feet + inches");
+        Assert.True(units.HasAttribute("aria-pressed"));
+        Assert.Equal(!locked, buttons.Any(b => NormalizeWhitespace(b.TextContent) == "Lock Job"));
+        Assert.Equal(
+            NormalizeWhitespace($"Last optimized: {before.Job(jobId).OptimizedAt!.Value.ToLocalTime():g}"),
+            NormalizeWhitespace(toolbar.QuerySelector(":scope > .results-optimized-at")!.TextContent));
+        Assert.NotNull(toolbar.QuerySelector(":scope > .packing-engine-used"));
+        Assert.Equal(locked ? 6 : 7, toolbar.Children.Length);
+        Assert.All(toolbar.Children, item => Assert.DoesNotContain(item.ClassList,
+            name => name.StartsWith("ms-") || name.StartsWith("me-")));
+        await units.ClickAsync(new());
+        Assert.Contains(page.FindAll(".results-toolbar > button"), b => NormalizeWhitespace(b.TextContent) == "Show all inches");
+        await page.FindAll(".results-toolbar > button").Single(b => NormalizeWhitespace(b.TextContent) == "Print Report").ClickAsync(new());
+        _ctx.JSInterop.VerifyInvoke("printWithTitle");
+        JobSnapshot.AssertUnchanged(before, await JobSnapshot.CaptureAsync(_db));
+    }
+
+    [Theory]
+    [InlineData("Exhaustive")]
+    [InlineData("Exhaustive (First Fit fallback)")]
+    public async Task Results_engine_label_stays_with_the_first_word_of_the_saved_value(string engineName)
+    {
+        var jobId = await CreateSavedJobAsync(engineName: engineName);
+        var page = await RenderEditorAsync(jobId);
+        await ClickTabAsync(page, "Results");
+
+        var used = page.Find(".results-toolbar > .packing-engine-used");
+        // Keep the label and first word in a no-wrap prefix, while ordinary spaces in
+        // the fallback suffix remain available as narrow-screen wrap opportunities.
+        Assert.Equal($"Engine: {engineName.Split(' ', 2)[0]}", used.QuerySelector(".packing-engine-used-prefix")!.TextContent);
+        Assert.Equal($"Engine: {engineName}", used.TextContent.Trim());
+    }
+
+    [Theory]
+    [InlineData("exhaustive")]
+    [InlineData("firstfit")]
+    [InlineData("bestfit")]
+    public async Task Engine_help_is_a_closed_native_disclosure_with_the_complete_selected_description(string engineId)
+    {
+        var page = await RenderEditorAsync(_seed.UnlockedJobId);
+        await ClickTabAsync(page, "Results");
+        await page.Find("#packing-engine").ChangeAsync(new() { Value = engineId });
+        var engine = _ctx.Services.GetRequiredService<IPackingEngineCatalog>().Engines.Single(e => e.Id == engineId);
+
+        var help = page.Find("details.packing-engine-help");
+        Assert.False(help.HasAttribute("open"));
+        Assert.Contains("print-screen-only", help.ClassList);
+        var summary = help.QuerySelector(":scope > summary")!;
+        Assert.NotNull(summary);
+        Assert.Same(summary, help.FirstElementChild);
+        Assert.Equal("About this engine", summary.TextContent.Trim());
+        Assert.False(summary.HasAttribute("tabindex")); // Keep native summary keyboard behavior.
+        Assert.False(summary.HasAttribute("role"));
+        Assert.Equal(engine.Description, help.QuerySelector(".packing-engine-description")!.TextContent.Trim());
+        Assert.Single(page.FindAll(".packing-engine-description"));
+        Assert.Equal(engine.Description, page.Find("#packing-engine").GetAttribute("title"));
+        Assert.Equal("Engine", page.Find("label[for='packing-engine']").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task Results_toolbar_preserves_optimize_before_a_plan_is_saved()
+    {
+        await _ctx.Services.GetRequiredService<JobService>().ClearOptimizationResultAsync(_seed.UnlockedJobId);
+        var page = await RenderEditorAsync(_seed.UnlockedJobId);
+        await ClickTabAsync(page, "Results");
+
+        var toolbar = page.Find(".results-toolbar");
+        Assert.Equal("Optimize", NormalizeWhitespace(toolbar.QuerySelector(":scope > #run-optimization")!.TextContent));
+        Assert.NotNull(toolbar.QuerySelector(":scope > .packing-engine-picker"));
+        Assert.Empty(toolbar.QuerySelectorAll(".packing-engine-used"));
+        Assert.DoesNotContain(toolbar.QuerySelectorAll("button"), b => NormalizeWhitespace(b.TextContent) == "Print Report");
+    }
+
     private async Task<int> CreateSavedJobAsync(
-        int quantity = 1, bool hasStock = true, decimal partLength = 144.0000m, decimal stockLength = 240.0000m)
+        int quantity = 1, bool hasStock = true, decimal partLength = 144.0000m, decimal stockLength = 240.0000m,
+        bool locked = true, string? engineName = null)
     {
         var jobs = _ctx.Services.GetRequiredService<JobService>();
         var packing = _ctx.Services.GetRequiredService<CutListPackingService>();
@@ -167,15 +262,29 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
             });
         }
 
-        // Pack freshly loaded persisted rows, save the actual custom-source plan, then lock it.
+        // Pack freshly loaded persisted rows and save the actual custom-source plan.
         job = (await jobs.GetByIdAsync(job.Id))!;
         var result = await packing.PackAsync(job.Parts, job.CuttingTool!.KerfInches, job.Stock);
         var materialResult = Assert.Single(result.MaterialResults);
         Assert.Empty(materialResult.InStockBins);
         Assert.Equal(hasStock ? quantity : 0, materialResult.ToBePurchasedBins.Count);
         Assert.Equal(hasStock ? 0 : quantity, materialResult.PackResult.ItemsNotUsed.Count);
+        if (engineName != null)
+        {
+            // Exercise saved display metadata, including the real catalog's longest fallback name;
+            // this presentation fixture does not attempt to force the packing search to time out.
+            Assert.Contains(engineName, new[]
+            {
+                BuiltInPackingEngines.Exhaustive.DisplayName,
+                BuiltInPackingEngines.Exhaustive.RunName(BuiltInPackingEngines.FirstFit)
+            });
+            result.EngineName = engineName;
+        }
         await jobs.SaveOptimizationResultAsync(job.Id, packing.SerializeResult(result), DateTime.UtcNow);
-        await jobs.LockAsync(job.Id);
+        if (locked)
+        {
+            await jobs.LockAsync(job.Id);
+        }
         return job.Id;
     }
 
