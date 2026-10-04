@@ -1211,7 +1211,8 @@ else
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var materialGroup in packResult.MaterialResults.GroupBy(mr => mr.Material.Id))
+                                        @foreach (var materialGroup in packResult.MaterialResults.GroupBy(mr => mr.Material.Id)
+                                            .OrderBy(g => g.First().Material.DisplayName).ThenBy(g => g.Key))
                                         {
                                             @foreach (var group in materialGroup.SelectMany(mr => mr.PackResult.Bins).GroupBy(b => b.Length).OrderByDescending(g => g.Key))
                                             {

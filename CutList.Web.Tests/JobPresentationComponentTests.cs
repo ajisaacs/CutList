@@ -237,7 +237,7 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(false, true)]
-    public async Task Material_list_includes_every_used_bar_once_in_material_and_descending_length_order(
+    public async Task Material_list_includes_every_used_bar_once_in_material_display_identity_and_descending_length_order(
         bool newlyPacked, bool legacy)
     {
         var fixture = await CreateMixedSourceJobAsync(save: !newlyPacked, legacy: legacy);
@@ -275,10 +275,10 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
         Assert.Contains(before.StockOf(fixture.JobId), s => s.Quantity == 2 && s.Priority == 2 && s.StockItemId == _seed.FlatBarStockItemId);
         var expectedRows = new[]
         {
-            (MaterialId: _seed.RoundTubeMaterialId, Length: 288d, Quantity: 1),
             (MaterialId: _seed.FlatBarMaterialId, Length: 240d, Quantity: 4),
             (MaterialId: _seed.FlatBarMaterialId, Length: 120d, Quantity: 1),
-            (MaterialId: fixture.DuplicateMaterialId, Length: 240d, Quantity: 1)
+            (MaterialId: fixture.DuplicateMaterialId, Length: 240d, Quantity: 1),
+            (MaterialId: _seed.RoundTubeMaterialId, Length: 288d, Quantity: 1)
         };
         AssertUsedMaterialRows(page, loaded, expectedRows, feetAndInches: false);
         Assert.Equal("7 bars", page.Find(".print-material-list tfoot td.text-end").TextContent.Trim());
@@ -422,8 +422,10 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
 
     private void AssertMixedPlanSources(MultiMaterialPackResult result, int duplicateMaterialId)
     {
-        Assert.Equal(new[] { _seed.RoundTubeMaterialId, _seed.FlatBarMaterialId, duplicateMaterialId },
+        // Packing and saved JSON retain source order, not the Material List's display/ID order.
+        Assert.Equal(new[] { _seed.RoundTubeMaterialId, duplicateMaterialId, _seed.FlatBarMaterialId },
             result.MaterialResults.Select(m => m.Material.Id));
+        Assert.True(_seed.FlatBarMaterialId < duplicateMaterialId);
         Assert.Equal(7, result.MaterialResults.Sum(m => m.PackResult.Bins.Count));
         var flat = result.MaterialResults.Single(m => m.Material.Id == _seed.FlatBarMaterialId);
         Assert.Equal(2, flat.InStockBins.Count(b => b.Length == 240));
@@ -451,13 +453,15 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
         await context.SaveChangesAsync();
         var jobs = _ctx.Services.GetRequiredService<JobService>();
         var job = await jobs.CreateAsync(new Job { Name = "Seven actually used bars", CuttingToolId = 1 });
+        // Start with Round Tube and reverse the equal-display-name Flat Bar identities so both
+        // display-name ordering and the material-ID tie-breaker must override source order.
         foreach (var part in new[]
         {
             new JobPart { MaterialId = _seed.RoundTubeMaterialId, Name = "Tube", LengthInches = 180m, Quantity = 1 },
+            new JobPart { MaterialId = duplicate.Id, Name = "Other grade", LengthInches = 150m, Quantity = 1 },
             new JobPart { MaterialId = _seed.FlatBarMaterialId, Name = "Rail", LengthInches = 150m, Quantity = 4 },
             new JobPart { MaterialId = _seed.FlatBarMaterialId, Name = "Brace", LengthInches = 90m, Quantity = 1 },
-            new JobPart { MaterialId = _seed.FlatBarMaterialId, Name = "Too long", LengthInches = 500m, Quantity = 1 },
-            new JobPart { MaterialId = duplicate.Id, Name = "Other grade", LengthInches = 150m, Quantity = 1 }
+            new JobPart { MaterialId = _seed.FlatBarMaterialId, Name = "Too long", LengthInches = 500m, Quantity = 1 }
         })
         {
             part.JobId = job.Id;
