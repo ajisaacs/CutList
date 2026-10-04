@@ -111,10 +111,17 @@ not silently redirected to Results.
    nonblank customer, actual saved engine, Last optimized, browser-local Printed time
    with timezone, tool/kerf, complete Material List and safely encoded multiline notes.
    Blank customer/notes blocks are omitted. `dateTime` is ISO; visible print time is local.
-3. Generate real Letter PDFs with Chromium. Extract text (`pdftotext -layout`) and render
-   **every** page (`pdftoppm`), enumerate and count the image manifest programmatically,
+3. Generate real Letter PDFs with Chromium without adding automation-only margins:
+   the application's print CSS must supply the half-inch `@page` margins. Also check
+   a sample on A4 so the CSS does not silently force a paper size. Extract text
+   (`pdftotext -layout`) and render **every** page, enumerate/count the image manifest,
    and visually inspect all pages as well as comparing expected text/rows.
-4. Check lowercase dimension `x`, black cut-badge text/dividers, repeating material
+4. Measure the physical inset of text **and drawing/border bounds** on every PDF page,
+   including continuations: at least 36 points (0.5 inch) per side, allowing at most
+   half a point of browser/PDF coordinate rounding. Reject outer rules that reach the
+   page edges. Bootstrap row gutters must not bleed into the page margins; inner cell
+   padding is not a substitute for physical margins. Then check lowercase dimension
+   `x`, black cut-badge text/dividers, repeating material
    headers, and intact individual summary/cut rows. Whole lists and long notes must
    paginate rather than clip. A repeated table footer is the whole-report total, not a
    per-page subtotal. Check continuity against all pages before diagnosing missing rows.
@@ -187,9 +194,10 @@ publication had not been performed; the later README publication is recorded bel
 
 ## Published README example
 
-The README gallery uses a separate, fictional workshop-frame job captured from
+The README screen captures use a separate, fictional workshop-frame job captured from
 `b42e0aff1fee6c30d62b1ab608ea5d7ba8fd9356` with Chromium 154.0.8037.97 on 2026-10-03.
-It does not reuse the higher-precision mixed-material fixture described above.
+The PDF and its preview were subsequently regenerated with the margin correction below.
+These assets do not reuse the higher-precision mixed-material fixture described above.
 
 - Material: Steel/A500 Square Tube, size 2 inches and wall 0.125 inches, created through
   the material API and read back as `2" x 1/8" wall`.
@@ -215,6 +223,34 @@ Capture/API/PDF evidence is under
 SQL/app environment was used; no production catalog, credentials, or customer data were
 accessed. This publication does not apply the production material-label repair or deploy
 an application change.
+
+### Physical-margin correction
+
+The first published sample passed content checks but incorrectly had no physical page
+margin. Its drawing bounds extended from -8.5 to 620.5 points on a 612-point-wide Letter
+page: the missing `@page` inset and Bootstrap summary-row negative gutters both mattered.
+That earlier visual review did not catch the page-perimeter defect.
+
+The corrected `report.css` applies `@page { margin: 0.5in; }` in print media, without a
+fixed paper size, and resets the summary row's margins. Two new regressions failed on
+the previous CSS; all 36 Python regressions now pass. The actual Web app was published
+and run against a new loopback-only disposable SQL database, then the same synthetic
+job was saved/reloaded and printed without Playwright margin overrides. The sample PDF
+and its README preview were regenerated; the two screen captures are unchanged.
+
+Verified on Chromium 154.0.8037.97 against source base `0bc642c` plus the recorded margin
+patch: one-page Letter and A4 samples, plus a five-page report with 24 material-length
+rows, 24 individually named cut rows, and 20 notes. Every one of the seven rendered
+pages was visually reviewed and its text/drawing bounds measured. Letter side margins
+are 36 points; the A4 right edge is 35.67 points due to browser coordinate rounding.
+Every page stays within the half-inch target using the documented half-point tolerance.
+All sample cut labels, long-report rows, repeating headings, and the final notes marker
+remain present; no split cut rows or clipped text were found.
+
+Evidence: `/home/aj/extracted/2026-10-03/cutlist-print-margins/`, including the source diff,
+API fixture/readbacks, raw PDFs, all page renders, `margin-verification.json`, and
+updated-asset hashes. The original failed sample remains in the prior publication
+archive. Production repair and deployment are not part of this correction.
 
 Next hardening: the documented API precision boundary, general catalog import identity,
 nominal dimensions/pipe-wall precision policy, removal of the unused report component,
