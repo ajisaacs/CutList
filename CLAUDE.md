@@ -87,8 +87,10 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Unit Handling**:
 - `ArchUnits` — Converts feet/inches/fractions to decimal inches (accepts "12'", "6\"", "12 1/2\"", etc.)
-- `FormatHelper` — Converts decimals to mixed fractions for display
-- Internal calculations use inches; format on display
+- `FormatHelper` — Rounds ordinary length displays to the nearest 1/16 inch (or supplied positive denominator), midpoint away from zero, then reduces fractions; signs and whole-inch/feet carries are preserved.
+- `ArchUnits.FormatFromInches` rounds before splitting feet/inches and includes `0-` for fractional remainders below one inch after feet.
+- Internal calculations use inches; formatting is presentation-only. Parsing, stored lengths, kerf, and packing inputs are not quantized. `LengthInput` blur formats its last parsed value without reparsing display text or emitting another value callback.
+- Tube-wall identity: Round Tube, Square Tube, and Rectangular Tube wall names and their opt-in `LengthInput` displays share an exact-decimal-or-fraction formatter. Exact multiples of 1/16 inch retain simplified fractions; other walls retain the full decimal with insignificant trailing zeros trimmed. Never infer gauge numbers, cast through double, or quantize the measurement. Overall dimensions and ordinary inputs keep ordinary length formatting; pipe/schedule naming is unchanged.
 
 **Patterns**:
 - `Result<T>` for standardized error handling (Success/Failure instead of exceptions)
@@ -118,7 +120,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Overview**: The root page uses `OverviewService` to show recently created jobs, headline planning counts, and the five stock configurations most frequently specified across job stock. The stock ranking is a planning-demand signal (distinct jobs configured for a material/length), not a count of on-hand inventory.
 
-**Material list semantics**: The Results tab labels lengths not covered by the job's configured stock as a **Material List**, not a purchase list. It identifies required material; purchasing remains a separate decision outside the cut-list result.
+**Material list semantics**: The Results **Material List** contains all and only stock bars actually used in the saved/displayed cutting plan, catalog and custom alike. Derive rows only from each material result's `PackResult.Bins`, grouped by material identity and numeric length, ordered by material display and descending length; never add the legacy source partitions again or infer use from configured stock quantities. `Total Bars Used` is the sum of those rows. This is neither on-hand inventory nor a purchasing recommendation. Unplaced parts retain their warning even when no bars were used. Screen and print share these rows.
 
 ### CutList.Mcp — MCP Server
 
@@ -188,7 +190,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - `PackAsync(parts, kerfInches, jobStock?, engineId?)` — runs optimization per material group with the requested engine (null = configured default); an unknown id throws `UnknownPackingEngineException` before any database work
 - `Engines` / `DefaultEngine` expose the engine catalog for selection UIs
 - Results record `EngineId`/`EngineName` (the name notes an engine fallback in any material group; `PackingEngineServiceTests` checks this with a fake engine that always falls back); `SavedOptimizationResult` persists them inside `OptimizationResultJson` (no schema change). Results saved before engine selection have no engine fields and load as First Fit, the only engine the job path used then. Plans saved under the retired id `advanced` (the same algorithm) keep their stored engine name; the Results-tab picker then starts on the configured default
-- Separates results into `InStockBins` (from catalog-sourced job stock) and `ToBePurchasedBins`
+- Retains legacy source partitions `InStockBins` (catalog-sourced job stock) and `ToBePurchasedBins` (custom-source stock) for saved/API compatibility. These are not true inventory/purchasing decisions. Both are already represented in canonical `PackResult.Bins`; the UI must not double-count them.
 - `GetSummary(result)` — calculates total bins, pieces, waste, efficiency %
 - `SerializeResult(result)` / `LoadSavedResult(json)` — JSON round-trip via DTO layer (`SavedOptimizationResult` etc.)
 
@@ -197,7 +199,13 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 ### CatalogService
 - `ExportAsync()` — dumps cutting tools and materials (with dimensions + stock items) into a shape-grouped `CatalogData` DTO for bulk export/import tooling
-- Backs the `CatalogController` REST endpoint and the `scripts/ExportData` data-loading workflow
+- Backs `GET /api/catalog/export` and `POST /api/catalog/import`. Import identity is material shape plus stored `Size`, not stable ID or dimensions. Corrected seed labels are for fresh/disposable imports; re-importing renamed labels over an existing catalog can create duplicates and is not a repair. Inspect response `Errors` and read back exact IDs/values, even on HTTP 200. See `docs/material-size-repair.md`.
+
+### MaterialSizeRepair (explicit operator invocation only)
+
+- `tools/CutList.MaterialRepair` is a separate Linux-only CLI, not startup maintenance or an HTTP endpoint. Default dry-run requires an explicit environment-supplied connection and expected actual server/database identity; it never falls back to appsettings or runs migrations.
+- It proposes only proven historical-generated labels for the three tube shapes and Channel, preserving custom/ambiguous/missing-dimension rows. Explicit reviewed-manifest apply and compare-and-swap rollback revalidate identity, dimensions, timestamps and SQL-collation name collisions under `SERIALIZABLE` transactions. Only material `Size` and documented `UpdatedAt` may change; job JSON, locks, references and measurements are untouched.
+- Durable before-images precede writes. Follow `docs/material-size-repair.md` for exact commands, Linux artifact-path protections, reviewed manifests, named-production-target authorization, verified backup and post-write readback. Building/testing the tool does not authorize production application. Locked reports resolve live material labels by ID, so their displayed labels can change without saved-plan JSON changes.
 
 ## CutList.Web Pages
 
@@ -234,18 +242,21 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - **ConfirmDialog** — All destructive actions use the shared `ConfirmDialog` component
 - **Material selection flow** — Shape dropdown -> Size dropdown -> Length input -> Quantity (conditional dropdowns)
 - **Stock priority** — Lower number = used first; `-1` quantity = unlimited
-- **Job stock** — Jobs must have stock explicitly configured (catalog-sourced `StockItem` rows or custom-length rows); there is no fallback to auto-discovered inventory
+- **Job stock** — Jobs must have stock explicitly configured (catalog-sourced `StockItem` rows or custom-length rows); there is no fallback to auto-discovered inventory. The job Stock workflow says `Catalog`/`From Catalog`, not `Inventory`; public API/MCP field names are unchanged.
 - **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`, including the engine used; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
 - **Job lock flow** — Optimize job -> review/print results -> Lock Job (manual action beside Print Report on the Results tab, available whether or not purchases are needed) -> job becomes read-only until Unlock
-- **Printed cut badges** — Print styles intentionally remove color fills; cut badges therefore force black text and a black part-number/length divider so both remain legible on paper. The print-only tool line shows the selected cut method and kerf immediately below the summary.
+- **Printed reports** — The active renderer is the job Results markup plus `report.css`, not the unused `CutListReport.razor`. Reuse the job title; print optional nonblank customer, saved engine/fallback, Last optimized, full used-bar Material List, tool/kerf and safely encoded multiline notes. One browser `beforeprint` listener refreshes `<time data-print-timestamp>` on every attempt with local date/time and timezone plus ISO `dateTime`; `printWithTitle` restores the title after print/cancel. Printing a different tab is not automatically routed to Results.
+- **Printed cut badges and pagination** — Print styles force black cut text/dividers and preserve mixed-case material names and lowercase dimension `x`. Material lists and notes may span pages; individual material-summary and cut rows remain intact, with repeating table headers. See `docs/qa/screenshot-readiness.md` for actual browser/PDF acceptance rather than relying on source tests alone.
 - **Timestamps** — `CreatedAt` defaults to `GETUTCDATE()`; `UpdatedAt` set on modifications
 - **Collections** — Encapsulated in Core; use `AsReadOnly()`, access via `Add*` methods
 - **Priority system** — Lower priority bins used first in packing algorithm
 - **UI ↔ MCP split** — The Blazor UI calls services directly (in-process); CutList.Mcp and any other external integration go through the REST API in `Controllers/`. Keep both paths in sync when changing service method signatures used by controllers.
 
-## Supporting Scripts (`scripts/`)
+## Catalog and screenshot QA workflows
 
-- `ExportData/` — standalone console project that exercises `CutList.Web`'s data layer to import/export catalog seed data (e.g. `Data/SeedData/oneals-catalog.json`)
+- Use the catalog REST endpoints for fresh disposable imports/exports of `CutList.Web/Data/SeedData/oneals-catalog.json`; the previously documented `scripts/ExportData` project does not exist in this checkout.
+- `docs/qa/screenshot-readiness.md` defines synthetic-data screen/PDF checks, explicit loopback-only disposable SQL/app setup, real print/cancel checks, evidence and targeted cleanup. Python print-lifecycle regressions execute the actual App script with Node. Never redirect failing test fixtures to a development or production database.
+- Serialize shared-checkout .NET builds/tests with `flock --close -w 180 <scratch-lock> dotnet ...` so persistent MSBuild nodes cannot inherit the lock descriptor. Production repair, deployment and README image publication remain separately authorized follow-on work.
 
 ## Key Files
 
@@ -255,7 +266,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | `CutList.Core/Nesting/MultiBinPacker.cs` | Multi-bin type orchestration |
 | `CutList.Core/Nesting/BuiltInPackingEngines.cs` | The list of selectable packing engines |
 | `CutList.Core/Nesting/PackingEngineCatalog.cs` | Engine id resolution and creation |
-| `CutList.Core/ArchUnits.cs` | Architectural unit parsing/conversion |
+| `CutList.Core/Formatting/ArchUnits.cs` | Architectural unit parsing/conversion |
 | `CutList.Core/Formatting/FormatHelper.cs` | Display formatting |
 | `CutList.Web/Data/ApplicationDbContext.cs` | EF Core context with all DbSets and configuration |
 | `CutList.Web/Services/JobService.cs` | Job orchestration (CRUD, parts, stock, tools, lock/unlock) and lock enforcement |

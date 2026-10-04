@@ -146,6 +146,12 @@
     display: none;
 }
 
+/* Job details and notes are paper-only; the existing page title identifies the job. */
+.print-job-metadata,
+.print-job-notes {
+    display: none;
+}
+
 /* Print styles - Compact layout to save paper */
 @media print {
     body {
@@ -325,10 +331,40 @@
         padding: 0.3rem 0.75rem;
     }
 
-    /* Keep material list with cut lists to save paper */
+    .print-job-metadata {
+        display: block !important;
+        font-size: 9pt;
+        margin-bottom: 0.5rem;
+    }
+
+    .print-job-metadata > div {
+        margin-bottom: 0.1rem;
+    }
+
+    .print-job-notes {
+        display: block !important;
+        break-inside: auto;
+        page-break-inside: auto;
+    }
+
+    .print-job-notes p {
+        overflow-wrap: anywhere;
+    }
+
+    /* Long material lists and notes must be able to span pages. */
     .print-material-list {
-        break-inside: avoid;
-        page-break-inside: avoid;
+        break-inside: auto;
+        page-break-inside: auto;
+    }
+
+    .cutlist-material-card .table-responsive,
+    .print-material-list .table-responsive {
+        overflow: visible !important;
+    }
+
+    .cutlist-material-card thead,
+    .print-material-list thead {
+        display: table-header-group;
     }
 
     /* General card print styles — allow large cards to break across pages */
@@ -369,6 +405,7 @@
     }
 
     .cutlist-material-print-header th {
+        text-transform: none !important;
         background: #f0f0f0 !important;
         padding: 0.4rem 0.5rem !important;
         border-bottom: 1px solid #ccc !important;
@@ -395,7 +432,8 @@
         padding: 0 !important;
     }
 
-    /* Keep each stock-bar result, its cuts, and its waste on one printed page. */
+    /* Keep each material summary row and stock-bar result on one printed page. */
+    .print-material-list tbody tr,
     .cutlist-material-card tbody tr {
         break-inside: avoid;
         page-break-inside: avoid;

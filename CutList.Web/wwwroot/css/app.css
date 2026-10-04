@@ -269,6 +269,63 @@ a, .btn-link { color: var(--accent-dark); }
 .table-actions .btn { align-items: center; display: inline-flex; justify-content: center; min-height: 2rem; min-width: 2rem; padding: .35rem .45rem; }
 .alert { border-radius: .4rem; border-width: 1px; }
 
+/* Results controls wrap as complete items; only an oversized engine value wraps internally. */
+.results-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem .75rem;
+}
+
+.results-toolbar > * {
+    flex: 0 0 auto;
+    max-width: 100%;
+}
+
+.results-toolbar > .btn {
+    white-space: nowrap;
+}
+
+.results-toolbar .packing-engine-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+}
+
+.results-toolbar .packing-engine-picker label {
+    flex: 0 0 auto;
+}
+
+.results-toolbar .packing-engine-picker select {
+    min-width: 0;
+    width: auto;
+}
+
+.results-toolbar .packing-engine-used {
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: normal;
+}
+
+.results-toolbar .packing-engine-used-prefix {
+    white-space: nowrap;
+}
+
+.packing-engine-help > summary {
+    color: var(--accent-dark);
+    cursor: pointer;
+}
+
+.packing-engine-help > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: .2rem;
+}
+
+.packing-engine-help .packing-engine-description {
+    margin-top: .5rem;
+}
+
 /* Results cut badges keep the part number and its length visually distinct. */
 .cut-part-badge { background-color: #6c8ebf; display: inline-flex; font-weight: 500; overflow: hidden; padding: 0; }
 .cut-part-badge-name { padding: .35em .55em; }

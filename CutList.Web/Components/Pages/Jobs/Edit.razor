@@ -254,11 +254,11 @@ else
                     {
                         <ul class="nav nav-tabs mb-3" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link @(stockModalTab == StockModalTab.Inventory ? "active" : "")"
+                                <button class="nav-link @(stockModalTab == StockModalTab.Catalog ? "active" : "")"
                                         type="button" disabled="@(job.Parts.Count == 0)"
-                                        title="@(job.Parts.Count == 0 ? "Add parts first to match against inventory" : "")"
-                                        @onclick="() => stockModalTab = StockModalTab.Inventory">
-                                    From Inventory
+                                        title="@(job.Parts.Count == 0 ? "Add parts first to match against catalog" : "")"
+                                        @onclick="() => stockModalTab = StockModalTab.Catalog">
+                                    From Catalog
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
@@ -271,7 +271,7 @@ else
                         </ul>
                     }
 
-                    @if (stockModalTab == StockModalTab.Inventory && editingStock == null)
+                    @if (stockModalTab == StockModalTab.Catalog && editingStock == null)
                     {
                         @if (loadingImport)
                         {
@@ -283,7 +283,7 @@ else
                         else if (importCandidates.Count == 0)
                         {
                             <div class="text-center py-4 text-muted">
-                                <p class="mb-2">No matching inventory stock found.</p>
+                                <p class="mb-2">No matching catalog stock found.</p>
                                 <p class="small">Either no stock items exist for the materials in your parts, or they have already been added to this job.</p>
                             </div>
                         }
@@ -341,7 +341,7 @@ else
                             <div class="alert alert-danger mt-3 mb-0">@importErrorMessage</div>
                         }
                     }
-                    else if (stockModalTab == StockModalTab.Inventory && editingStock != null)
+                    else if (stockModalTab == StockModalTab.Catalog && editingStock != null)
                     {
                         <div class="row g-3">
                             <div class="col-md-3">
@@ -441,7 +441,7 @@ else
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" @onclick="CloseStockModal">Cancel</button>
-                    @if (stockModalTab == StockModalTab.Inventory && editingStock == null)
+                    @if (stockModalTab == StockModalTab.Catalog && editingStock == null)
                     {
                         @if (importCandidates.Count > 0)
                         {
@@ -451,9 +451,9 @@ else
                             </button>
                         }
                     }
-                    else if (stockModalTab == StockModalTab.Inventory && editingStock != null)
+                    else if (stockModalTab == StockModalTab.Catalog && editingStock != null)
                     {
-                        <button type="button" class="btn btn-primary" @onclick="SaveStockFromInventoryAsync">Save Changes</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveStockFromCatalogAsync">Save Changes</button>
                     }
                     else
                     {
@@ -494,10 +494,10 @@ else
     private int partSelectedMaterialId;
     private List<PartRow> partRows = new();
 
-    // Stock modal (unified add/edit, both inventory-sourced and custom-length)
-    private enum StockModalTab { Inventory, Custom }
+    // Stock modal (unified add/edit, both catalog-sourced and custom-length)
+    private enum StockModalTab { Catalog, Custom }
     private bool showStockModal;
-    private StockModalTab stockModalTab = StockModalTab.Inventory;
+    private StockModalTab stockModalTab = StockModalTab.Catalog;
     private JobStock newStock = new();
     private JobStock? editingStock;
     private string? stockErrorMessage;
@@ -527,6 +527,9 @@ else
     private string FormatResultLength(double inches) => showLengthsInInches
         ? ArchUnits.FormatInches(inches)
         : ArchUnits.FormatFromInches(inches);
+
+    private static string CountLabel(int count, string singular, string plural) =>
+        $"{count} {(count == 1 ? singular : plural)}";
 
     // Set when JobService rejects a change because the job was locked or changed in another session.
     private string? conflictMessage;
@@ -764,7 +767,7 @@ else
                                 {
                                     <tr>
                                         <td>@part.Material.DisplayName</td>
-                                        <td>@ArchUnits.FormatFromInches((double)part.LengthInches) <span class="text-muted">(@(part.LengthInches)")</span></td>
+                                        <td>@ArchUnits.FormatFromInches((double)part.LengthInches) <span class="text-muted">(@(part.LengthInches.ToString("0.####"))")</span></td>
                                         <td>@part.Quantity</td>
                                         <td>@(string.IsNullOrWhiteSpace(part.Name) ? "-" : part.Name)</td>
                                         <td>
@@ -782,7 +785,7 @@ else
                         </table>
                     </div>
                     <div class="mt-3 text-muted">
-                        Total: @job.Parts.Sum(p => p.Quantity) pieces
+                        Total: @CountLabel(job.Parts.Sum(p => p.Quantity), "piece", "pieces")
                     </div>
                 }
             </div>
@@ -977,8 +980,8 @@ else
                 {
                     <div class="text-center py-4 text-muted">
                         <p class="mb-2">No stock configured for this job.</p>
-                        <p class="small">Add stock from your inventory or define custom lengths.</p>
-                        <p class="small">Stock must be explicitly added here before you can optimize — there is no automatic fallback to inventory.</p>
+                        <p class="small">Add stock from your catalog or define custom lengths.</p>
+                        <p class="small">Stock must be explicitly added here before you can optimize — there is no automatic fallback to catalog.</p>
                     </div>
                 }
                 else
@@ -1008,7 +1011,7 @@ else
                     {
                         <tr>
                             <td>@stock.Material?.DisplayName</td>
-                            <td>@ArchUnits.FormatFromInches((double)stock.LengthInches) <span class="text-muted">(@(stock.LengthInches)")</span></td>
+                            <td>@ArchUnits.FormatFromInches((double)stock.LengthInches) <span class="text-muted">(@(stock.LengthInches.ToString("0.####"))")</span></td>
                             <td>@(stock.Quantity == -1 ? "Unlimited" : stock.Quantity.ToString())</td>
                             <td>@stock.Priority</td>
                             <td>
@@ -1018,7 +1021,7 @@ else
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">Inventory</span>
+                                    <span class="badge bg-secondary">Catalog</span>
                                 }
                             </td>
                             <td>
@@ -1058,10 +1061,10 @@ else
         }
         else
         {
-            <div class="mb-3">
-                <div class="packing-engine-picker d-inline-flex align-items-center me-2 print-screen-only">
-                    <label class="form-label mb-0 me-2" for="packing-engine">Engine</label>
-                    <select id="packing-engine" class="form-select form-select-sm w-auto" @bind="selectedEngineId"
+            <div class="results-toolbar mb-3">
+                <div class="packing-engine-picker print-screen-only">
+                    <label class="form-label mb-0" for="packing-engine">Engine</label>
+                    <select id="packing-engine" class="form-select form-select-sm" @bind="selectedEngineId"
                             disabled="@(optimizing || job.IsLocked)" title="@SelectedEngine?.Description">
                         @foreach (var engine in PackingService.Engines)
                         {
@@ -1088,16 +1091,16 @@ else
                 </button>
                 @if (packResult != null)
                 {
-                    <button class="btn btn-outline-secondary ms-2" @onclick="PrintReport">
+                    <button class="btn btn-outline-secondary" @onclick="PrintReport">
                         <i class="bi bi-printer me-1"></i> Print Report
                     </button>
-                    <button class="btn btn-outline-secondary ms-2" @onclick="() => showLengthsInInches = !showLengthsInInches"
+                    <button class="btn btn-outline-secondary" @onclick="() => showLengthsInInches = !showLengthsInInches"
                             aria-pressed="@showLengthsInInches">
                         @(showLengthsInInches ? "Show feet + inches" : "Show all inches")
                     </button>
                     @if (!job.IsLocked)
                     {
-                        <button class="btn btn-warning ms-2" @onclick="LockJob" disabled="@lockingJob">
+                        <button class="btn btn-warning" @onclick="LockJob" disabled="@lockingJob">
                             @if (lockingJob)
                             {
                                 <span class="spinner-border spinner-border-sm me-1"></span>
@@ -1108,18 +1111,22 @@ else
                 }
                 @if (job.OptimizedAt.HasValue)
                 {
-                    <span class="text-muted ms-3">
+                    <span class="text-muted results-optimized-at print-screen-only">
                         Last optimized: @job.OptimizedAt.Value.ToLocalTime().ToString("g")
                     </span>
                 }
                 @if (packResult != null && !string.IsNullOrEmpty(packResult.EngineName))
                 {
-                    <span class="text-muted ms-3 packing-engine-used">Engine: @packResult.EngineName</span>
+                    var engineNameParts = packResult.EngineName.Split(' ', 2);
+                    <span class="text-muted packing-engine-used print-screen-only"><span class="packing-engine-used-prefix">Engine: @engineNameParts[0]</span>@(engineNameParts.Length > 1 ? $" {engineNameParts[1]}" : string.Empty)</span>
                 }
             </div>
             @if (SelectedEngine != null)
             {
-                <div class="form-text mb-3 print-screen-only packing-engine-description">@SelectedEngine.Description</div>
+                <details class="packing-engine-help form-text mb-3 print-screen-only">
+                    <summary>About this engine</summary>
+                    <p class="packing-engine-description mb-0">@SelectedEngine.Description</p>
+                </details>
             }
 
             @if (packResult != null && summary != null)
@@ -1131,6 +1138,22 @@ else
                         <p class="mb-0">Some items could not be placed. This usually means no stock lengths are configured for the material, or parts are too long.</p>
                     </div>
                 }
+
+                <div class="print-job-metadata">
+                    @if (!string.IsNullOrWhiteSpace(job.Customer))
+                    {
+                        <div class="print-customer"><strong>Customer:</strong> @job.Customer</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(packResult.EngineName))
+                    {
+                        <div class="print-engine-used"><strong>Engine:</strong> @packResult.EngineName</div>
+                    }
+                    @if (job.OptimizedAt.HasValue)
+                    {
+                        <div class="print-optimized-at"><strong>Last optimized:</strong> @job.OptimizedAt.Value.ToLocalTime().ToString("g")</div>
+                    }
+                    <div><strong>Printed:</strong> <time data-print-timestamp></time></div>
+                </div>
 
                 <!-- Overall Summary Cards -->
                 <div class="row mb-4 print-summary">
@@ -1176,7 +1199,8 @@ else
                     </div>
                 }
 
-                <!-- Material List: required stock lengths not covered by job stock -->
+                <!-- Material List: all actually used bars, independent of source partition -->
+                var totalBarsUsed = packResult.MaterialResults.Sum(mr => mr.PackResult.Bins.Count);
                 <div class="card mb-4 print-material-list">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Material List</h5>
@@ -1186,9 +1210,10 @@ else
                         }
                     </div>
                     <div class="card-body">
-                        @if (summary.TotalToBePurchasedBins == 0)
+                        <p class="text-muted material-list-scope">Stock bars used in this cutting plan.</p>
+                        @if (totalBarsUsed == 0)
                         {
-                            <p class="text-muted mb-0">No additional material lengths are required beyond the stock configured for this job.</p>
+                            <p class="text-muted mb-0">No stock bars were used in this plan.</p>
                         }
                         else
                         {
@@ -1202,12 +1227,13 @@ else
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var materialResult in packResult.MaterialResults.Where(mr => mr.ToBePurchasedBins.Count > 0))
+                                        @foreach (var materialGroup in packResult.MaterialResults.GroupBy(mr => mr.Material.Id)
+                                            .OrderBy(g => g.First().Material.DisplayName).ThenBy(g => g.Key))
                                         {
-                                            @foreach (var group in materialResult.ToBePurchasedBins.GroupBy(b => b.Length).OrderByDescending(g => g.Key))
+                                            @foreach (var group in materialGroup.SelectMany(mr => mr.PackResult.Bins).GroupBy(b => b.Length).OrderByDescending(g => g.Key))
                                             {
                                                 <tr>
-                                                    <td>@materialResult.Material.DisplayName</td>
+                                                    <td>@materialGroup.First().Material.DisplayName</td>
                                                     <td>@FormatResultLength(group.Key)</td>
                                                     <td class="text-end">@group.Count()</td>
                                                 </tr>
@@ -1216,8 +1242,8 @@ else
                                     </tbody>
                                     <tfoot>
                                         <tr class="fw-bold">
-                                            <td colspan="2">Total Required</td>
-                                            <td class="text-end">@summary.TotalToBePurchasedBins bars</td>
+                                            <td colspan="2">Total Bars Used</td>
+                                            <td class="text-end">@CountLabel(totalBarsUsed, "bar", "bars")</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -1241,8 +1267,8 @@ else
                             <div class="d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">@materialResult.Material.DisplayName</h5>
                                 <span class="text-muted">
-                                    @(materialSummary.InStockBins + materialSummary.ToBePurchasedBins) bars
-                                    &middot; @materialSummary.TotalPieces pieces
+                                    @CountLabel(materialSummary.InStockBins + materialSummary.ToBePurchasedBins, "bar", "bars")
+                                    &middot; @CountLabel(materialSummary.TotalPieces, "piece", "pieces")
                                     &middot; @materialSummary.Efficiency.ToString("F1")% efficiency
                                 </span>
                             </div>
@@ -1251,7 +1277,7 @@ else
                             @if (materialResult.PackResult.ItemsNotUsed.Count > 0)
                             {
                                 <div class="alert alert-danger">
-                                    <strong>@materialResult.PackResult.ItemsNotUsed.Count items not placed</strong> —
+                                    <strong>@CountLabel(materialResult.PackResult.ItemsNotUsed.Count, "item", "items") not placed</strong> —
                                     not enough stock quantity entered for this job, no stock lengths configured, or parts too long.
                                 </div>
                             }
@@ -1263,8 +1289,8 @@ else
                                             <th colspan="4">
                                                 <span class="cutlist-material-name">@materialResult.Material.DisplayName</span>
                                                 <span class="cutlist-material-stats">
-                                                    @(materialSummary.InStockBins + materialSummary.ToBePurchasedBins) bars
-                                                    &middot; @materialSummary.TotalPieces pieces
+                                                    @CountLabel(materialSummary.InStockBins + materialSummary.ToBePurchasedBins, "bar", "bars")
+                                                    &middot; @CountLabel(materialSummary.TotalPieces, "piece", "pieces")
                                                     &middot; @materialSummary.Efficiency.ToString("F1")% efficiency
                                                 </span>
                                             </th>
@@ -1305,6 +1331,14 @@ else
                             </div>
                         </div>
                     </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(job.Notes))
+                {
+                    <section class="notes-section print-job-notes">
+                        <h3>Notes</h3>
+                        <p>@job.Notes</p>
+                    </section>
                 }
             }
             else if (!optimizing)
@@ -1376,7 +1410,7 @@ else
         stockErrorMessage = null;
         importErrorMessage = null;
         importCandidates.Clear();
-        stockModalTab = job.Parts.Count > 0 ? StockModalTab.Inventory : StockModalTab.Custom;
+        stockModalTab = job.Parts.Count > 0 ? StockModalTab.Catalog : StockModalTab.Custom;
         showStockModal = true;
 
         if (job.Parts.Count > 0)
@@ -1428,7 +1462,7 @@ else
         stockSelectedShape = stock.Material?.Shape;
         stockSelectedMaterialId = stock.MaterialId;
         stockErrorMessage = null;
-        stockModalTab = stock.IsCustomLength ? StockModalTab.Custom : StockModalTab.Inventory;
+        stockModalTab = stock.IsCustomLength ? StockModalTab.Custom : StockModalTab.Catalog;
         showStockModal = true;
 
         if (!stock.IsCustomLength)
@@ -1447,7 +1481,7 @@ else
             : new List<StockItem>();
     }
 
-    private async Task SaveStockFromInventoryAsync()
+    private async Task SaveStockFromCatalogAsync()
     {
         stockErrorMessage = null;
 
@@ -1554,7 +1588,7 @@ else
         summary = null;
     }
 
-    // Loads inventory stock candidates for the modal's "From Inventory" tab
+    // Loads catalog stock candidates for the modal's "From Catalog" tab
     private async Task LoadImportCandidatesAsync()
     {
         importErrorMessage = null;

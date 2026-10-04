@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -41,6 +42,16 @@ class CutBadgeFormatTests(unittest.TestCase):
         self.assertIn("color: #000 !important;", print_styles)
         self.assertIn(".cut-part-badge-divider {", print_styles)
         self.assertIn("border-left: 1px solid #000 !important;", print_styles)
+
+    def test_print_material_headers_preserve_dimension_case_and_repeat_without_splitting_bars(self) -> None:
+        css = (REPO_ROOT / "CutList.Web/wwwroot/css/report.css").read_text()
+        printed = css.split("@media print {", 1)[1]
+        self.assertRegex(printed, r"\.cutlist-material-print-header th\s*\{[^}]*text-transform: none !important;")
+        self.assertNotRegex(printed, r"(?:^|\n)\s*(?:th|h[1-6])\s*\{[^}]*text-transform: none")
+        for selector in (".cutlist-material-card thead", ".print-material-list thead"):
+            self.assertRegex(printed, re.escape(selector) + r"[^{}]*\{[^}]*display: table-header-group;")
+        self.assertRegex(printed, r"\.cutlist-material-card tbody tr\s*\{[^}]*break-inside: avoid;[^}]*page-break-inside: avoid;")
+        self.assertRegex(printed, r"\.cutlist-material-card \.table-responsive[^{}]*\{[^}]*overflow: visible !important;")
 
 
 if __name__ == "__main__":

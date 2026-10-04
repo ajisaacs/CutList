@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/report.css" />
     <link rel="stylesheet" href="CutList.Web.styles.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
@@ -21,6 +21,19 @@
     <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
     <script>
+        // Native Ctrl+P and the report button share one fresh browser-local print instant.
+        window.addEventListener('beforeprint', () => {
+            const now = new Date();
+            const timestamp = now.toLocaleString(undefined, {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short'
+            });
+            document.querySelectorAll('time[data-print-timestamp]').forEach(time => {
+                time.textContent = timestamp;
+                time.dateTime = now.toISOString();
+            });
+        });
+
         function printWithTitle(title) {
             const originalTitle = document.title;
             document.title = title;
