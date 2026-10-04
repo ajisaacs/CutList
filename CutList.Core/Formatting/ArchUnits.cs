@@ -68,17 +68,25 @@ namespace CutList.Core.Formatting
 
         public static string FormatFromInches(double totalInches)
         {
-            var feet = Math.Floor(totalInches / 12.0);
-            var inches = FormatHelper.ConvertToMixedFraction(totalInches - (feet * 12.0));
+            const int precision = 16;
+            // Round the complete measurement before splitting so inches can carry into feet.
+            var ticks = FormatHelper.RoundToTicks((decimal)totalInches, precision);
+            var sign = ticks < 0 ? "-" : string.Empty;
+            var roundedInches = Math.Abs(ticks) / precision;
+            var feet = decimal.Truncate(roundedInches / 12m);
+            var inches = roundedInches - feet * 12m;
+            var formattedInches = FormatHelper.ConvertToMixedFraction(inches, precision);
 
             if (feet > 0)
             {
-                return $"{feet}'  {inches}\"";
+                if (inches > 0 && inches < 1)
+                {
+                    formattedInches = $"0-{formattedInches}";
+                }
+                return $"{sign}{feet}'  {formattedInches}\"";
             }
-            else
-            {
-                return $"{inches}\"";
-            }
+
+            return $"{sign}{formattedInches}\"";
         }
 
         /// <summary>
