@@ -182,7 +182,39 @@ Evidence is at `/home/aj/extracted/2026-10-03/cutlist-screenshot-readiness/`:
 `automated-gate/summary.json`, PDFs/text/page manifest, and the implementation-test
 archive/manifest. The disposable app and SQL container are stopped/removed, their port
 is closed, and the isolated worktree (including EF-generated backslash build debris)
-is removed. Production repair/deployment and README publication were not performed.
+is removed. At that verification checkpoint, production repair/deployment and README
+publication had not been performed; the later README publication is recorded below.
+
+## Published README example
+
+The README gallery uses a separate, fictional workshop-frame job captured from
+`b42e0aff1fee6c30d62b1ab608ea5d7ba8fd9356` with Chromium 154.0.8037.97 on 2026-10-03.
+It does not reuse the higher-precision mixed-material fixture described above.
+
+- Material: Steel/A500 Square Tube, size 2 inches and wall 0.125 inches, created through
+  the material API and read back as `2" x 1/8" wall`.
+- Parts: four each of RAIL 47-7/8 inches, LEG 29-7/8 inches, and BRACE 17-7/8 inches.
+- Job stock: one custom 96-inch bar at priority 0; unlimited catalog 144-inch bars at
+  priority 1; two catalog 240-inch bars at priority 2. Bandsaw kerf is 1/16 inch.
+- Persist through the real UI's Exhaustive Optimize action, then reload Results before
+  capturing. The saved result has 3 used bars (two 144-inch and one 96-inch), 12 pieces,
+  no unplaced parts, and 3/4 inch remaining waste. The unused 240-inch stock is absent
+  from Material List. Reported 99.8% efficiency includes kerf in consumed length;
+  the Results-tab badge rounds that same efficiency to a whole percent.
+- Capture Results at 1400×1080 and Stock at 1400×900 without changing rendered content.
+  Generate a real one-page Letter PDF from Results and render it at 1400 pixels wide.
+  Verify all three rows, twelve cut badges, notes, and fresh print timestamp.
+- Keep losslessly compressed, pixel-identical PNGs in `docs/images/` (each below 300 KB)
+  and the actual report in `docs/examples/sample-cut-list.pdf`. README links use relative
+  paths, meaningful alt text, full-size image targets, and a direct PDF link.
+- Recheck every image and the PDF for privacy, clipping, and inconsistent labels before
+  replacing binaries. Verify README anchor/file links and remote asset hashes after push.
+
+Capture/API/PDF evidence is under
+`/home/aj/extracted/2026-10-03/cutlist-readme-publication/`. Only the disposable loopback
+SQL/app environment was used; no production catalog, credentials, or customer data were
+accessed. This publication does not apply the production material-label repair or deploy
+an application change.
 
 Next hardening: the documented API precision boundary, general catalog import identity,
 nominal dimensions/pipe-wall precision policy, removal of the unused report component,

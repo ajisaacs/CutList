@@ -2,6 +2,8 @@
 
 CutList optimizes one-dimensional material cutting to reduce waste when turning stock lengths into required parts. It includes a Blazor web application, a Windows desktop application, a shared packing library, and an MCP server for AI-assisted workflows.
 
+[Screenshots](#screenshots) · [Quick start](#run-the-web-application) · [Docker](#docker) · [REST API and MCP](#rest-api-and-mcp)
+
 ## Features
 
 - Plan cutting jobs with named parts, quantities, and material specifications.
@@ -13,6 +15,21 @@ CutList optimizes one-dimensional material cutting to reduce waste when turning 
 - Integrate through a REST API or stdio MCP tools.
 
 Stock catalog entries describe available cutting lengths, not counted on-hand inventory. Each job must explicitly specify the stock it may use. CutList is a **1D cutting optimizer**, not a sheet-metal or other 2D nesting tool.
+
+## Screenshots
+
+A sample workshop-frame job using fictional data. Select any image to view it at full size.
+
+### Cutting results
+
+Review a saved three-bar plan with named cuts, kerf-aware stock usage, and remaining waste.
+
+[![CutList Results showing 12 named parts cut from three square-tube bars, with a material list and per-bar cut details](docs/images/cutting-results.png)](docs/images/cutting-results.png)
+
+| Stock setup | Printable report |
+| --- | --- |
+| [![Job stock setup with a custom 8-foot length, catalog lengths, quantities, and priorities](docs/images/job-stock.png)](docs/images/job-stock.png) | [![One-page cut-list report with job metadata, material quantities, labeled cuts, kerf, and notes](docs/images/printed-report.png)](docs/images/printed-report.png) |
+| Mix catalog and custom lengths; lower priority numbers are used first. | [Open the sample cut-list PDF](docs/examples/sample-cut-list.pdf). |
 
 ## Requirements
 
