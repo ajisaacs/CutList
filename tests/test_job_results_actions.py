@@ -98,6 +98,26 @@ class JobResultsActionsTests(unittest.TestCase):
         self.assertIn(".print-screen-only", report_css)
         self.assertIn("display: none !important;", report_css)
 
+    def test_print_report_reserves_half_inch_margins_on_every_page(self) -> None:
+        css = (REPO_ROOT / "CutList.Web/wwwroot/css/report.css").read_text()
+        css = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+        screen, printed = css.split("@media print {", 1)
+        self.assertNotIn("@page", screen)
+        # An unqualified @page rule covers continuation pages, not just :first.
+        pages = re.findall(r"@page\s*\{([^}]*)\}", printed)
+        self.assertEqual(1, len(pages), "Missing physical page margins")
+        self.assertRegex(pages[0], r"(?:^|;)\s*margin:\s*0\.5in\s*;")
+        self.assertNotRegex(pages[0], r"\bsize\s*:", "Respect the user's paper size")
+
+    def test_print_summary_cancels_bootstrap_negative_row_margins(self) -> None:
+        css = (REPO_ROOT / "CutList.Web/wwwroot/css/report.css").read_text()
+        printed = re.sub(r"/\*.*?\*/", "", css.split("@media print {", 1)[1], flags=re.DOTALL)
+        summary = re.search(r"\.print-summary\s*\{([^}]*)\}", printed)
+        if summary is None:
+            self.fail("Missing print summary rule")
+        # Bootstrap .row gutters must not draw borders into the physical margins.
+        self.assertRegex(summary[1], r"(?:^|;)\s*margin:\s*0 0 0\.5rem !important\s*;")
+
     def test_print_report_forces_backgrounds_to_plain_white(self) -> None:
         report_css = (REPO_ROOT / "CutList.Web/wwwroot/css/report.css").read_text()
         print_styles = report_css[report_css.index("@media print {"):]
