@@ -96,5 +96,48 @@ public class FormatHelperTests
         Assert.Equal("precision", exception.ParamName);
     }
 
+    [Theory]
+    [InlineData("0", "0\"")]
+    [InlineData("0.0598", "0.0598\"")]
+    [InlineData("0.065", "0.065\"")]
+    [InlineData("0.1196", "0.1196\"")]
+    [InlineData("0.05980000", "0.0598\"")]
+    [InlineData("0.0650000", "0.065\"")]
+    [InlineData("0.0625", "1/16\"")]
+    [InlineData("0.06250000", "1/16\"")]
+    [InlineData("0.125", "1/8\"")]
+    [InlineData("0.1875", "3/16\"")]
+    [InlineData("1.375", "1-3/8\"")]
+    [InlineData("12.0625", "12-1/16\"")]
+    [InlineData("-0.0625", "-1/16\"")]
+    [InlineData("-1.375", "-1-3/8\"")]
+    [InlineData("-0.0598", "-0.0598\"")]
+    [InlineData("0.0598123456789", "0.0598123456789\"")]
+    [InlineData("0.0625000000000000000000000001", "0.0625000000000000000000000001\"")]
+    [InlineData("1.2345678901234567890123456789", "1.2345678901234567890123456789\"")]
+    [InlineData("0.0000000000000000000000000001", "0.0000000000000000000000000001\"")]
+    [InlineData("79228162514264337593543950335", "79228162514264337593543950335\"")]
+    [InlineData("-79228162514264337593543950335", "-79228162514264337593543950335\"")]
+    public void Exact_inches_use_fractions_only_for_exact_sixteenths(string input, string expected)
+    {
+        Assert.Equal(expected, FormatHelper.FormatExactOrFractionInches(Parse(input)));
+    }
+
+    [Fact]
+    public void Exact_inches_use_a_decimal_point_independent_of_the_current_culture()
+    {
+        var originalCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
+            Assert.Equal("0.0598\"", FormatHelper.FormatExactOrFractionInches(0.05980000m));
+            Assert.Equal("1-3/8\"", FormatHelper.FormatExactOrFractionInches(1.375m));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
+    }
+
     private static decimal Parse(string value) => decimal.Parse(value, CultureInfo.InvariantCulture);
 }

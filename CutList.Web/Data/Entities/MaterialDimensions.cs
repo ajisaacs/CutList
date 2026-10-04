@@ -1,3 +1,5 @@
+using CutList.Core.Formatting;
+
 namespace CutList.Web.Data.Entities;
 
 /// <summary>
@@ -45,7 +47,7 @@ public class RoundTubeDimensions : MaterialDimensions
     public decimal Wall { get; set; }
 
     public override string GenerateSizeString() =>
-        $"{FormatDimension(OuterDiameter)} OD x {FormatDimension(Wall)} wall";
+        $"{FormatDimension(OuterDiameter)} OD x {FormatHelper.FormatExactOrFractionInches(Wall)} wall";
 
     public override int GetSortOrder() => (int)(OuterDiameter * 1000);
 
@@ -95,7 +97,7 @@ public class SquareTubeDimensions : MaterialDimensions
     public decimal Wall { get; set; }
 
     public override string GenerateSizeString() =>
-        $"{FormatDimension(Size)} x {FormatDimension(Wall)} wall";
+        $"{FormatDimension(Size)} x {FormatHelper.FormatExactOrFractionInches(Wall)} wall";
 
     public override int GetSortOrder() => (int)(Size * 1000);
 
@@ -113,7 +115,7 @@ public class RectangularTubeDimensions : MaterialDimensions
     public decimal Wall { get; set; }
 
     public override string GenerateSizeString() =>
-        $"{FormatDimension(Width)} x {FormatDimension(Height)} x {FormatDimension(Wall)} wall";
+        $"{FormatDimension(Width)} x {FormatDimension(Height)} x {FormatHelper.FormatExactOrFractionInches(Wall)} wall";
 
     public override int GetSortOrder() => (int)(Width * 1000);
 

@@ -36,10 +36,18 @@
     [Parameter]
     public string Placeholder { get; set; } = "e.g., 12' 6\" or 144";
 
+    /// <summary>
+    /// Opts into exact decimal-or-sixteenth inches for display only (e.g., tube walls).
+    /// Ordinary length inputs continue to round to the nearest sixteenth by default.
+    /// </summary>
+    [Parameter]
+    public bool PreservePrecision { get; set; }
+
     private string DisplayValue { get; set; } = string.Empty;
     private bool HasError { get; set; }
     private string ErrorMessage { get; set; } = string.Empty;
     private decimal? _lastValue;
+    private bool _lastPreservePrecision;
 
     private bool IsNullableMode => NullableValueChanged.HasDelegate;
 
@@ -47,13 +55,14 @@
 
     protected override void OnParametersSet()
     {
-        // Reset display when Value changes externally (e.g., form reset)
-        if (CurrentValue != _lastValue)
+        // Reset display when Value or its display policy changes externally.
+        if (CurrentValue != _lastValue || PreservePrecision != _lastPreservePrecision)
         {
             _lastValue = CurrentValue;
+            _lastPreservePrecision = PreservePrecision;
             if (CurrentValue.HasValue && CurrentValue.Value > 0)
             {
-                DisplayValue = ArchUnits.FormatFromInches((double)CurrentValue.Value);
+                DisplayValue = FormatDisplay(CurrentValue.Value);
             }
             else
             {
@@ -129,9 +138,13 @@
         // Format the display value nicely on blur if we have a valid value
         if (!HasError && _lastValue.HasValue && _lastValue.Value > 0)
         {
-            DisplayValue = ArchUnits.FormatFromInches((double)_lastValue.Value);
+            DisplayValue = FormatDisplay(_lastValue.Value);
         }
     }
+
+    private string FormatDisplay(decimal inches) => PreservePrecision
+        ? FormatHelper.FormatExactOrFractionInches(inches)
+        : FormatLength(inches);
 
     public static string FormatLength(decimal inches)
     {

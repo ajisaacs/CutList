@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace CutList.Core.Formatting
 {
     /// <summary>
@@ -46,6 +48,34 @@ namespace CutList.Core.Formatting
         public static string ConvertToMixedFraction(double input)
         {
             return ConvertToMixedFraction((decimal)input);
+        }
+
+        /// <summary>
+        /// Formats exact sixteenth-inch multiples as simplified fractions; other values
+        /// retain their full decimal precision, trimming only insignificant trailing zeros.
+        /// Always displays total inches, without converting to double or splitting feet.
+        /// </summary>
+        public static string FormatExactOrFractionInches(decimal inches)
+        {
+            if (inches % 0.0625m != 0)
+            {
+                return $"{inches.ToString("0.############################", CultureInfo.InvariantCulture)}\"";
+            }
+
+            decimal whole = decimal.Truncate(inches);
+            decimal remainder = Math.Abs(inches % 1m);
+            string wholeText = whole.ToString("0", CultureInfo.InvariantCulture);
+            if (remainder == 0)
+            {
+                return $"{wholeText}\"";
+            }
+
+            // Only an exact sixteenth reaches this reducer. Split first to avoid tick
+            // multiplication overflowing for large whole-inch decimal values.
+            string fraction = ConvertToMixedFraction(remainder);
+            return whole == 0
+                ? $"{(inches < 0 ? "-" : string.Empty)}{fraction}\""
+                : $"{wholeText}-{fraction}\"";
         }
 
         // Presentation only: keep decimal midpoint rounding separate from packing tolerances.

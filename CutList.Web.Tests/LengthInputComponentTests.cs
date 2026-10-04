@@ -53,18 +53,24 @@ public sealed class LengthInputComponentTests
     }
 
     [Theory]
-    [InlineData(false, "")]
-    [InlineData(true, "")]
-    [InlineData(false, " ")]
-    [InlineData(true, " ")]
+    [InlineData(false, false, "")]
+    [InlineData(true, false, "")]
+    [InlineData(false, false, " ")]
+    [InlineData(true, false, " ")]
+    [InlineData(false, true, "")]
+    [InlineData(true, true, "")]
+    [InlineData(false, true, " ")]
+    [InlineData(true, true, " ")]
     public async Task Clearing_emits_zero_or_null_once_and_blur_preserves_the_optional_value(
-        bool nullableMode, string typed)
+        bool nullableMode, bool preservePrecision, string typed)
     {
         await using var context = new BunitContext();
         var host = context.Render<LengthInputHost>(p => p
             .Add(x => x.NullableMode, nullableMode)
             .Add(x => x.Model, 12.03m));
         decimal? expectedValue = nullableMode ? null : 0m;
+
+        host.Render(p => p.Add(x => x.PreservePrecision, preservePrecision));
 
         await host.Find("input").InputAsync(new() { Value = typed });
         AssertBinding(host, nullableMode, expectedValue, 1);
@@ -75,12 +81,15 @@ public sealed class LengthInputComponentTests
         Assert.Empty(host.FindAll(".invalid-feedback"));
     }
 
-    [Fact]
-    public async Task An_absent_optional_value_remains_blank_and_null_on_blur()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task An_absent_optional_value_remains_blank_and_null_on_blur(bool preservePrecision)
     {
         await using var context = new BunitContext();
         var host = context.Render<LengthInputHost>(p => p
             .Add(x => x.NullableMode, true)
+            .Add(x => x.PreservePrecision, preservePrecision)
             .Add(x => x.Model, (decimal?)null));
 
         Assert.Equal("", host.Find("input").GetAttribute("value"));
@@ -91,15 +100,18 @@ public sealed class LengthInputComponentTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Invalid_input_and_blur_preserve_the_model_text_and_error(bool nullableMode)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Invalid_input_and_blur_preserve_the_model_text_and_error(bool nullableMode, bool preservePrecision)
     {
         await using var context = new BunitContext();
         var host = context.Render<LengthInputHost>(p => p
             .Add(x => x.NullableMode, nullableMode)
             .Add(x => x.Model, 12.03m));
 
+        host.Render(p => p.Add(x => x.PreservePrecision, preservePrecision));
         await host.Find("input").InputAsync(new() { Value = "not a length" });
         AssertBinding(host, nullableMode, 12.03m, 0);
         Assert.Contains("is-invalid", host.Find("input").ClassList);
@@ -112,6 +124,79 @@ public sealed class LengthInputComponentTests
         Assert.Equal("not a length", host.Find("input").GetAttribute("value"));
         Assert.Contains("is-invalid", host.Find("input").ClassList);
         Assert.Equal(error, host.Find(".invalid-feedback").TextContent);
+    }
+
+    [Theory]
+    [InlineData(false, "0.0598", "0.0598\"")]
+    [InlineData(true, "0.0598", "0.0598\"")]
+    [InlineData(false, "0.065", "0.065\"")]
+    [InlineData(true, "0.065", "0.065\"")]
+    [InlineData(false, "0.1196", "0.1196\"")]
+    [InlineData(true, "0.1196", "0.1196\"")]
+    [InlineData(false, "0.0625", "1/16\"")]
+    [InlineData(true, "0.125", "1/8\"")]
+    [InlineData(false, "0.0598123456789", "0.0598123456789\"")]
+    [InlineData(true, "0.0625000000000000000000000001", "0.0625000000000000000000000001\"")]
+    public async Task Precision_mode_displays_the_exact_bound_decimal_without_a_callback(
+        bool nullableMode, string stored, string expectedDisplay)
+    {
+        await using var context = new BunitContext();
+        var value = decimal.Parse(stored, System.Globalization.CultureInfo.InvariantCulture);
+        var host = context.Render<LengthInputHost>(p => p
+            .Add(x => x.NullableMode, nullableMode)
+            .Add(x => x.PreservePrecision, true)
+            .Add(x => x.Model, value));
+
+        Assert.Equal(expectedDisplay, host.Find("input").GetAttribute("value"));
+        AssertBinding(host, nullableMode, value, 0);
+        await host.Find("input").BlurAsync(new());
+        Assert.Equal(expectedDisplay, host.Find("input").GetAttribute("value"));
+        AssertBinding(host, nullableMode, value, 0);
+        Assert.Empty(host.FindAll(".invalid-feedback"));
+    }
+
+    [Theory]
+    [InlineData(false, "0.0598", "0.0598\"")]
+    [InlineData(true, "0.0598", "0.0598\"")]
+    [InlineData(false, "0.065", "0.065\"")]
+    [InlineData(true, "0.065", "0.065\"")]
+    [InlineData(false, "0.1196", "0.1196\"")]
+    [InlineData(true, "0.1196", "0.1196\"")]
+    [InlineData(false, "0.0625", "1/16\"")]
+    [InlineData(true, "0.125", "1/8\"")]
+    public async Task Precision_mode_blur_preserves_the_typed_model_and_callback_count(
+        bool nullableMode, string typed, string expectedDisplay)
+    {
+        await using var context = new BunitContext();
+        var value = decimal.Parse(typed, System.Globalization.CultureInfo.InvariantCulture);
+        var host = context.Render<LengthInputHost>(p => p
+            .Add(x => x.NullableMode, nullableMode)
+            .Add(x => x.PreservePrecision, true)
+            .Add(x => x.Model, 0m));
+
+        await host.Find("input").InputAsync(new() { Value = typed });
+        Assert.Equal(typed, host.Find("input").GetAttribute("value"));
+        AssertBinding(host, nullableMode, value, 1);
+        await host.Find("input").BlurAsync(new());
+        Assert.Equal(expectedDisplay, host.Find("input").GetAttribute("value"));
+        AssertBinding(host, nullableMode, value, 1);
+    }
+
+    [Fact]
+    public async Task Changing_display_mode_reformats_the_unchanged_model_without_a_callback()
+    {
+        await using var context = new BunitContext();
+        var host = context.Render<LengthInputHost>(p => p.Add(x => x.Model, 0.0598m));
+        Assert.False(host.FindComponent<LengthInput>().Instance.PreservePrecision);
+        Assert.Equal("1/16\"", host.Find("input").GetAttribute("value"));
+
+        host.Render(p => p.Add(x => x.PreservePrecision, true));
+        Assert.Equal("0.0598\"", host.Find("input").GetAttribute("value"));
+        AssertBinding(host, false, 0.0598m, 0);
+
+        host.Render(p => p.Add(x => x.PreservePrecision, false));
+        Assert.Equal("1/16\"", host.Find("input").GetAttribute("value"));
+        AssertBinding(host, false, 0.0598m, 0);
     }
 
     private static void AssertBinding(
@@ -138,6 +223,7 @@ public sealed class LengthInputComponentTests
     public sealed class LengthInputHost : ComponentBase
     {
         [Parameter] public bool NullableMode { get; set; }
+        [Parameter] public bool PreservePrecision { get; set; }
         [Parameter] public decimal? Model { get; set; }
         public List<decimal> RequiredChanges { get; } = new();
         public List<decimal?> OptionalChanges { get; } = new();
@@ -162,6 +248,7 @@ public sealed class LengthInputComponentTests
                         OptionalChanges.Add(value);
                     }));
             }
+            builder.AddAttribute(5, nameof(LengthInput.PreservePrecision), PreservePrecision);
             builder.CloseComponent();
         }
     }
