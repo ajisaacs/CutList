@@ -90,6 +90,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 - `FormatHelper` — Rounds ordinary length displays to the nearest 1/16 inch (or supplied positive denominator), midpoint away from zero, then reduces fractions; signs and whole-inch/feet carries are preserved.
 - `ArchUnits.FormatFromInches` rounds before splitting feet/inches and includes `0-` for fractional remainders below one inch after feet.
 - Internal calculations use inches; formatting is presentation-only. Parsing, stored lengths, kerf, and packing inputs are not quantized. `LengthInput` blur formats its last parsed value without reparsing display text or emitting another value callback.
+- Tube-wall identity: Round Tube, Square Tube, and Rectangular Tube wall names and their opt-in `LengthInput` displays share an exact-decimal-or-fraction formatter. Exact multiples of 1/16 inch retain simplified fractions; other walls retain the full decimal with insignificant trailing zeros trimmed. Never infer gauge numbers, cast through double, or quantize the measurement. Overall dimensions and ordinary inputs keep ordinary length formatting; pipe/schedule naming is unchanged.
 
 **Patterns**:
 - `Result<T>` for standardized error handling (Success/Failure instead of exceptions)
