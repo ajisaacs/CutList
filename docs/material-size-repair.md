@@ -84,9 +84,11 @@ materials/810 stock rows, and preserves all material/dimension/stock IDs and mea
 The original file first produced five expected failing test cases (three tube groups,
 reviewed channels and persisted import labels); count/semantic-preservation characterizations
 passed. The corrected file passes all seven cases. Optional `CUTLIST_TASK6_EVIDENCE_DIR`
-records actual import summaries, persisted-ID snapshots and exports. Development audit,
-semantic before/after files, logs and TRX results are kept under the scratch `cutlist-task6`
-directory rather than committed as production artifacts.
+records actual import summaries, persisted-ID snapshots and exports. The implementation
+session's audit, semantic before/after files, logs and TRX evidence are preserved in
+`/home/aj/extracted/2026-10-03/cutlist-screenshot-readiness/implementation-test-evidence.zip`
+(with a companion manifest), not committed as production artifacts. Served-purpose
+scratch audit projects are removed after verification.
 
 ## Existing databases: explicit guarded repair (Task 9)
 

@@ -199,7 +199,13 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 
 ### CatalogService
 - `ExportAsync()` — dumps cutting tools and materials (with dimensions + stock items) into a shape-grouped `CatalogData` DTO for bulk export/import tooling
-- Backs the `CatalogController` REST endpoint and the `scripts/ExportData` data-loading workflow
+- Backs `GET /api/catalog/export` and `POST /api/catalog/import`. Import identity is material shape plus stored `Size`, not stable ID or dimensions. Corrected seed labels are for fresh/disposable imports; re-importing renamed labels over an existing catalog can create duplicates and is not a repair. Inspect response `Errors` and read back exact IDs/values, even on HTTP 200. See `docs/material-size-repair.md`.
+
+### MaterialSizeRepair (explicit operator invocation only)
+
+- `tools/CutList.MaterialRepair` is a separate Linux-only CLI, not startup maintenance or an HTTP endpoint. Default dry-run requires an explicit environment-supplied connection and expected actual server/database identity; it never falls back to appsettings or runs migrations.
+- It proposes only proven historical-generated labels for the three tube shapes and Channel, preserving custom/ambiguous/missing-dimension rows. Explicit reviewed-manifest apply and compare-and-swap rollback revalidate identity, dimensions, timestamps and SQL-collation name collisions under `SERIALIZABLE` transactions. Only material `Size` and documented `UpdatedAt` may change; job JSON, locks, references and measurements are untouched.
+- Durable before-images precede writes. Follow `docs/material-size-repair.md` for exact commands, Linux artifact-path protections, reviewed manifests, named-production-target authorization, verified backup and post-write readback. Building/testing the tool does not authorize production application. Locked reports resolve live material labels by ID, so their displayed labels can change without saved-plan JSON changes.
 
 ## CutList.Web Pages
 
@@ -239,15 +245,18 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 - **Job stock** — Jobs must have stock explicitly configured (catalog-sourced `StockItem` rows or custom-length rows); there is no fallback to auto-discovered inventory. The job Stock workflow says `Catalog`/`From Catalog`, not `Inventory`; public API/MCP field names are unchanged.
 - **Optimization persistence** — Results saved as JSON in `Job.OptimizationResultJson`, including the engine used; DTO layer (`SavedOptimizationResult` etc.) handles serialization since Core types use encapsulated collections; results auto-cleared when parts, stock, or cutting tool change
 - **Job lock flow** — Optimize job -> review/print results -> Lock Job (manual action beside Print Report on the Results tab, available whether or not purchases are needed) -> job becomes read-only until Unlock
-- **Printed cut badges** — Print styles intentionally remove color fills; cut badges therefore force black text and a black part-number/length divider so both remain legible on paper. The print-only tool line shows the selected cut method and kerf immediately below the summary.
+- **Printed reports** — The active renderer is the job Results markup plus `report.css`, not the unused `CutListReport.razor`. Reuse the job title; print optional nonblank customer, saved engine/fallback, Last optimized, full used-bar Material List, tool/kerf and safely encoded multiline notes. One browser `beforeprint` listener refreshes `<time data-print-timestamp>` on every attempt with local date/time and timezone plus ISO `dateTime`; `printWithTitle` restores the title after print/cancel. Printing a different tab is not automatically routed to Results.
+- **Printed cut badges and pagination** — Print styles force black cut text/dividers and preserve mixed-case material names and lowercase dimension `x`. Material lists and notes may span pages; individual material-summary and cut rows remain intact, with repeating table headers. See `docs/qa/screenshot-readiness.md` for actual browser/PDF acceptance rather than relying on source tests alone.
 - **Timestamps** — `CreatedAt` defaults to `GETUTCDATE()`; `UpdatedAt` set on modifications
 - **Collections** — Encapsulated in Core; use `AsReadOnly()`, access via `Add*` methods
 - **Priority system** — Lower priority bins used first in packing algorithm
 - **UI ↔ MCP split** — The Blazor UI calls services directly (in-process); CutList.Mcp and any other external integration go through the REST API in `Controllers/`. Keep both paths in sync when changing service method signatures used by controllers.
 
-## Supporting Scripts (`scripts/`)
+## Catalog and screenshot QA workflows
 
-- `ExportData/` — standalone console project that exercises `CutList.Web`'s data layer to import/export catalog seed data (e.g. `Data/SeedData/oneals-catalog.json`)
+- Use the catalog REST endpoints for fresh disposable imports/exports of `CutList.Web/Data/SeedData/oneals-catalog.json`; the previously documented `scripts/ExportData` project does not exist in this checkout.
+- `docs/qa/screenshot-readiness.md` defines synthetic-data screen/PDF checks, explicit loopback-only disposable SQL/app setup, real print/cancel checks, evidence and targeted cleanup. Python print-lifecycle regressions execute the actual App script with Node. Never redirect failing test fixtures to a development or production database.
+- Serialize shared-checkout .NET builds/tests with `flock --close -w 180 <scratch-lock> dotnet ...` so persistent MSBuild nodes cannot inherit the lock descriptor. Production repair, deployment and README image publication remain separately authorized follow-on work.
 
 ## Key Files
 
