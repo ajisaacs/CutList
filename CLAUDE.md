@@ -87,8 +87,9 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 **Unit Handling**:
 - `ArchUnits` — Converts feet/inches/fractions to decimal inches (accepts "12'", "6\"", "12 1/2\"", etc.)
-- `FormatHelper` — Converts decimals to mixed fractions for display
-- Internal calculations use inches; format on display
+- `FormatHelper` — Rounds ordinary length displays to the nearest 1/16 inch (or supplied positive denominator), midpoint away from zero, then reduces fractions; signs and whole-inch/feet carries are preserved.
+- `ArchUnits.FormatFromInches` rounds before splitting feet/inches and includes `0-` for fractional remainders below one inch after feet.
+- Internal calculations use inches; formatting is presentation-only. Parsing, stored lengths, kerf, and packing inputs are not quantized. `LengthInput` blur formats its last parsed value without reparsing display text or emitting another value callback.
 
 **Patterns**:
 - `Result<T>` for standardized error handling (Success/Failure instead of exceptions)
@@ -255,7 +256,7 @@ Abstract base with TPC (Table Per Concrete type) mapping — each shape gets its
 | `CutList.Core/Nesting/MultiBinPacker.cs` | Multi-bin type orchestration |
 | `CutList.Core/Nesting/BuiltInPackingEngines.cs` | The list of selectable packing engines |
 | `CutList.Core/Nesting/PackingEngineCatalog.cs` | Engine id resolution and creation |
-| `CutList.Core/ArchUnits.cs` | Architectural unit parsing/conversion |
+| `CutList.Core/Formatting/ArchUnits.cs` | Architectural unit parsing/conversion |
 | `CutList.Core/Formatting/FormatHelper.cs` | Display formatting |
 | `CutList.Web/Data/ApplicationDbContext.cs` | EF Core context with all DbSets and configuration |
 | `CutList.Web/Services/JobService.cs` | Job orchestration (CRUD, parts, stock, tools, lock/unlock) and lock enforcement |
