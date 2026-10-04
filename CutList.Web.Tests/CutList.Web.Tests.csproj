@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CutList.Web\CutList.Web.csproj" />
     <ProjectReference Include="..\CutList.Mcp\CutList.Mcp.csproj" />
+    <ProjectReference Include="../tools/CutList.MaterialRepair/CutList.MaterialRepair.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
