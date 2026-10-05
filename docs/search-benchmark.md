@@ -55,8 +55,25 @@ non-timing field exactly.
   25M search finished, 10 already had the optimal bar count at 1M. Their L2 gap of 32 bars overstated
   the real gap of 1 bar.
 - On high-distinct jobs, 29 of the 30 exhausted jobs sit exactly one bar above L2, and 25 times the
-  budget changes nothing. More budget is not the lever. A stronger lower bound could prove First Fit
-  optimal (removing the fallback label), and stronger dominance could find a better plan. This
-  baseline cannot tell which of the two applies, because the true optimum is unknown for those jobs.
+  budget changes nothing. More budget is not the lever.
+
+## Exact optima (2026-10-04)
+
+An external check solved all 120 jobs exactly, outside the repository: an arc-flow integer program
+(lengths in whole sixteenths, CutFit capacity) in HiGHS 1.15.1. Every job was solved to proven
+optimality, and every solver plan passed `CutFit.Fits` with exact part counts. The solver also agreed
+with every bar count that the engine or the 25M search had already proven.
+
+| Scenario | Bars: First Fit / engine / optimum | Jobs above optimum | Fallbacks where First Fit is optimal |
+|---|---|---|---|
+| repeated | 5,163 / 5,138 / 5,135 | 3 (1 bar each) | 11 of 13 |
+| distinct | 3,727 / 3,724 / 3,703 | 21 (1 bar each) | 8 of 29 |
+
+- Better search can save at most 3 bars on the repeated-length jobs and 21 on the high-distinct jobs
+  (0.57%, one bar on 35% of those jobs). All 21 distinct-length losses are fallbacks, and in 20 of
+  them the optimum equals L2. Finding the better plan is the gap there, not proving it.
+- The other 19 fallbacks (11 + 8) already have the optimal bar count, and their optimum is above L2.
+  For these, only a stronger lower bound can prove optimality and remove the fallback label. Pruning
+  does not help.
 - Before changing the search, compare every proposed pruning rule against brute force on small
-  inputs. Then rerun this benchmark on the same seeds and budget against this table.
+  inputs. Then rerun this benchmark on the same seeds and budget against these tables.
