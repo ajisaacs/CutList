@@ -84,6 +84,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 - **Adding an engine**: implement `IPackingEngine` and add one `PackingEngineRegistration` to `BuiltInPackingEngines.All`. `CutList.Core.Tests/Nesting/EngineContractTests` then runs it through the shared contract (every part placed or reported as not placed, including same-named copies of a part, compared by reference; no overfilled bar, finite stock respected, `-1` = unlimited)
 - **Fit rule** (`CutFit`): parts fit a bar when their cut length (lengths plus a kerf between consecutive parts; the last kerf may run off the end) exceeds the stock by at most `Tolerance.Epsilon` (0.00001", the same value as OpenNest), compared in whole billionths of an inch so every caller gets the same exact answer. `Bin` (full-bar clamp), First Fit (`FirstFitDecreasingStep`), Best Fit, the pattern search (`CutDemand` sizes/capacity in units; the L2 bound is exact integer arithmetic), the oracle tests and `EngineContractTests` all use it
 - `PackingRequest.MaxBinCount`: negative values (e.g. `MultiBin` quantity `-1`) are normalized to unlimited (`int.MaxValue`)
+- **Search benchmark**: `CutList.Core.Tests/Benchmarks/SearchBaselineBenchmark.cs` is opt-in (skipped unless `CUTLIST_SEARCH_BENCHMARK_DIR` is set). `docs/search-benchmark.md` has the command and the recorded baseline; rerun it in Release on the same seeds and budget before and after any search change
 
 **Unit Handling**:
 - `ArchUnits` — Converts feet/inches/fractions to decimal inches (accepts "12'", "6\"", "12 1/2\"", etc.)
