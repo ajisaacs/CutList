@@ -58,6 +58,11 @@ Keep the `FirstFitImprovementTests` regressions alongside benchmark comparisons:
 larger-piece versus smaller-combination case, kerf rejection, finite stock, displaced demand,
 reference identity, stock orchestration, and whole-job non-regression.
 
+For the test-only bounded last-bar redistribution experiment, see
+[last-bar-elimination-evaluation.md](last-bar-elimination-evaluation.md). Allowing temporary
+local slack found whole-job savings under a small additional post-pass budget; production
+engines remain unchanged pending the documented integration gates.
+
 ## Baseline (2026-10-04)
 
 Source `ffd5a53` plus this harness. Release, .NET 10.0.12, 4 processors (hermes.lan, shared VM).
