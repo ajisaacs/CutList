@@ -1,10 +1,10 @@
 namespace CutList.Core.Nesting.Pipeline
 {
     /// <summary>
-    /// Fills limited bins tighter by swapping a packed item for leftover items.
+    /// Fills bins tighter by swapping a packed item for remaining items.
     /// For each bin, tries replacing a packed item with one or more items that are still unplaced,
-    /// keeping the swap when it leaves less room in the bin. Only acts when items are left over,
-    /// i.e. after the bin limit has been reached.
+    /// keeping the swap when it leaves less room in the bin. First Fit also uses the same improvement
+    /// on each new bin, while the smaller parts are still available for replacement.
     /// </summary>
     public class SwapInLeftoversStep : IPackingStep
     {
@@ -12,10 +12,15 @@ namespace CutList.Core.Nesting.Pipeline
         {
             foreach (var bin in context.Bins)
             {
-                while (TryImprovePacking(bin, context.RemainingItems, context.Spacing))
-                {
-                    // Keep optimizing until no improvement can be made
-                }
+                ImproveBin(bin, context.RemainingItems, context.Spacing);
+            }
+        }
+
+        internal static void ImproveBin(Bin bin, List<BinItem> remainingItems, double spacing)
+        {
+            while (TryImprovePacking(bin, remainingItems, spacing))
+            {
+                // Keep optimizing until no improvement can be made.
             }
         }
 

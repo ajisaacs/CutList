@@ -40,6 +40,24 @@ Jobs that exhaust the budget are searched again with the extended budget.
 Non-timing fields are deterministic. Timings depend on the host, so compare them only within one
 session on the same machine.
 
+## First Fit incumbent
+
+First Fit also tries improving each bar before opening the next: a packed part can be replaced by
+remaining smaller parts that fill its space better. The existing longest-length group stays anchored,
+and the final leftover swap pass remains in place for limited stock. This is a local heuristic, not a
+promise of the fewest bars.
+
+A tighter bar can strand awkward pieces later. First Fit therefore compares this candidate with its
+original whole-job pipeline and retains the original if the candidate uses more bars, leaves more
+parts unplaced, or leaves a greater total unplaced part length (compared in `CutFit` units). On ties,
+the per-bar candidate is kept. Exhaustive uses this selected result as its incumbent/fallback; its
+search budget and fallback reporting are unchanged. Repeat-layout batching is separate and is not
+implemented by this pass.
+
+Keep the `FirstFitImprovementTests` regressions alongside benchmark comparisons: they cover the
+larger-piece versus smaller-combination case, kerf rejection, finite stock, displaced demand,
+reference identity, stock orchestration, and whole-job non-regression.
+
 ## Baseline (2026-10-04)
 
 Source `ffd5a53` plus this harness. Release, .NET 10.0.12, 4 processors (hermes.lan, shared VM).
