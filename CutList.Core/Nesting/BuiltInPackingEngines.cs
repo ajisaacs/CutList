@@ -10,7 +10,7 @@ namespace CutList.Core.Nesting
         public static PackingEngineInfo FirstFit { get; } = new(
             "firstfit",
             "First Fit",
-            "First-fit decreasing: longest parts first, each into the first bar it fits. When bar quantity is limited, swaps parts to fill those bars tighter.");
+            "First-fit decreasing: tries better-fitting combinations on each bar before opening the next, keeping the original plan if the swaps would use more bars or leave more parts or part length unplaced. Includes a final leftover swap pass for limited stock.");
 
         public static PackingEngineInfo BestFit { get; } = new(
             "bestfit",

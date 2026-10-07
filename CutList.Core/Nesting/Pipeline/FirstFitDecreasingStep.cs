@@ -7,12 +7,21 @@ namespace CutList.Core.Nesting.Pipeline
     /// </summary>
     public class FirstFitDecreasingStep : IPackingStep
     {
+        private readonly bool _improveEachBin;
+
+        public FirstFitDecreasingStep() : this(false) { }
+
+        internal FirstFitDecreasingStep(bool improveEachBin) => _improveEachBin = improveEachBin;
+
         public void Execute(PackingContext context)
         {
             while (context.RemainingItems.Count > 0 && context.CanAddMoreBins())
             {
                 var bin = context.CreateBin();
                 FillBin(bin, context.RemainingItems);
+                // Reconsider greedy choices before later bins consume the smaller replacements.
+                if (_improveEachBin)
+                    SwapInLeftoversStep.ImproveBin(bin, context.RemainingItems, context.Spacing);
                 context.Bins.Add(bin);
             }
         }
