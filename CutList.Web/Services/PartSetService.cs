@@ -29,6 +29,7 @@ public class PartSetService(IDbContextFactory<ApplicationDbContext> factory)
 
     public async Task<PartSet> CreateAsync(PartSet input)
     {
+        ValidateInput(input);
         await using var db = factory.CreateDbContext();
         var set = await ValidatedCopyAsync(db, input);
         await RequireUniqueAsync(db, set, 0);
@@ -39,6 +40,7 @@ public class PartSetService(IDbContextFactory<ApplicationDbContext> factory)
 
     public async Task UpdateAsync(PartSet input)
     {
+        ValidateInput(input);
         await using var db = factory.CreateDbContext();
         var stored = await db.PartSets.Include(s => s.Members).FirstOrDefaultAsync(s => s.Id == input.Id)
             ?? throw new KeyNotFoundException($"Part set {input.Id} was not found.");
@@ -74,6 +76,14 @@ public class PartSetService(IDbContextFactory<ApplicationDbContext> factory)
         { throw new ArgumentException("A part set with this drawing number and revision already exists.", ex); }
     }
 
+    private static void ValidateInput(PartSet input)
+    {
+        if (input == null) throw new ArgumentException("Part set input is required.", nameof(input));
+        if (input.Members == null) throw new ArgumentException("Part set members are required.", nameof(input));
+        // Validate before sorting, which dereferences every member.
+        foreach (var member in input.Members) ValidateRow(member);
+    }
+
     private static async Task<PartSet> ValidatedCopyAsync(ApplicationDbContext db, PartSet input)
     {
         var drawing = Required(input.DrawingNumber, 100, "Drawing number");
@@ -97,6 +107,7 @@ public class PartSetService(IDbContextFactory<ApplicationDbContext> factory)
 
     internal static void ValidateRow(PartSetMember row)
     {
+        if (row == null) throw new ArgumentException("Part set members cannot contain null entries.", nameof(row));
         Required(row.Name, 100, "Cut name");
         // JobPart uses decimal(10,4); reject values that SQL would round or overflow.
         if (row.LengthInches <= 0 || row.LengthInches > 999999.9999m || decimal.Round(row.LengthInches, 4) != row.LengthInches)

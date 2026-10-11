@@ -28,7 +28,7 @@ public class OverviewService
                 j.Customer,
                 j.CreatedAt,
                 j.LockedAt != null,
-                j.Parts.Sum(p => (int?)p.Quantity) ?? 0))
+                j.Parts.Sum(p => (long?)p.Quantity) ?? 0))
             .ToListAsync();
 
         var frequentStock = await context.JobStocks
@@ -51,7 +51,7 @@ public class OverviewService
 
         var totalJobs = await context.Jobs.CountAsync();
         var openJobs = await context.Jobs.CountAsync(j => j.LockedAt == null);
-        var totalParts = await context.JobParts.SumAsync(p => (int?)p.Quantity) ?? 0;
+        var totalParts = await context.JobParts.SumAsync(p => (long?)p.Quantity) ?? 0;
         var activeStockItems = await context.StockItems.CountAsync(s => s.IsActive);
 
         return new OverviewSnapshot(
@@ -71,7 +71,7 @@ public class OverviewService
 public record OverviewSnapshot(
     int TotalJobs,
     int OpenJobs,
-    int TotalParts,
+    long TotalParts,
     int ActiveStockItems,
     IReadOnlyList<RecentJobOverview> RecentJobs,
     IReadOnlyList<FrequentStockOverview> FrequentStock);
@@ -83,7 +83,7 @@ public record RecentJobOverview(
     string? Customer,
     DateTime CreatedAt,
     bool IsLocked,
-    int PartCount);
+    long PartCount);
 
 public record FrequentStockOverview(
     int MaterialId,

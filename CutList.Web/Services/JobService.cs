@@ -7,6 +7,7 @@ namespace CutList.Web.Services;
 
 public class JobService
 {
+    public const int MaxExpandedJobPieces = 10_000;
     private readonly IDbContextFactory<ApplicationDbContext> _factory;
 
     public JobService(IDbContextFactory<ApplicationDbContext> factory)
@@ -271,6 +272,16 @@ public class JobService
             throw new ArgumentException("An archived or empty part set cannot be added to a job.", nameof(partSetId));
         foreach (var member in set.Members) PartSetService.ValidateRow(member);
         await PartSetService.ValidateMaterialsAsync(context, set.Members);
+        // Cast before SQL SUM and multiplication: individual int quantities can fit while
+        // their aggregate cannot. Count existing manual and snapshot rows exactly once.
+        var demand = await context.JobParts.Where(p => p.JobId == jobId)
+            .SumAsync(p => (long?)p.Quantity) ?? 0;
+        foreach (var member in set.Members)
+        {
+            demand += (long)member.Quantity * quantity;
+            if (demand > MaxExpandedJobPieces)
+                throw new ArgumentException("Adding this part set would exceed the per-job limit of 10,000 expanded pieces.", nameof(quantity));
+        }
         var maxOrder = await context.JobParts.Where(p => p.JobId == jobId)
             .MaxAsync(p => (int?)p.SortOrder) ?? -1;
         var instance = new JobPartSetInstance
