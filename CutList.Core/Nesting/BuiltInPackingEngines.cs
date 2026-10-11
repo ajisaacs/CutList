@@ -24,15 +24,15 @@ namespace CutList.Core.Nesting
 
         public static PackingEngineInfo LastBar { get; } = new(
             "lastbar",
-            "Exhaustive + Last-Bar Trial",
-            "Runs Exhaustive then a bounded 10,000-step relaxed last-bar rearrangement pass. The extra budget may save bars but does not prove optimality; the default engine remains Exhaustive. Preserves any First Fit fallback label from Exhaustive.");
+            "Exhaustive + Last-Bar",
+            "Runs Exhaustive then a bounded 10,000-step relaxed last-bar rearrangement pass. The extra budget may save bars but does not prove optimality. Preserves any First Fit fallback label from Exhaustive.");
 
         /// <summary>Selectable engines in display order; the first is the default.</summary>
         public static IReadOnlyList<PackingEngineRegistration> All { get; } = new[]
         {
-            new PackingEngineRegistration(Exhaustive, () => new ExhaustiveSearchEngine()),
             new PackingEngineRegistration(LastBar, () => new LastBarEliminationEngine(10_000,
                 new ExhaustiveSearchEngine(), allowNonMonotoneEjections: true)),
+            new PackingEngineRegistration(Exhaustive, () => new ExhaustiveSearchEngine()),
             new PackingEngineRegistration(FirstFit, () => new FirstFitEngine()),
             new PackingEngineRegistration(BestFit, () => new BestFitEngine()),
         };

@@ -14,21 +14,21 @@ public class PackingEngineCatalogTests
         new(new PackingEngineInfo(id, id.ToUpperInvariant(), $"{id} engine"), () => new FakeEngine());
 
     [Fact]
-    public void Built_in_catalog_lists_engines_in_order_with_exhaustive_as_default()
+    public void Built_in_catalog_lists_engines_in_order_with_last_bar_as_default()
     {
         var catalog = PackingEngineCatalog.CreateDefault();
 
-        Assert.Equal(new[] { "exhaustive", "lastbar", "firstfit", "bestfit" }, catalog.Engines.Select(e => e.Id));
-        Assert.Equal("exhaustive", catalog.Default.Id);
+        Assert.Equal(new[] { "lastbar", "exhaustive", "firstfit", "bestfit" }, catalog.Engines.Select(e => e.Id));
+        Assert.Equal("lastbar", catalog.Default.Id);
         Assert.All(catalog.Engines, e => Assert.False(string.IsNullOrWhiteSpace(e.Description)));
     }
 
     [Theory]
     [InlineData("BestFit", "bestfit")]
     [InlineData(" firstfit ", "firstfit")]
-    [InlineData(null, "exhaustive")]
-    [InlineData("", "exhaustive")]
-    [InlineData("   ", "exhaustive")]
+    [InlineData(null, "lastbar")]
+    [InlineData("", "lastbar")]
+    [InlineData("   ", "lastbar")]
     public void Resolve_is_case_insensitive_and_blank_means_default(string? requested, string expected)
     {
         Assert.Equal(expected, PackingEngineCatalog.CreateDefault().Resolve(requested).Id);
@@ -49,11 +49,12 @@ public class PackingEngineCatalogTests
             return packer.Pack(items!);
         }
 
-        var baseline = Pack(null);
+        var baseline = Pack("exhaustive");
         var trial = Pack("lastbar");
         Assert.Equal(98, baseline.Bins.Count);
         Assert.Equal(97, trial.Bins.Count);
-        Assert.Equal("exhaustive", catalog.Default.Id);
+        Assert.Equal("lastbar", catalog.Default.Id);
+        Assert.Equal(trial.Bins.Count, Pack(null).Bins.Count);
         var returned = trial.Bins.SelectMany(b => b.Items).Concat(trial.ItemsNotUsed).ToList();
         Assert.Equal(items!.Count, returned.Count);
         Assert.All(items, item => Assert.Equal(1, returned.Count(i => ReferenceEquals(i, item))));
@@ -65,7 +66,7 @@ public class PackingEngineCatalogTests
         var ex = Assert.Throws<UnknownPackingEngineException>(() => PackingEngineCatalog.CreateDefault().Resolve("optimal"));
 
         Assert.Equal("optimal", ex.EngineId);
-        Assert.Equal("Unknown packing engine 'optimal'. Available engines: exhaustive, lastbar, firstfit, bestfit.", ex.Message);
+        Assert.Equal("Unknown packing engine 'optimal'. Available engines: lastbar, exhaustive, firstfit, bestfit.", ex.Message);
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public class PackingEngineCatalogTests
     {
         var catalog = PackingEngineCatalog.CreateDefault();
 
-        Assert.IsType<ExhaustiveSearchEngine>(catalog.Create(null));
+        Assert.IsType<LastBarEliminationEngine>(catalog.Create(null));
         Assert.IsType<LastBarEliminationEngine>(catalog.Create("lastbar"));
         Assert.IsType<FirstFitEngine>(catalog.Create("firstfit"));
         Assert.IsType<BestFitEngine>(catalog.Create("bestfit"));
