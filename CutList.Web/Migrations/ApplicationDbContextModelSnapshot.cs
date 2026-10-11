@@ -164,6 +164,9 @@ namespace CutList.Web.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("PartSetInstanceId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
@@ -176,7 +179,52 @@ namespace CutList.Web.Migrations
 
                     b.HasIndex("MaterialId");
 
+                    b.HasIndex("PartSetInstanceId", "JobId");
+
                     b.ToTable("JobParts");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.JobPartSetInstance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DrawingNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("JobId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PartSetId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Revision")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("PartSetId");
+
+                    b.ToTable("JobPartSetInstances", t =>
+                        {
+                            t.HasCheckConstraint("CK_JobPartSetInstance_Quantity", "[Quantity] > 0");
+                        });
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.JobStock", b =>
@@ -635,9 +683,36 @@ namespace CutList.Web.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("CutList.Web.Data.Entities.JobPartSetInstance", "PartSetInstance")
+                        .WithMany("Parts")
+                        .HasForeignKey("PartSetInstanceId", "JobId")
+                        .HasPrincipalKey("Id", "JobId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.Navigation("Job");
 
                     b.Navigation("Material");
+
+                    b.Navigation("PartSetInstance");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.JobPartSetInstance", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.Job", "Job")
+                        .WithMany("PartSetInstances")
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CutList.Web.Data.Entities.PartSet", "PartSet")
+                        .WithMany()
+                        .HasForeignKey("PartSetId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+
+                    b.Navigation("PartSet");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.JobStock", b =>
@@ -714,9 +789,16 @@ namespace CutList.Web.Migrations
 
             modelBuilder.Entity("CutList.Web.Data.Entities.Job", b =>
                 {
+                    b.Navigation("PartSetInstances");
+
                     b.Navigation("Parts");
 
                     b.Navigation("Stock");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.JobPartSetInstance", b =>
+                {
+                    b.Navigation("Parts");
                 });
 
             modelBuilder.Entity("CutList.Web.Data.Entities.Material", b =>

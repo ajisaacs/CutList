@@ -87,6 +87,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
         await context.Database.ExecuteSqlRawAsync("""
             DELETE FROM JobStocks;
             DELETE FROM JobParts;
+            DELETE FROM JobPartSetInstances;
             DELETE FROM Jobs;
             DELETE FROM PartSetMembers;
             DELETE FROM PartSets;

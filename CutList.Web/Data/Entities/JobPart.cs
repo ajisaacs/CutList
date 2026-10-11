@@ -4,6 +4,8 @@ public class JobPart
 {
     public int Id { get; set; }
     public int JobId { get; set; }
+    public int? PartSetInstanceId { get; set; }
+    public JobPartSetInstance? PartSetInstance { get; set; }
     public int MaterialId { get; set; }
     public string Name { get; set; } = string.Empty;
     public decimal LengthInches { get; set; }

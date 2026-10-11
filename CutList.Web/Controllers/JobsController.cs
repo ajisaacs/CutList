@@ -177,7 +177,14 @@ public class JobsController : ControllerBase
         }
         if (dto.Quantity.HasValue) part.Quantity = dto.Quantity.Value;
 
-        await _jobService.UpdatePartAsync(part);
+        try
+        {
+            await _jobService.UpdatePartAsync(part);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         var reloadedJob = await _jobService.GetByIdAsync(id);
         var updatedPart = reloadedJob!.Parts.FirstOrDefault(p => p.Id == partId);
@@ -195,7 +202,14 @@ public class JobsController : ControllerBase
         if (part == null)
             return NotFound();
 
-        await _jobService.DeletePartAsync(partId);
+        try
+        {
+            await _jobService.DeletePartAsync(partId);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
         return NoContent();
     }
 

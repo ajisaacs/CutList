@@ -1,5 +1,6 @@
 using CutList.Web.Data;
 using CutList.Web.Data.Entities;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace CutList.Web.Services;
@@ -35,6 +36,7 @@ public class JobService
                 .ThenInclude(s => s.Material)
             .Include(p => p.Stock)
                 .ThenInclude(s => s.StockItem)
+            .Include(p => p.PartSetInstances)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 
@@ -144,6 +146,7 @@ public class JobService
                 .ThenInclude(s => s.Material)
             .Include(p => p.Stock)
                 .ThenInclude(s => s.StockItem)
+            .Include(p => p.PartSetInstances)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (original == null)
@@ -162,18 +165,27 @@ public class JobService
         };
 
         context.Jobs.Add(duplicate);
+        await using var transaction = await context.Database.BeginTransactionAsync();
         await context.SaveChangesAsync();
 
         duplicate.JobNumber = $"JOB-{duplicate.Id}";
         await context.SaveChangesAsync();
 
-        // Copy parts
+        var instances = original.PartSetInstances.ToDictionary(i => i.Id, i => new JobPartSetInstance
+        {
+            JobId = duplicate.Id, PartSetId = i.PartSetId, DrawingNumber = i.DrawingNumber,
+            Revision = i.Revision, DisplayName = i.DisplayName, Quantity = i.Quantity
+        });
+        context.JobPartSetInstances.AddRange(instances.Values);
+
+        // Copy parts with new instance identities, never links to the source job.
         foreach (var part in original.Parts)
         {
             context.JobParts.Add(new JobPart
             {
                 JobId = duplicate.Id,
                 MaterialId = part.MaterialId,
+                PartSetInstance = part.PartSetInstanceId is int instanceId ? instances[instanceId] : null,
                 Name = part.Name,
                 LengthInches = part.LengthInches,
                 Quantity = part.Quantity,
@@ -198,6 +210,7 @@ public class JobService
         }
 
         await context.SaveChangesAsync();
+        await transaction.CommitAsync();
         return duplicate;
     }
 
@@ -242,6 +255,69 @@ public class JobService
         ForceJobUpdate(context, job);
 
         await SaveJobMutationAsync(context, job.Id);
+    }
+
+    /// <summary>Atomically captures a reusable set and its expanded cut rows in an unlocked job.</summary>
+    public async Task<JobPartSetInstance> AddPartSetAsync(int jobId, int partSetId, int quantity)
+    {
+        await using var context = _factory.CreateDbContext();
+        var job = await LoadUnlockedJobAsync(context, jobId);
+        if (quantity < 1) throw new ArgumentException("Assembly quantity must be positive.", nameof(quantity));
+        var set = await context.PartSets.AsNoTracking()
+            .Include(s => s.Members.OrderBy(m => m.SortOrder).ThenBy(m => m.Id))
+            .FirstOrDefaultAsync(s => s.Id == partSetId)
+            ?? throw new KeyNotFoundException($"Part set {partSetId} was not found.");
+        if (set.IsArchived || set.Members.Count == 0)
+            throw new ArgumentException("An archived or empty part set cannot be added to a job.", nameof(partSetId));
+        foreach (var member in set.Members) PartSetService.ValidateRow(member);
+        await PartSetService.ValidateMaterialsAsync(context, set.Members);
+        var maxOrder = await context.JobParts.Where(p => p.JobId == jobId)
+            .MaxAsync(p => (int?)p.SortOrder) ?? -1;
+        var instance = new JobPartSetInstance
+        {
+            JobId = jobId, PartSetId = set.Id, DrawingNumber = set.DrawingNumber,
+            Revision = set.Revision, DisplayName = set.DisplayName, Quantity = quantity
+        };
+        try
+        {
+            foreach (var member in set.Members)
+                instance.Parts.Add(new JobPart
+                {
+                    JobId = jobId, MaterialId = member.MaterialId, Name = member.Name,
+                    LengthInches = member.LengthInches, Quantity = checked(member.Quantity * quantity),
+                    SortOrder = maxOrder = checked(maxOrder + 1)
+                });
+        }
+        catch (OverflowException ex)
+        {
+            throw new ArgumentException("Expanded quantities or sort orders exceed the supported integer range.", nameof(quantity), ex);
+        }
+        context.JobPartSetInstances.Add(instance);
+        TouchJob(context, job);
+        InvalidateOptimization(job);
+        await SaveJobMutationAsync(context, jobId);
+        return instance;
+    }
+
+    /// <summary>Removes only the specified job's whole instance and its snapshot rows in one save.</summary>
+    public async Task RemovePartSetInstanceAsync(int jobId, int instanceId)
+    {
+        await using var context = _factory.CreateDbContext();
+        var job = await LoadUnlockedJobAsync(context, jobId);
+        var instance = await context.JobPartSetInstances.Include(i => i.Parts)
+            .FirstOrDefaultAsync(i => i.Id == instanceId && i.JobId == jobId)
+            ?? throw new KeyNotFoundException($"Part set instance {instanceId} was not found in job {jobId}.");
+        context.JobParts.RemoveRange(instance.Parts);
+        context.JobPartSetInstances.Remove(instance);
+        TouchJob(context, job);
+        InvalidateOptimization(job);
+        await SaveJobMutationAsync(context, jobId);
+    }
+
+    private static void RequireManualPart(JobPart part)
+    {
+        if (part.PartSetInstanceId != null)
+            throw new ArgumentException("Set-created parts cannot be edited or deleted individually; remove the whole part set instance instead.");
     }
 
     // Parts management
@@ -295,6 +371,7 @@ public class JobService
             ?? throw new KeyNotFoundException($"Job part {part.Id} was not found.");
         var job = await LoadUnlockedJobAsync(context, stored.JobId);
         RequireSameOwner(stored.JobId, part.JobId, nameof(part));
+        RequireManualPart(stored);
 
         stored.MaterialId = part.MaterialId;
         stored.Name = part.Name;
@@ -316,6 +393,7 @@ public class JobService
             return;
 
         var job = await LoadUnlockedJobAsync(context, stored.JobId);
+        RequireManualPart(stored);
         context.JobParts.Remove(stored);
         TouchJob(context, job);
         InvalidateOptimization(job);
@@ -561,6 +639,16 @@ public class JobService
                 throw new JobLockedException(jobId, currentLock, ex);
 
             throw new JobMutationConflictException(jobId, ex);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 547 })
+        {
+            // SQL may insert children before the parent UPDATE. A concurrently deleted job
+            // can therefore fail its FK before EF gets to the LockedAt concurrency check.
+            // Translate only a proven missing owner; unrelated FK/check failures stay errors.
+            await using var fresh = _factory.CreateDbContext();
+            if (!await fresh.Jobs.AsNoTracking().AnyAsync(j => j.Id == jobId))
+                throw new JobMutationConflictException(jobId, ex);
+            throw;
         }
     }
 

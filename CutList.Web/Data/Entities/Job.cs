@@ -18,6 +18,7 @@ public class Job
 
     public CuttingTool? CuttingTool { get; set; }
     public ICollection<JobPart> Parts { get; set; } = new List<JobPart>();
+    public ICollection<JobPartSetInstance> PartSetInstances { get; set; } = new List<JobPartSetInstance>();
     public ICollection<JobStock> Stock { get; set; } = new List<JobStock>();
 
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? JobNumber : $"{JobNumber} - {Name}";

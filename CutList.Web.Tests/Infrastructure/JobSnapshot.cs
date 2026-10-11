@@ -10,7 +10,8 @@ public sealed record JobRow(
     int Id, string JobNumber, string? Name, string? Customer, int? CuttingToolId, string? Notes,
     DateTime CreatedAt, DateTime? UpdatedAt, DateTime? LockedAt, string? OptimizationResultJson, DateTime? OptimizedAt);
 
-public sealed record PartRow(int Id, int JobId, int MaterialId, string Name, decimal LengthInches, int Quantity, int SortOrder);
+public sealed record PartRow(int Id, int JobId, int MaterialId, string Name, decimal LengthInches, int Quantity, int SortOrder, int? PartSetInstanceId = null);
+public sealed record InstanceRow(int Id, int JobId, int PartSetId, string DrawingNumber, string? Revision, string DisplayName, int Quantity);
 
 public sealed record StockRow(
     int Id, int JobId, int MaterialId, int? StockItemId, decimal LengthInches, int Quantity,
@@ -34,6 +35,7 @@ public sealed record CuttingToolRow(int Id, string Name, decimal KerfInches, boo
 public sealed record JobSnapshot(
     IReadOnlyList<JobRow> Jobs,
     IReadOnlyList<PartRow> Parts,
+    IReadOnlyList<InstanceRow> Instances,
     IReadOnlyList<StockRow> Stock,
     IReadOnlyList<MaterialRow> Materials,
     IReadOnlyList<StockItemRow> StockItems,
@@ -55,7 +57,10 @@ public sealed record JobSnapshot(
                 j.CreatedAt, j.UpdatedAt, j.LockedAt, j.OptimizationResultJson, j.OptimizedAt))
             .ToListAsync();
         var parts = await context.JobParts.AsNoTracking().OrderBy(p => p.Id)
-            .Select(p => new PartRow(p.Id, p.JobId, p.MaterialId, p.Name, p.LengthInches, p.Quantity, p.SortOrder))
+            .Select(p => new PartRow(p.Id, p.JobId, p.MaterialId, p.Name, p.LengthInches, p.Quantity, p.SortOrder, p.PartSetInstanceId))
+            .ToListAsync();
+        var instances = await context.JobPartSetInstances.AsNoTracking().OrderBy(i => i.Id)
+            .Select(i => new InstanceRow(i.Id, i.JobId, i.PartSetId, i.DrawingNumber, i.Revision, i.DisplayName, i.Quantity))
             .ToListAsync();
         var stock = await context.JobStocks.AsNoTracking().OrderBy(s => s.Id)
             .Select(s => new StockRow(s.Id, s.JobId, s.MaterialId, s.StockItemId, s.LengthInches, s.Quantity,
@@ -73,7 +78,7 @@ public sealed record JobSnapshot(
             .Select(t => new CuttingToolRow(t.Id, t.Name, t.KerfInches, t.IsDefault, t.IsActive))
             .ToListAsync();
 
-        return new JobSnapshot(jobs, parts, stock, materials, stockItems, tools);
+        return new JobSnapshot(jobs, parts, instances, stock, materials, stockItems, tools);
     }
 
     public JobRow Job(int id) => Jobs.Single(j => j.Id == id);

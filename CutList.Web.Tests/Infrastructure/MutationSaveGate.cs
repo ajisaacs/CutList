@@ -85,5 +85,5 @@ public sealed class MutationSaveGate : SaveChangesInterceptor
     private static bool StagesJobAggregateChange(DbContext context) =>
         context.ChangeTracker.Entries()
             .Any(e => (e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
-                      && (e.Entity is Job or JobPart or JobStock));
+                      && (e.Entity is Job or JobPart or JobStock or JobPartSetInstance));
 }

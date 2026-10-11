@@ -16,6 +16,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<CuttingTool> CuttingTools => Set<CuttingTool>();
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<JobPart> JobParts => Set<JobPart>();
+    public DbSet<JobPartSetInstance> JobPartSetInstances => Set<JobPartSetInstance>();
     public DbSet<JobStock> JobStocks => Set<JobStock>();
 
     public DbSet<PartSet> PartSets => Set<PartSet>();
@@ -210,12 +211,30 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
+        modelBuilder.Entity<JobPartSetInstance>(entity =>
+        {
+            entity.HasAlternateKey(e => new { e.Id, e.JobId });
+            entity.Property(e => e.DrawingNumber).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Revision).HasMaxLength(50);
+            entity.Property(e => e.DisplayName).HasMaxLength(100).IsRequired();
+            entity.ToTable(t => t.HasCheckConstraint("CK_JobPartSetInstance_Quantity", "[Quantity] > 0"));
+            entity.HasOne(e => e.Job).WithMany(j => j.PartSetInstances)
+                .HasForeignKey(e => e.JobId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.PartSet).WithMany()
+                .HasForeignKey(e => e.PartSetId).OnDelete(DeleteBehavior.NoAction);
+        });
+
         // JobPart
         modelBuilder.Entity<JobPart>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.LengthInches).HasPrecision(10, 4);
+
+            // The composite FK also prevents linking a part to another job's instance.
+            entity.HasOne(e => e.PartSetInstance).WithMany(i => i.Parts)
+                .HasForeignKey(e => new { e.PartSetInstanceId, e.JobId })
+                .HasPrincipalKey(i => new { i.Id, i.JobId }).OnDelete(DeleteBehavior.NoAction);
 
             entity.HasOne(e => e.Job)
                 .WithMany(p => p.Parts)
