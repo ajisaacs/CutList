@@ -6,13 +6,14 @@ namespace CutList.Core.Nesting.Search
     /// </summary>
     internal sealed class CutDemand
     {
-        private CutDemand(double[] lengths, int[] counts, double kerf, double stockLength, List<BinItem>[] items)
+        private CutDemand(double[] lengths, int[] counts, double kerf, double stockLength,
+            List<BinItem>[] items, long reservedCapacity = 0)
         {
             Lengths = lengths;
             Counts = counts;
             LengthUnits = lengths.Select(CutFit.Units).ToArray();
             Sizes = lengths.Select(l => CutFit.Size(l, kerf)).ToArray();
-            Capacity = CutFit.Capacity(stockLength, kerf);
+            Capacity = CutFit.Capacity(stockLength, kerf) - reservedCapacity;
             StockLength = stockLength;
             Kerf = kerf;
             Items = items;
@@ -27,7 +28,7 @@ namespace CutList.Core.Nesting.Search
         /// <summary>Length plus one kerf, in units: what a part uses of a bar.</summary>
         public long[] Sizes { get; }
 
-        /// <summary>What one bar holds, in units: parts fit when their sizes total at most this (see CutFit).</summary>
+        /// <summary>Available capacity in Size units, after any reserved capacity (see CutFit).</summary>
         public long Capacity { get; }
 
         public double StockLength { get; }
@@ -35,7 +36,12 @@ namespace CutList.Core.Nesting.Search
         public List<BinItem>[] Items { get; }
         public int GroupCount => Lengths.Length;
 
-        public static CutDemand From(IEnumerable<BinItem> items, double stockLength, double kerf)
+        /// <param name="reservedCapacity">
+        /// Capacity already occupied by retained parts, in CutFit.Size units (including their kerfs).
+        /// Subtracted from the original bar capacity without granting another kerf or tolerance.
+        /// </param>
+        public static CutDemand From(IEnumerable<BinItem> items, double stockLength, double kerf,
+            long reservedCapacity = 0)
         {
             var groups = items.GroupBy(i => i.Length).OrderByDescending(g => g.Key).ToList();
             return new CutDemand(
@@ -43,7 +49,8 @@ namespace CutList.Core.Nesting.Search
                 groups.Select(g => g.Count()).ToArray(),
                 kerf,
                 stockLength,
-                groups.Select(g => g.ToList()).ToArray());
+                groups.Select(g => g.ToList()).ToArray(),
+                reservedCapacity);
         }
 
         /// <summary>

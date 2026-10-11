@@ -58,6 +58,10 @@ Keep the `FirstFitImprovementTests` regressions alongside benchmark comparisons:
 larger-piece versus smaller-combination case, kerf rejection, finite stock, displaced demand,
 reference identity, stock orchestration, and whole-job non-regression.
 
+For the subsequent bounded `MaxFillSearch` replacement experiment, see
+[replacement-search-evaluation.md](replacement-search-evaluation.md). It is test-only; the measured
+local improvements did not reduce unlimited-stock bar counts, so production defaults stayed unchanged.
+
 ## Baseline (2026-10-04)
 
 Source `ffd5a53` plus this harness. Release, .NET 10.0.12, 4 processors (hermes.lan, shared VM).
