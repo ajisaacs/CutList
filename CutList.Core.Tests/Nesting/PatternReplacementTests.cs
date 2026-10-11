@@ -232,11 +232,8 @@ public sealed class PatternReplacementTests
     }
 
     [Fact]
-    public void Characterizes_the_inherited_near_equal_named_part_identity_defect_at_pack_level()
+    public void Same_named_near_equal_parts_keep_exact_references_at_pack_level()
     {
-        // Known pre-existing greedy-helper defect, not a claim of universal prototype safety.
-        // Keep this characterization tied to docs/replacement-search-evaluation.md until that
-        // separate production repair changes these assertions to exact reference conservation.
         var items = Items(7.000005, 7, 4, 3);
         var request = new PackingRequest(items, 16, maxBinCount: 1);
         var baseline = new FirstFitEngine().Pack(request);
@@ -246,9 +243,8 @@ public sealed class PatternReplacementTests
         foreach (var result in new[] { baseline, candidate })
         {
             var returned = result.Bins.SelectMany(b => b.Items).Concat(result.ItemsNotUsed).ToList();
-            Assert.DoesNotContain(returned, i => ReferenceEquals(i, items[0]));
-            Assert.Equal(2, returned.Count(i => ReferenceEquals(i, items[1])));
-            Assert.Equal(items.Count, returned.Count); // Aggregate demand checks miss the corruption.
+            Assert.Equal(items.Count, returned.Count);
+            Assert.All(items, item => Assert.Equal(1, returned.Count(i => ReferenceEquals(i, item))));
         }
         Assert.False(engine.LastGuardRejected);
     }

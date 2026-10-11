@@ -26,7 +26,11 @@ namespace CutList.Core
 
         public void RemoveItem(BinItem item)
         {
-            _items.Remove(item);
+            // Parts with the same name and nearly equal lengths compare equal by value.
+            // A packing swap must remove the selected instance, not a different copy.
+            var index = _items.FindIndex(candidate => ReferenceEquals(candidate, item));
+            if (index >= 0)
+                _items.RemoveAt(index);
         }
 
         public void SortItems(Comparison<BinItem> comparison)
