@@ -1,0 +1,48 @@
+@page "/part-sets"
+@inject PartSetService PartSetService
+@using CutList.Web.Data.Entities
+
+<PageTitle>Drawing Sets</PageTitle>
+<div class="d-flex justify-content-between align-items-center mb-3"><h1>Drawing Sets</h1><a href="part-sets/new" class="btn btn-primary">New Drawing Set</a></div>
+<p class="text-muted">Reusable saw cuts per drawing/assembly. Adding a set to a job creates an independent snapshot; stock is configured separately.</p>
+<div class="d-flex gap-2 align-items-center mb-3">
+    <label for="set-search">Search</label><input id="set-search" class="form-control" placeholder="Drawing number or name" @bind="search" />
+    <label class="text-nowrap"><input type="checkbox" @bind="includeArchived" /> Include archived</label>
+    <button id="search-sets" class="btn btn-outline-primary" @onclick="Search">Search</button>
+</div>
+@if (error != null) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (loading) { <p>Loading...</p> }
+else
+{
+    <table class="table table-hover"><thead><tr><th>Drawing</th><th>Revision</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        @foreach (var set in sets.Skip((page - 1) * PageSize).Take(PageSize))
+        {
+            <tr><td><a href="part-sets/@set.Id">@set.DrawingNumber</a></td><td>@(set.Revision ?? "—")</td><td>@set.DisplayName</td><td>@(set.IsArchived ? "Archived" : "Active")</td><td><div class="table-actions"><a href="part-sets/@set.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                @if (!set.IsArchived) { <button title="Archive" class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmArchive(set)">Archive</button> }
+            </div></td></tr>
+        }
+    </tbody></table>
+    @if (sets.Count == 0) { <p>No drawing sets found.</p> }
+    <Pager CurrentPage="page" PageSize="PageSize" TotalCount="sets.Count" CurrentPageChanged="PageChanged" />
+}
+<ConfirmDialog @ref="archiveDialog" Title="Archive Drawing Set" Message="Archive this drawing set? It will no longer be available for new jobs. Existing job snapshots are unchanged." ConfirmText="Archive" OnConfirm="Archive" />
+@code {
+    private const int PageSize = 25;
+    private int page = 1;
+    private List<PartSet> sets = [];
+    private string? search, error;
+    private bool includeArchived, loading = true;
+    private PartSet? pendingArchive;
+    private ConfirmDialog archiveDialog = null!;
+    protected override async Task OnInitializedAsync() => await Search();
+    private async Task Search() { loading = true; sets = await PartSetService.GetAllAsync(search, includeArchived); page = 1; loading = false; }
+    private void PageChanged(int value) => page = value;
+    private void ConfirmArchive(PartSet set) { pendingArchive = set; archiveDialog.Show(); }
+    private async Task Archive()
+    {
+        error = null;
+        try { if (pendingArchive != null) await PartSetService.ArchiveAsync(pendingArchive.Id); await Search(); }
+        catch (KeyNotFoundException ex) { error = ex.Message; await Search(); }
+        pendingArchive = null;
+    }
+}

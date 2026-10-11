@@ -30,6 +30,7 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
         _ctx.Services.AddSingleton(_db.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>());
         _ctx.Services.AddSingleton(_db.Services.GetRequiredService<IPackingEngineCatalog>());
         _ctx.Services.AddScoped<JobService>();
+        _ctx.Services.AddScoped<PartSetService>();
         _ctx.Services.AddScoped<MaterialService>();
         _ctx.Services.AddScoped<CutListPackingService>();
         _ctx.Services.AddScoped<ReportService>();

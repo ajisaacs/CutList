@@ -1,0 +1,104 @@
+@page "/part-sets/new"
+@page "/part-sets/{Id:int}"
+@inject PartSetService PartSetService
+@inject MaterialService MaterialService
+@inject NavigationManager Navigation
+@using CutList.Web.Data.Entities
+
+<PageTitle>Drawing Set</PageTitle>
+<h1>@(Id.HasValue ? "Edit Drawing Set" : "New Drawing Set")</h1>
+<a href="part-sets" class="btn btn-outline-secondary mb-3">Back to Drawing Sets</a>
+@if (loading)
+{
+    <p>Loading...</p>
+}
+else if (missing)
+{
+    <div class="alert alert-warning">Drawing set not found.</div>
+}
+else
+{
+    @if (set.IsArchived)
+    {
+        <div class="alert alert-warning">Archived — unavailable for new jobs. Existing job snapshots are unchanged.</div>
+    }
+    <p class="text-muted">Quantities are per one drawing/assembly. Changes affect future adds only, never existing jobs. Configure stock separately in each job.</p>
+    @if (error != null) { <div class="alert alert-danger" role="alert">@error</div> }
+    <EditForm Model="set" OnSubmit="Save">
+        <fieldset disabled="@saving">
+            <div class="row g-3 mb-3">
+                <div class="col-md-4"><label for="drawing-number" class="form-label">Drawing number</label><input id="drawing-number" class="form-control" maxlength="100" @bind="set.DrawingNumber" /></div>
+                <div class="col-md-2"><label for="set-revision" class="form-label">Revision (optional)</label><input id="set-revision" class="form-control" maxlength="50" @bind="set.Revision" /></div>
+                <div class="col-md-6"><label for="set-name" class="form-label">Display name</label><input id="set-name" class="form-control" maxlength="100" @bind="set.DisplayName" /></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Cut name</th><th>Catalog material</th><th>Length</th><th>Per-set qty</th><th>Source item</th><th>Source file</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        @foreach (var row in set.Members.OrderBy(m => m.SortOrder))
+                        {
+                            <tr @key="row">
+                                <td><input aria-label="Cut name" class="form-control member-name" maxlength="100" @bind="row.Name" /></td>
+                                <td><select aria-label="Catalog material" class="form-select member-material" @bind="row.MaterialId"><option value="0">Select material</option>
+                                    @foreach (var material in materials) { <option value="@material.Id">@material.DisplayName</option> }
+                                    @if (row.MaterialId != 0 && !materials.Any(m => m.Id == row.MaterialId)) { <option value="@row.MaterialId">Inactive material — select a replacement</option> }
+                                </select></td>
+                                <td><LengthInput @bind-Value="row.LengthInches" /></td>
+                                <td><input aria-label="Per-set quantity" class="form-control member-quantity" type="number" min="1" @bind="row.Quantity" /></td>
+                                <td><input aria-label="Source item" class="form-control" maxlength="100" @bind="row.SourceItem" /></td>
+                                <td><input aria-label="Source file" class="form-control" maxlength="255" @bind="row.SourceFile" /></td>
+                                <td><button type="button" class="btn btn-outline-danger btn-sm" title="Remove cut" @onclick="() => ConfirmRemove(row)">Remove</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <button id="add-member" type="button" class="btn btn-outline-secondary" @onclick="AddMember">Add Cut</button>
+            <button type="submit" class="btn btn-primary">@(saving ? "Saving..." : "Save Drawing Set")</button>
+        </fieldset>
+    </EditForm>
+}
+<ConfirmDialog @ref="removeDialog" Title="Remove Cut" Message="Remove this cut from the library draft? Existing job snapshots are unchanged." OnConfirm="RemoveMember" />
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private PartSet set = new();
+    private List<Material> materials = [];
+    private bool loading = true, missing, saving;
+    private string? error;
+    private ConfirmDialog removeDialog = null!;
+    private PartSetMember? pendingRemoval;
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        error = null;
+        materials = await MaterialService.GetAllAsync();
+        var existing = Id.HasValue ? await PartSetService.GetByIdAsync(Id.Value) : new PartSet();
+        missing = existing == null;
+        set = existing ?? new();
+        loading = false;
+    }
+    private void AddMember() => set.Members.Add(new PartSetMember { Quantity = 1, SortOrder = set.Members.Count });
+    private void ConfirmRemove(PartSetMember row) { pendingRemoval = row; removeDialog.Show(); }
+    private void RemoveMember()
+    {
+        if (pendingRemoval != null) set.Members.Remove(pendingRemoval);
+        var order = 0;
+        foreach (var row in set.Members.OrderBy(m => m.SortOrder)) row.SortOrder = order++;
+        pendingRemoval = null;
+    }
+    private async Task Save()
+    {
+        error = null;
+        saving = true;
+        try
+        {
+            if (set.Members.Count == 0) throw new ArgumentException("Add at least one valid cut before saving.");
+            if (Id.HasValue) await PartSetService.UpdateAsync(set);
+            else set = await PartSetService.CreateAsync(set);
+            Navigation.NavigateTo($"part-sets/{set.Id}");
+        }
+        catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException) { error = ex.Message; }
+        finally { saving = false; }
+    }
+}

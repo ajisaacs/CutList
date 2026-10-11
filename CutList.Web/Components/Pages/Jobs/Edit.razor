@@ -1,6 +1,7 @@
 @page "/jobs/new"
 @page "/jobs/{Id:int}"
 @inject JobService JobService
+@inject PartSetService PartSetService
 @inject MaterialService MaterialService
 @inject CutListPackingService PackingService
 @inject NavigationManager Navigation
@@ -467,7 +468,53 @@ else
     </div>
 }
 
+<ConfirmDialog @ref="removeSetDialog" Title="Remove Drawing Set" Message="Remove this entire drawing-set instance and all its cut rows? Manual parts and other instances will remain." ConfirmText="Remove Drawing Set" OnConfirm="RemoveSetAsync" />
+
 @code {
+    private List<PartSet> partSets = [];
+    private int selectedPartSetId;
+    private int assemblyCount = 1;
+    private bool changingSet;
+    private string? setError;
+    private ConfirmDialog removeSetDialog = null!;
+    private JobPartSetInstance? pendingSetRemoval;
+
+    private async Task AddSetAsync()
+    {
+        changingSet = true;
+        setError = null;
+        try
+        {
+            if (await TryJobChangeAsync(async () => { await JobService.AddPartSetAsync(Id!.Value, selectedPartSetId, assemblyCount); }))
+            {
+                job = (await JobService.GetByIdAsync(Id!.Value))!;
+                packResult = null;
+                summary = null;
+                partSets = await PartSetService.GetAllAsync();
+            }
+        }
+        catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException or OverflowException) { setError = ex.Message; }
+        finally { changingSet = false; }
+    }
+
+    private void ConfirmRemoveSet(JobPartSetInstance instance) { pendingSetRemoval = instance; removeSetDialog.Show(); }
+    private async Task RemoveSetAsync()
+    {
+        if (pendingSetRemoval == null) return;
+        changingSet = true;
+        setError = null;
+        try
+        {
+            if (await TryJobChangeAsync(() => JobService.RemovePartSetInstanceAsync(Id!.Value, pendingSetRemoval.Id)))
+            {
+                job = (await JobService.GetByIdAsync(Id!.Value))!;
+                packResult = null;
+                summary = null;
+            }
+        }
+        catch (KeyNotFoundException ex) { setError = ex.Message; }
+        finally { changingSet = false; pendingSetRemoval = null; }
+    }
     private enum Tab { Details, Parts, Stock, Results }
 
     [Parameter]
@@ -567,6 +614,8 @@ else
         showStockModal = false;
         editingStock = null;
         importCandidates.Clear();
+        removeSetDialog.Hide();
+        pendingSetRemoval = null;
 
         conflictMessage = string.Join(" ", new[]
         {
@@ -608,6 +657,7 @@ else
             selectedEngineId = PackingService.DefaultEngine.Id;
             materials = await MaterialService.GetAllAsync();
             cuttingTools = await JobService.GetCuttingToolsAsync();
+            partSets = await PartSetService.GetAllAsync();
 
             if (Id.HasValue)
             {
@@ -742,7 +792,41 @@ else
                 }
             </div>
             <div class="card-body">
-                @if (job.Parts.Count == 0)
+                @if (!job.IsLocked)
+                {
+                    <fieldset disabled="@changingSet" class="mb-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-7"><label for="job-part-set" class="form-label">Drawing set</label>
+                                <select id="job-part-set" class="form-select" @bind="selectedPartSetId">
+                                    <option value="0">Select drawing set</option>
+                                    @foreach (var set in partSets) { <option value="@set.Id">@set.DrawingNumber — @(set.Revision ?? "no revision") — @set.DisplayName</option> }
+                                </select>
+                            </div>
+                            <div class="col-md-2"><label for="set-assembly-count" class="form-label">Assemblies</label><input id="set-assembly-count" class="form-control" type="number" min="1" @bind="assemblyCount" /></div>
+                            <div class="col-md-3"><button id="add-part-set" class="btn btn-outline-primary" disabled="@(selectedPartSetId == 0 || assemblyCount < 1)" @onclick="AddSetAsync">Add Drawing Set</button></div>
+                        </div>
+                        <small class="text-muted">Per-set quantities × assemblies. Copies are independent of the library. Configure stock separately.</small>
+                    </fieldset>
+                }
+                @if (setError != null) { <div class="alert alert-danger" role="alert">@setError</div> }
+                @foreach (var instance in job.PartSetInstances.OrderBy(i => i.Id))
+                {
+                    <div class="part-set-instance border rounded p-3 mb-3" data-instance-id="@instance.Id">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>@instance.DrawingNumber — @(instance.Revision ?? "no revision") — @instance.DisplayName — @CountLabel(instance.Quantity, "assembly", "assemblies")</strong>
+                            @if (!job.IsLocked) { <button class="btn btn-sm btn-outline-danger" disabled="@changingSet" title="Remove drawing set" @onclick="() => ConfirmRemoveSet(instance)">Remove Drawing Set</button> }
+                        </div>
+                        <small class="text-muted">Snapshot: remove the whole instance to change its cuts; add manual parts for customization.</small>
+                        <table class="table table-sm mb-0"><thead><tr><th>Cut name</th><th>Material</th><th>Length</th><th>Expanded qty</th></tr></thead><tbody>
+                            @foreach (var member in job.Parts.Where(p => p.PartSetInstanceId == instance.Id).OrderBy(p => p.SortOrder))
+                            {
+                                <tr data-set-member="@member.Id"><td>@member.Name</td><td>@member.Material.DisplayName</td><td>@ArchUnits.FormatFromInches((double)member.LengthInches)</td><td>@member.Quantity</td></tr>
+                            }
+                        </tbody></table>
+                    </div>
+                }
+                <h6>Manual parts</h6>
+                @if (job.Parts.All(p => p.PartSetInstanceId != null))
                 {
                     <div class="text-center py-4 text-muted">
                         <p class="mb-2">No parts added yet.</p>
@@ -763,7 +847,7 @@ else
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var part in job.Parts)
+                                @foreach (var part in job.Parts.Where(p => p.PartSetInstanceId == null))
                                 {
                                     <tr>
                                         <td>@part.Material.DisplayName</td>
