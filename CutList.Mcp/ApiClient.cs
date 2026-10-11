@@ -7,7 +7,7 @@ namespace CutList.Mcp;
 /// <summary>
 /// Typed HTTP client for calling the CutList.Web REST API.
 /// </summary>
-public class ApiClient
+public partial class ApiClient
 {
     private readonly HttpClient _http;
 
@@ -286,12 +286,14 @@ public class ApiJobDto
 
 public class ApiJobDetailDto : ApiJobDto
 {
+    public List<ApiJobPartSetInstanceDto> PartSetInstances { get; set; } = new();
     public List<ApiJobPartDto> Parts { get; set; } = new();
     public List<ApiJobStockDto> Stock { get; set; } = new();
 }
 
 public class ApiJobPartDto
 {
+    public int? PartSetInstanceId { get; set; }
     public int Id { get; set; }
     public int JobId { get; set; }
     public int MaterialId { get; set; }

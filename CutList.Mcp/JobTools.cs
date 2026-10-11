@@ -47,7 +47,7 @@ public class JobTools
         };
     }
 
-    [McpServerTool(Name = "get_job"), Description("Gets full job details including all parts and stock assignments, and whether the job is locked.")]
+    [McpServerTool(Name = "get_job"), Description("Gets full job details, stock, lock state and snapshotted drawing-set instances. Flat parts include nullable partSetInstanceId; grouped instance parts are the same cuts, not additional demand. Do not count both views.")]
     public async Task<JobDetailResult> GetJob(
         [Description("Job ID")]
         int jobId)
@@ -405,7 +405,7 @@ public class JobTools
 
     #region Mapping Helpers
 
-    private static JobDetailDto MapJobDetail(ApiJobDetailDto j) => new()
+    internal static JobDetailDto MapJobDetail(ApiJobDetailDto j) => new()
     {
         Id = j.Id,
         JobNumber = j.JobNumber,
@@ -421,11 +421,14 @@ public class JobTools
         IsLocked = j.IsLocked,
         LockedAt = j.LockedAt,
         Parts = j.Parts.Select(MapPart).ToList(),
-        Stock = j.Stock.Select(MapStock).ToList()
+        Stock = j.Stock.Select(MapStock).ToList(),
+        PartSetInstances = j.PartSetInstances
     };
 
     private static JobPartSummaryDto MapPart(ApiJobPartDto p) => new()
     {
+        PartSetInstanceId = p.PartSetInstanceId,
+        SortOrder = p.SortOrder,
         Id = p.Id,
         MaterialId = p.MaterialId,
         MaterialName = p.MaterialName,
@@ -511,6 +514,8 @@ public class JobSummaryDto
 
 public class JobDetailDto
 {
+    [Description("Snapshotted drawing-set instances with expanded parts. These are the same rows as flat Parts, not additional demand; do not count both.")]
+    public List<ApiJobPartSetInstanceDto> PartSetInstances { get; set; } = new();
     public int Id { get; set; }
     public string JobNumber { get; set; } = string.Empty;
     public string? Name { get; set; }
@@ -532,6 +537,8 @@ public class JobDetailDto
 
 public class JobPartSummaryDto
 {
+    public int? PartSetInstanceId { get; set; }
+    public int SortOrder { get; set; }
     public int Id { get; set; }
     public int MaterialId { get; set; }
     public string MaterialName { get; set; } = string.Empty;
