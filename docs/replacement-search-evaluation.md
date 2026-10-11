@@ -1,5 +1,8 @@
 # Bounded replacement-search evaluation
 
+> Historical test-only experiment. The reference-identity defect identified here was fixed in the
+> opt-in last-bar engine work; see [last-bar-engine-trial.md](last-bar-engine-trial.md).
+
 ## Decision
 
 Keep the production engines unchanged. Reusing `MaxFillSearch`/`CutPatterns` does find better

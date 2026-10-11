@@ -48,20 +48,17 @@ public class LastBarEliminationTests(ITestOutputHelper output)
     [Theory]
     [InlineData(0)]
     [InlineData(100_000)]
-    public void Existing_same_named_near_equal_FirstFit_reference_bug_fails_closed(long budget)
+    public void Same_named_near_equal_FirstFit_references_remain_valid(long budget)
     {
         var items = new[] { 7.000005, 7, 4, 3 }.Select(n => new BinItem("part", n)).ToList();
         var request = new PackingRequest(items, 16, maxBinCount: 1);
         var baseline = new FirstFitEngine().Pack(request);
-        Assert.False(SameReferences(items, Returned(baseline)));
+        Assert.True(SameReferences(items, Returned(baseline)));
         Assert.Single(baseline.Bins);
-        Assert.Equal(items.Count, Returned(baseline).Count); // count-only checks miss this failure
-        Assert.All(baseline.Bins, b => Assert.True(CutFit.Fits(b.Items.Select(i => i.Length), 16, 0)));
         var engine = new LastBarEliminationEngine(budget);
 
-        var error = Assert.Throws<InvalidOperationException>(() => engine.Pack(request));
-
-        Assert.Contains("baseline", error.Message, StringComparison.OrdinalIgnoreCase);
+        var result = engine.Pack(request);
+        Assert.True(SameReferences(items, Returned(result)));
         Assert.Equal(0, engine.LastEliminatedBars);
         Assert.Equal(0, engine.LastAttempts);
         Assert.Equal(0, engine.LastBudgetUsed);

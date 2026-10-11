@@ -62,10 +62,11 @@ For the bounded `MaxFillSearch` replacement experiment, see
 [replacement-search-evaluation.md](replacement-search-evaluation.md). It is test-only; the measured
 local improvements did not reduce unlimited-stock bar counts.
 
-For the bounded last-bar redistribution experiment, see
-[last-bar-elimination-evaluation.md](last-bar-elimination-evaluation.md). Allowing temporary
-local slack found whole-job savings under a small additional post-pass budget. Both experiments
-remain test-only; production engines and defaults are unchanged.
+For the historical bounded last-bar redistribution experiment, see
+[last-bar-elimination-evaluation.md](last-bar-elimination-evaluation.md). Its measured 10k relaxed
+pass is now available as an opt-in engine; see [last-bar-engine-trial.md](last-bar-engine-trial.md)
+for the current contract, limits, and trial instructions. The bounded replacement experiment
+remains test-only.
 
 ## Baseline (2026-10-04)
 

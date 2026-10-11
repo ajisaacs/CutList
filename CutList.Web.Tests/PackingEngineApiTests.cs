@@ -41,7 +41,7 @@ public sealed class PackingEngineApiTests : IAsyncLifetime
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("Available engines: exhaustive, firstfit, bestfit", await response.Content.ReadAsStringAsync());
+        Assert.Contains("Available engines: exhaustive, lastbar, firstfit, bestfit", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -50,13 +50,14 @@ public sealed class PackingEngineApiTests : IAsyncLifetime
         var engines = await _client.GetFromJsonAsync<List<PackingEngineDto>>("/api/packing/engines");
 
         Assert.NotNull(engines);
-        Assert.Equal(new[] { "exhaustive", "firstfit", "bestfit" }, engines.Select(e => e.Id));
+        Assert.Equal(new[] { "exhaustive", "lastbar", "firstfit", "bestfit" }, engines.Select(e => e.Id));
         Assert.Equal("exhaustive", Assert.Single(engines, e => e.IsDefault).Id);
         Assert.All(engines, e => Assert.False(string.IsNullOrWhiteSpace(e.Description)));
     }
 
     [Theory]
     [InlineData("bestfit", "bestfit")]
+    [InlineData("lastbar", "lastbar")]
     [InlineData(null, "exhaustive")]
     public async Task Job_pack_runs_requested_or_default_engine(string? requested, string expected)
     {

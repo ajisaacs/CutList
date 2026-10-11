@@ -22,10 +22,17 @@ namespace CutList.Core.Nesting
             "Exhaustive",
             "Groups parts by length and searches cut patterns for the fewest bars, starting from the First Fit plan. When limited stock cannot hold every part, fills those bars as fully as possible unless that strands parts needing more bars. Keeps the First Fit plan if the search budget runs out first or the job is too large to search; the reported engine name then says so.");
 
+        public static PackingEngineInfo LastBar { get; } = new(
+            "lastbar",
+            "Exhaustive + Last-Bar Trial",
+            "Runs Exhaustive then a bounded 10,000-step relaxed last-bar rearrangement pass. The extra budget may save bars but does not prove optimality; the default engine remains Exhaustive. Preserves any First Fit fallback label from Exhaustive.");
+
         /// <summary>Selectable engines in display order; the first is the default.</summary>
         public static IReadOnlyList<PackingEngineRegistration> All { get; } = new[]
         {
             new PackingEngineRegistration(Exhaustive, () => new ExhaustiveSearchEngine()),
+            new PackingEngineRegistration(LastBar, () => new LastBarEliminationEngine(10_000,
+                new ExhaustiveSearchEngine(), allowNonMonotoneEjections: true)),
             new PackingEngineRegistration(FirstFit, () => new FirstFitEngine()),
             new PackingEngineRegistration(BestFit, () => new BestFitEngine()),
         };

@@ -1,20 +1,13 @@
-using CutList.Core.Nesting;
 using CutList.Core.Nesting.Search;
 
-namespace CutList.Core.Tests.Nesting;
+namespace CutList.Core.Nesting;
 
 /// <summary>
-/// Test-only restricted heuristic, not an exact search or a proof of optimality. Tries to empty
-/// the least-used bar, largest pending part first, with direct moves or one/two-part ejections.
-/// By default ejections strictly increase the receiving bar's integer occupancy. The optional
-/// non-monotone mode also permits equal/larger ejections, but never ejects a reference already
-/// placed or moved in the current branch (including direct placements and original source parts).
-/// Each original resident can move at most once; repeated identical references are conservatively
-/// locked together without changing their multiplicity. Locks are branch-local, not job-global.
-/// A single work budget covers all attempts; at most 64 moves are allowed in any search branch.
-/// No catalog registration, production changes, or new global-proof/fallback claims.
+/// Bounded, non-optimal post-pass. Tries to empty the least-used bar with direct moves
+/// and one/two-part ejections. Validates exact reference conservation and never replaces
+/// a plan unless it saves a bar. Budget is additional to the baseline engine's budget.
 /// </summary>
-internal sealed class LastBarEliminationEngine(long searchBudget, IPackingEngine? baselineEngine = null,
+public sealed class LastBarEliminationEngine(long searchBudget, IPackingEngine? baselineEngine = null,
     bool allowNonMonotoneEjections = false) : IPackingEngine
 {
     private const int MaxDepth = 64;

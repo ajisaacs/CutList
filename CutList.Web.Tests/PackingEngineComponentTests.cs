@@ -43,7 +43,7 @@ public sealed class PackingEngineComponentTests : IAsyncLifetime
     {
         var page = await RenderResultsTabAsync(_seed.UnlockedJobId);
         var options = page.FindAll("select#packing-engine option").Select(o => o.GetAttribute("value"));
-        Assert.Equal(new[] { "exhaustive", "firstfit", "bestfit" }, options);
+        Assert.Equal(new[] { "exhaustive", "lastbar", "firstfit", "bestfit" }, options);
 
         page.Find("select#packing-engine").Change(new ChangeEventArgs { Value = "bestfit" });
         await page.Find("#run-optimization").ClickAsync(new());

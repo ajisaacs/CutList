@@ -1,5 +1,9 @@
 # Bounded last-bar elimination evaluation
 
+> Historical experiment from before promotion. The opt-in production trial and reference-identity
+> repair are documented in [last-bar-engine-trial.md](last-bar-engine-trial.md); measurements below
+> describe the earlier test-only revision and are not a new held-out validation.
+
 ## Result and recommendation
 
 A bounded post-pass targeting **one fewer bar** found real savings where the earlier

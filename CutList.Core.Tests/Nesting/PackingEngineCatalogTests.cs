@@ -18,7 +18,7 @@ public class PackingEngineCatalogTests
     {
         var catalog = PackingEngineCatalog.CreateDefault();
 
-        Assert.Equal(new[] { "exhaustive", "firstfit", "bestfit" }, catalog.Engines.Select(e => e.Id));
+        Assert.Equal(new[] { "exhaustive", "lastbar", "firstfit", "bestfit" }, catalog.Engines.Select(e => e.Id));
         Assert.Equal("exhaustive", catalog.Default.Id);
         Assert.All(catalog.Engines, e => Assert.False(string.IsNullOrWhiteSpace(e.Description)));
     }
@@ -35,12 +35,37 @@ public class PackingEngineCatalogTests
     }
 
     [Fact]
+    public void Opt_in_last_bar_engine_saves_a_bar_through_the_catalog_and_multi_bin_path()
+    {
+        var scenario = Benchmarks.SearchBaselineBenchmark.Scenarios.Single(s => s.Name == "repeated");
+        var random = new Random(scenario.Seed);
+        List<BinItem>? items = null;
+        for (var job = 0; job <= 36; job++) items = scenario.Generate(random);
+        var catalog = PackingEngineCatalog.CreateDefault();
+        PackResult Pack(string? id)
+        {
+            var packer = new MultiBinPacker(catalog.Create(id)) { Spacing = 0.125 };
+            packer.SetBins([new MultiBin(240, -1, 1)]);
+            return packer.Pack(items!);
+        }
+
+        var baseline = Pack(null);
+        var trial = Pack("lastbar");
+        Assert.Equal(98, baseline.Bins.Count);
+        Assert.Equal(97, trial.Bins.Count);
+        Assert.Equal("exhaustive", catalog.Default.Id);
+        var returned = trial.Bins.SelectMany(b => b.Items).Concat(trial.ItemsNotUsed).ToList();
+        Assert.Equal(items!.Count, returned.Count);
+        Assert.All(items, item => Assert.Equal(1, returned.Count(i => ReferenceEquals(i, item))));
+    }
+
+    [Fact]
     public void Unknown_engine_is_rejected_with_the_valid_ids()
     {
         var ex = Assert.Throws<UnknownPackingEngineException>(() => PackingEngineCatalog.CreateDefault().Resolve("optimal"));
 
         Assert.Equal("optimal", ex.EngineId);
-        Assert.Equal("Unknown packing engine 'optimal'. Available engines: exhaustive, firstfit, bestfit.", ex.Message);
+        Assert.Equal("Unknown packing engine 'optimal'. Available engines: exhaustive, lastbar, firstfit, bestfit.", ex.Message);
     }
 
     [Fact]
@@ -56,6 +81,7 @@ public class PackingEngineCatalogTests
         var catalog = PackingEngineCatalog.CreateDefault();
 
         Assert.IsType<ExhaustiveSearchEngine>(catalog.Create(null));
+        Assert.IsType<LastBarEliminationEngine>(catalog.Create("lastbar"));
         Assert.IsType<FirstFitEngine>(catalog.Create("firstfit"));
         Assert.IsType<BestFitEngine>(catalog.Create("bestfit"));
         Assert.NotSame(catalog.Create("bestfit"), catalog.Create("bestfit"));
