@@ -171,4 +171,4 @@ See [repository workflow](docs/repository-workflow.md) for repository and contai
 
 ## License
 
-No license has been specified in this repository.
+CutList is licensed under the [MIT License](LICENSE). Commercial use is permitted; see the license for its notice and disclaimer requirements.
