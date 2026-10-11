@@ -303,10 +303,10 @@ public class JobService
     public async Task RemovePartSetInstanceAsync(int jobId, int instanceId)
     {
         await using var context = _factory.CreateDbContext();
-        var job = await LoadUnlockedJobAsync(context, jobId);
         var instance = await context.JobPartSetInstances.Include(i => i.Parts)
             .FirstOrDefaultAsync(i => i.Id == instanceId && i.JobId == jobId)
             ?? throw new KeyNotFoundException($"Part set instance {instanceId} was not found in job {jobId}.");
+        var job = await LoadUnlockedJobAsync(context, jobId);
         context.JobParts.RemoveRange(instance.Parts);
         context.JobPartSetInstances.Remove(instance);
         TouchJob(context, job);

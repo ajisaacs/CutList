@@ -102,6 +102,28 @@ Add/remove use the existing `TryJobChangeAsync` lock recovery: a stale or racing
 
 bUnit coverage exercises library create/edit/search/archive, N=2 expansion, independent library edits/archive, saved-plan cut quantities, whole-instance removal, manual/stock preservation, locked presentation and deterministic stale/racing locks for both add and remove. Existing job locking, presentation and packing-engine components register the new library service dependency. This checkpoint adds no REST endpoints, Excel handling, migration, production SQL or deployment.
 
+## Drawing-set REST surface (checkpoint 4)
+
+The LAN-only API now exposes the same reviewed manual library and snapshot operations as Blazor:
+
+| Method/path | Request / response |
+| --- | --- |
+| `GET /api/part-sets?search=...&includeArchived=false` | Ordered summaries; drawing/name search; archived hidden by default |
+| `POST /api/part-sets` | Editable set fields below; 201 with detail and readback Location |
+| `GET /api/part-sets/{id}` | Detail including ordered members, even when archived |
+| `PUT /api/part-sets/{id}` | Full replacement of editable fields/members; 200 detail |
+| `POST /api/part-sets/{id}/archive` | No body; 204; idempotent, never deletes snapshots |
+| `POST /api/jobs/{id}/part-set-instances` | `{ "partSetId": 123, "quantity": 2 }`; 201 snapshotted instance with expanded parts and job-detail Location |
+| `DELETE /api/jobs/{id}/part-set-instances/{instanceId}` | 204; removes only that job's whole instance |
+
+Create/update use `drawingNumber`, optional `revision`, `displayName`, and `members`. Each member accepts only `name`, optional `sourceItem`/`sourceFile`, `materialId`, decimal `lengthInches`, integer per-assembly `quantity`, and `sortOrder`. Member IDs, canonical keys, archive state, job ownership, provenance, locks and optimization results are server-owned and not input fields. Unknown JSON properties cannot inject these values. Empty library drafts remain allowed but cannot be expanded; null lists/rows and invalid cuts are rejected. PUT replaces the entire member list, not a patch or revision propagation operation.
+
+`GET /api/jobs/{id}` adds `partSetInstances` with snapshotted drawing/revision/name/assembly quantity and grouped expanded `parts`. The existing flat `parts` array and `/api/jobs/{id}/parts` remain; their only additive field is nullable `partSetInstanceId` (null for manual rows). Consumers must not sum flat and grouped arrays together. Library editing/archiving never updates captured job rows, and stock remains independent.
+
+Invalid input, duplicate canonical drawing keys, unusable sets and checked expansion overflow return 400; missing resources or a job/instance ownership mismatch return 404 (including a wrong locked job). Both controller and service verify ownership. Existing persisted/racing lock and deleted-job conflicts retain 409 `application/problem+json` with `job_locked` / `job_changed`; rejected writes preserve instance rows, timestamps and saved plans. No automatic retries, lock input or new lock endpoint. Individual set-created part PUT/DELETE remain 400; ordinary manual clients remain supported.
+
+This checkpoint has no schema change, Excel parsing, MCP tools, production SQL or deployment. Verification uses the disposable migrated SQL fixture, HTTP readback, full aggregate snapshots and deterministic competing saves. Production rollout still requires the separate backup-aware authorization above.
+
 ## Fresh SQL Server deployments
 
 The web host does not migrate or populate the database on startup. Apply EF migrations explicitly before starting it; for an offline SQL Server target, generate an idempotent SQL script with `dotnet ef migrations script --idempotent --project CutList.Web/CutList.Web.csproj --output <private-path>`. The generated file has a UTF-8 BOM; strip it when piping through `sqlcmd` stdin. Historical data-copy migrations defer SQL Server's column binding with `EXEC(N'...')` so the generated script works on a fresh database as well as on replay. Test the script against only the intended fresh database and verify `__EFMigrationsHistory`, schema reads, and an idempotent replay before deploying an app image. Do not apply this script blindly to an existing production database.

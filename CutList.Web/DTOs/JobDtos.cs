@@ -25,6 +25,7 @@ public class JobDetailDto : JobDto
 {
     public List<JobPartDto> Parts { get; set; } = new();
     public List<JobStockDto> Stock { get; set; } = new();
+    public List<JobPartSetInstanceDto> PartSetInstances { get; set; } = new();
 }
 
 public class CreateJobDto
@@ -45,6 +46,7 @@ public class UpdateJobDto
 
 public class JobPartDto
 {
+    public int? PartSetInstanceId { get; set; }
     public int Id { get; set; }
     public int JobId { get; set; }
     public int MaterialId { get; set; }

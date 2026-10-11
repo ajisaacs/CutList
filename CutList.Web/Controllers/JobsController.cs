@@ -213,6 +213,31 @@ public class JobsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id}/part-set-instances")]
+    public async Task<ActionResult<JobPartSetInstanceDto>> AddPartSetInstance(int id, AddPartSetInstanceDto dto)
+    {
+        if (await _jobService.GetByIdAsync(id) == null) return NotFound();
+        try
+        {
+            var instance = await _jobService.AddPartSetAsync(id, dto.PartSetId, dto.Quantity);
+            var job = await _jobService.GetByIdAsync(id);
+            return CreatedAtAction(nameof(GetById), new { id },
+                MapInstanceToDto(job!.PartSetInstances.Single(i => i.Id == instance.Id), job.Parts));
+        }
+        catch (KeyNotFoundException) { return NotFound(); }
+        catch (ArgumentException ex) { return BadRequest(ex.Message); }
+    }
+
+    [HttpDelete("{id}/part-set-instances/{instanceId}")]
+    public async Task<IActionResult> RemovePartSetInstance(int id, int instanceId)
+    {
+        var job = await _jobService.GetByIdAsync(id);
+        if (job == null || !job.PartSetInstances.Any(i => i.Id == instanceId)) return NotFound();
+        try { await _jobService.RemovePartSetInstanceAsync(id, instanceId); return NoContent(); }
+        catch (KeyNotFoundException) { return NotFound(); }
+        catch (ArgumentException ex) { return BadRequest(ex.Message); }
+    }
+
     // --- Stock ---
 
     [HttpGet("{id}/stock")]
@@ -400,11 +425,13 @@ public class JobsController : ControllerBase
         IsLocked = j.IsLocked,
         LockedAt = AsUtc(j.LockedAt),
         Parts = j.Parts?.Select(MapPartToDto).ToList() ?? new(),
-        Stock = j.Stock?.Select(MapStockToDto).ToList() ?? new()
+        Stock = j.Stock?.Select(MapStockToDto).ToList() ?? new(),
+        PartSetInstances = j.PartSetInstances.OrderBy(i => i.Id).Select(i => MapInstanceToDto(i, j.Parts ?? [])).ToList()
     };
 
     private static JobPartDto MapPartToDto(JobPart p) => new()
     {
+        PartSetInstanceId = p.PartSetInstanceId,
         Id = p.Id,
         JobId = p.JobId,
         MaterialId = p.MaterialId,
@@ -414,6 +441,14 @@ public class JobsController : ControllerBase
         LengthFormatted = ArchUnits.FormatFromInches((double)p.LengthInches),
         Quantity = p.Quantity,
         SortOrder = p.SortOrder
+    };
+
+    private static JobPartSetInstanceDto MapInstanceToDto(JobPartSetInstance instance, IEnumerable<JobPart> parts) => new()
+    {
+        Id = instance.Id, PartSetId = instance.PartSetId, DrawingNumber = instance.DrawingNumber,
+        Revision = instance.Revision, DisplayName = instance.DisplayName, Quantity = instance.Quantity,
+        Parts = parts.Where(p => p.PartSetInstanceId == instance.Id).OrderBy(p => p.SortOrder).ThenBy(p => p.Id)
+            .Select(MapPartToDto).ToList()
     };
 
     private static JobStockDto MapStockToDto(JobStock s) => new()
