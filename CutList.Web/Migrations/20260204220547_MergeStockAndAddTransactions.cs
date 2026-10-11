@@ -28,7 +28,9 @@ namespace CutList.Web.Migrations
 
             // Migrate data from MaterialStockLengths to StockItems
             // Update existing StockItems with matching MaterialId + LengthInches
-            migrationBuilder.Sql(@"
+            // Idempotent scripts compile each migration as a batch: defer binding of the
+            // newly added columns until after the ALTER TABLE statements execute.
+            migrationBuilder.Sql(@"EXEC(N'
                 UPDATE si
                 SET si.QuantityOnHand = msl.Quantity,
                     si.Notes = COALESCE(si.Notes, msl.Notes)
@@ -37,10 +39,10 @@ namespace CutList.Web.Migrations
                     ON si.MaterialId = msl.MaterialId
                     AND si.LengthInches = msl.LengthInches
                 WHERE msl.IsActive = 1
-            ");
+            ')");
 
             // Insert MaterialStockLengths that don't have a matching StockItem
-            migrationBuilder.Sql(@"
+            migrationBuilder.Sql(@"EXEC(N'
                 INSERT INTO StockItems (MaterialId, LengthInches, QuantityOnHand, Notes, IsActive, CreatedAt)
                 SELECT msl.MaterialId, msl.LengthInches, msl.Quantity, msl.Notes, 1, GETUTCDATE()
                 FROM MaterialStockLengths msl
@@ -50,7 +52,7 @@ namespace CutList.Web.Migrations
                     WHERE si.MaterialId = msl.MaterialId
                     AND si.LengthInches = msl.LengthInches
                 )
-            ");
+            ')");
 
             // Now drop the old table
             migrationBuilder.DropTable(

@@ -28,17 +28,17 @@ namespace CutList.Web.Migrations
                 nullable: false,
                 defaultValue: "");
 
-            // Generate job numbers for existing jobs
-            migrationBuilder.Sql(@"
+            // Defer column binding until after the preceding ADD in idempotent SQL batches.
+            migrationBuilder.Sql(@"EXEC(N'
                 WITH NumberedJobs AS (
                     SELECT Id, ROW_NUMBER() OVER (ORDER BY Id) AS RowNum
                     FROM Jobs
                 )
                 UPDATE j
-                SET j.JobNumber = 'JOB-' + RIGHT('00000' + CAST(nj.RowNum AS VARCHAR(5)), 5)
+                SET j.JobNumber = ''JOB-'' + RIGHT(''00000'' + CAST(nj.RowNum AS VARCHAR(5)), 5)
                 FROM Jobs j
                 INNER JOIN NumberedJobs nj ON j.Id = nj.Id
-            ");
+            ')");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Jobs_JobNumber",

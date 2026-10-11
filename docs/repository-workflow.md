@@ -65,4 +65,10 @@ The legacy `.gitea/workflows/build-cutlist.yml` is retained as a historical refe
 
 `CutList.Web` directly references `Microsoft.OpenApi` 2.7.5, the first patched 2.x release for [GHSA-v5pm-xwqc-g5wc](https://github.com/advisories/GHSA-v5pm-xwqc-g5wc), overriding Swashbuckle 10.1.3's vulnerable 2.4.1 transitive dependency without changing its major-version API. Keep this override until the parent package's dependency floor is patched. Verify upgrades with `dotnet list CutList.Web/CutList.Web.csproj package --vulnerable --include-transitive` and an isolated Development-mode Swagger document smoke test; Production must continue to keep Swagger disabled.
 
-Next hardening: consider digest-pinned deployment rollouts and image vulnerability scanning. A clean NuGet audit does not cover base-image OS packages.
+Next hardening: consider image vulnerability scanning. A clean NuGet audit does not cover base-image OS packages.
+
+## Fresh SQL Server deployments
+
+The web host does not migrate or populate the database on startup. Apply EF migrations explicitly before starting it; for an offline SQL Server target, generate an idempotent SQL script with `dotnet ef migrations script --idempotent --project CutList.Web/CutList.Web.csproj --output <private-path>`. The generated file has a UTF-8 BOM; strip it when piping through `sqlcmd` stdin. Historical data-copy migrations defer SQL Server's column binding with `EXEC(N'...')` so the generated script works on a fresh database as well as on replay. Test the script against only the intended fresh database and verify `__EFMigrationsHistory`, schema reads, and an idempotent replay before deploying an app image. Do not apply this script blindly to an existing production database.
+
+The bundled O'Neal catalog is not imported on startup. On a verified empty material catalog, POST `CutList.Web/Data/SeedData/oneals-catalog.json` to `/api/catalog/import`; inspect `errors` and `warnings` even on HTTP 200, then read back `/api/catalog/export`. Never re-import the corrected catalog over legacy labels as a repair: shape/size identity can create duplicate materials. See `docs/material-size-repair.md`. The Barge Compose declaration and its target-specific setup/recovery instructions live in the `docker-barge` repository under `cutlist/`.

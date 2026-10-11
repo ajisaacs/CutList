@@ -37,8 +37,9 @@ namespace CutList.Web.Migrations
             // 3. Copy MaterialId from DimBase into each shape table
             foreach (var table in DimTables)
             {
+                // Idempotent scripts compile the batch before ADD COLUMN executes.
                 migrationBuilder.Sql(
-                    $"UPDATE t SET t.MaterialId = b.MaterialId FROM [{table}] t INNER JOIN [DimBase] b ON t.Id = b.Id");
+                    $"EXEC(N'UPDATE t SET t.MaterialId = b.MaterialId FROM [{table}] t INNER JOIN [DimBase] b ON t.Id = b.Id')");
             }
 
             // 4. Make MaterialId non-nullable now that data is populated
