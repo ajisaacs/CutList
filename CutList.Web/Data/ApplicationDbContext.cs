@@ -18,6 +18,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<JobPart> JobParts => Set<JobPart>();
     public DbSet<JobStock> JobStocks => Set<JobStock>();
 
+    public DbSet<PartSet> PartSets => Set<PartSet>();
+    public DbSet<PartSetMember> PartSetMembers => Set<PartSetMember>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -162,6 +165,26 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(50).IsRequired();
             entity.Property(e => e.KerfInches).HasPrecision(6, 4);
+        });
+
+        modelBuilder.Entity<PartSet>(entity =>
+        {
+            entity.Property(s => s.DrawingNumber).HasMaxLength(100).IsRequired();
+            entity.Property(s => s.Revision).HasMaxLength(50);
+            entity.Property(s => s.DrawingKey).HasMaxLength(100).UseCollation("Latin1_General_100_BIN2").IsRequired();
+            entity.Property(s => s.RevisionKey).HasMaxLength(50).UseCollation("Latin1_General_100_BIN2").IsRequired();
+            entity.Property(s => s.DisplayName).HasMaxLength(100).IsRequired();
+            entity.HasIndex(s => new { s.DrawingKey, s.RevisionKey }).IsUnique();
+        });
+        modelBuilder.Entity<PartSetMember>(entity =>
+        {
+            entity.ToTable(t => { t.HasCheckConstraint("CK_PartSetMember_Length", "[LengthInches] > 0"); t.HasCheckConstraint("CK_PartSetMember_Quantity", "[Quantity] > 0"); });
+            entity.Property(m => m.Name).HasMaxLength(100).IsRequired();
+            entity.Property(m => m.SourceItem).HasMaxLength(100);
+            entity.Property(m => m.SourceFile).HasMaxLength(255);
+            entity.Property(m => m.LengthInches).HasPrecision(10, 4);
+            entity.HasOne(m => m.PartSet).WithMany(s => s.Members).HasForeignKey(m => m.PartSetId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(m => m.Material).WithMany().HasForeignKey(m => m.MaterialId).OnDelete(DeleteBehavior.NoAction);
         });
 
         // Job

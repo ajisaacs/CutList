@@ -88,6 +88,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
             DELETE FROM JobStocks;
             DELETE FROM JobParts;
             DELETE FROM Jobs;
+            DELETE FROM PartSetMembers;
+            DELETE FROM PartSets;
             DELETE FROM StockItems;
             DELETE FROM DimAngle; DELETE FROM DimChannel; DELETE FROM DimFlatBar; DELETE FROM DimIBeam;
             DELETE FROM DimPipe; DELETE FROM DimRectangularTube; DELETE FROM DimRoundBar; DELETE FROM DimRoundTube;

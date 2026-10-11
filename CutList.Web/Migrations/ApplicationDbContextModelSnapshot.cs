@@ -295,6 +295,102 @@ namespace CutList.Web.Migrations
                     b.UseTpcMappingStrategy();
                 });
 
+            modelBuilder.Entity("CutList.Web.Data.Entities.PartSet", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DrawingKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
+                    b.Property<string>("DrawingNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Revision")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RevisionKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DrawingKey", "RevisionKey")
+                        .IsUnique();
+
+                    b.ToTable("PartSets");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.PartSetMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("LengthInches")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<int>("MaterialId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("PartSetId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceFile")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("SourceItem")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialId");
+
+                    b.HasIndex("PartSetId");
+
+                    b.ToTable("PartSetMembers", t =>
+                        {
+                            t.HasCheckConstraint("CK_PartSetMember_Length", "[LengthInches] > 0");
+
+                            t.HasCheckConstraint("CK_PartSetMember_Quantity", "[Quantity] > 0");
+                        });
+                });
+
             modelBuilder.Entity("CutList.Web.Data.Entities.StockItem", b =>
                 {
                     b.Property<int>("Id")
@@ -581,6 +677,25 @@ namespace CutList.Web.Migrations
                     b.Navigation("Material");
                 });
 
+            modelBuilder.Entity("CutList.Web.Data.Entities.PartSetMember", b =>
+                {
+                    b.HasOne("CutList.Web.Data.Entities.Material", "Material")
+                        .WithMany()
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("CutList.Web.Data.Entities.PartSet", "PartSet")
+                        .WithMany("Members")
+                        .HasForeignKey("PartSetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Material");
+
+                    b.Navigation("PartSet");
+                });
+
             modelBuilder.Entity("CutList.Web.Data.Entities.StockItem", b =>
                 {
                     b.HasOne("CutList.Web.Data.Entities.Material", "Material")
@@ -611,6 +726,11 @@ namespace CutList.Web.Migrations
                     b.Navigation("JobParts");
 
                     b.Navigation("StockItems");
+                });
+
+            modelBuilder.Entity("CutList.Web.Data.Entities.PartSet", b =>
+                {
+                    b.Navigation("Members");
                 });
 #pragma warning restore 612, 618
         }

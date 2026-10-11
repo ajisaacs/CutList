@@ -38,6 +38,7 @@ builder.Services.AddSingleton<IPackingEngineCatalog>(
 builder.Services.AddScoped<MaterialService>();
 builder.Services.AddScoped<StockItemService>();
 builder.Services.AddScoped<JobService>();
+builder.Services.AddScoped<PartSetService>();
 builder.Services.AddScoped<OverviewService>();
 builder.Services.AddScoped<CutListPackingService>();
 builder.Services.AddScoped<ReportService>();
