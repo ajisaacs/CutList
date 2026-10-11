@@ -65,7 +65,7 @@ CutList.Web images are built from `CutList.Web/Dockerfile` with the repository r
 
 ### Publishing CutList.Mcp
 
-CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `~/.claude/mcp/CutList.Mcp/` and registered in `~/.claude/settings.local.json` (see global `CLAUDE.md` MCP Server Publishing table). It talks to CutList.Web's REST API at `http://localhost:5270`, so CutList.Web must be running (dev `dotnet run` or a Docker container reachable at that URL) for the MCP tools to work.
+CutList.Mcp is an stdio MCP server, not a hosted service. It talks to CutList.Web's REST API at `http://localhost:5270` by default; set `CUTLIST_API_URL` to an absolute HTTP(S) URL (e.g. `http://barge.lan:5270`) when connecting to the LAN deployment. Keep that unauthenticated API LAN-only. CutList.Web must be running for API-backed MCP tools to work.
 
 ## Architecture
 
@@ -127,7 +127,7 @@ CutList.Mcp is an stdio MCP server, not a hosted service — it's published to `
 
 Stdio-transport MCP server (`ModelContextProtocol` SDK) exposing CutList.Web's REST API as tools for Claude Code. Registers tools via `WithToolsFromAssembly`; logging is disabled entirely so it doesn't interfere with the stdio transport.
 
-- `ApiClient.cs` — typed `HttpClient` wrapper for CutList.Web's REST API (`BaseAddress` hardcoded to `http://localhost:5270`). Job mutations use `EnsureJobSuccessAsync`: a `job_locked`/`job_changed` problem response becomes an `HttpRequestException` with the server's detail and 409 status; other failures keep the generic status error. Duplicate material/stock 409s still raise `ApiConflictException`.
+- `ApiClient.cs` — typed `HttpClient` wrapper for CutList.Web's REST API (`BaseAddress` set by `CUTLIST_API_URL`, default `http://localhost:5270`). Job mutations use `EnsureJobSuccessAsync`: a `job_locked`/`job_changed` problem response becomes an `HttpRequestException` with the server's detail and 409 status; other failures keep the generic status error. Duplicate material/stock 409s still raise `ApiConflictException`.
 - `JobTools.cs` — job CRUD, parts/stock, optimization (`OptimizeJob`), cutting tools. `list_jobs`/`get_job` expose `IsLocked`/`LockedAt`; mutation tools return `Success = false` with the lock explanation; `add_job_parts` stops at the first job conflict and reports how many parts were really added. `optimize_job` is a non-persisting preview (works on locked jobs). There is deliberately no lock/unlock tool and no automatic retry. `optimize_job` accepts an optional `engine` id and reports `EngineId`/`EngineName`; `list_packing_engines` returns the server's engine list (`GET /api/packing/engines`).
 - `InventoryTools.cs` — materials, stock items (`add_stock`, etc.)
 - `CutListTools.cs` — `create_cutlist` / `create_cutlist_report`: pack in-process with CutList.Core's built-in engine catalog (optional `strategy` = engine id; default is the built-in default, not CutList.Web's `Packing:DefaultEngine`; unknown ids return an error listing valid ids; results report `EngineId` and `EngineName`, which notes a fallback), plus shared conversion helpers

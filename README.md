@@ -125,7 +125,7 @@ The SQL Server hostname must be reachable from inside the container; `localhost`
 
 The web application exposes REST endpoints for jobs, materials, stock items, cutting tools, packing, and catalog export. Explore the request and response schemas through Swagger in Development mode.
 
-`CutList.Mcp` is a stdio MCP server that calls the web application's API at `http://localhost:5270`. Start the web application at that address first, then register the following command with your MCP-compatible client:
+`CutList.Mcp` is a stdio MCP server that calls the web application's API at `http://localhost:5270` by default. Set `CUTLIST_API_URL` to an absolute HTTP(S) URL (for example, `http://barge.lan:5270`) when the web application runs elsewhere. Keep the API LAN-only: the web application does not authenticate requests. Start the web application first, then register the following command with your MCP-compatible client:
 
 ```bash
 dotnet run --project /absolute/path/to/CutList/CutList.Mcp/CutList.Mcp.csproj --no-build
