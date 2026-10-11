@@ -17,22 +17,22 @@ namespace CutList.Core.Nesting
             "Best Fit",
             "Best-fit decreasing: each part goes in the bar with the least room left that still fits it.");
 
-        public static PackingEngineInfo Exhaustive { get; } = new(
-            "exhaustive",
-            "Exhaustive",
+        public static PackingEngineInfo Bounded { get; } = new(
+            "bounded",
+            "Bounded Search",
             "Groups parts by length and searches cut patterns for the fewest bars, starting from the First Fit plan. When limited stock cannot hold every part, fills those bars as fully as possible unless that strands parts needing more bars. Keeps the First Fit plan if the search budget runs out first or the job is too large to search; the reported engine name then says so.");
 
-        public static PackingEngineInfo LastBar { get; } = new(
-            "lastbar",
-            "Exhaustive + Last-Bar",
-            "Runs Exhaustive then a bounded 10,000-step relaxed last-bar rearrangement pass. The extra budget may save bars but does not prove optimality. Preserves any First Fit fallback label from Exhaustive.");
+        public static PackingEngineInfo BoundedLastBar { get; } = new(
+            "boundedlastbar",
+            "Bounded Search + Last-Bar",
+            "Runs Bounded Search then a bounded 10,000-step relaxed last-bar rearrangement pass. The extra budget may save bars but does not prove optimality. Preserves any First Fit fallback label from Bounded Search.");
 
         /// <summary>Selectable engines in display order; the first is the default.</summary>
         public static IReadOnlyList<PackingEngineRegistration> All { get; } = new[]
         {
-            new PackingEngineRegistration(LastBar, () => new LastBarEliminationEngine(10_000,
-                new ExhaustiveSearchEngine(), allowNonMonotoneEjections: true)),
-            new PackingEngineRegistration(Exhaustive, () => new ExhaustiveSearchEngine()),
+            new PackingEngineRegistration(BoundedLastBar, () => new LastBarEliminationEngine(10_000,
+                new BoundedSearchEngine(), allowNonMonotoneEjections: true)),
+            new PackingEngineRegistration(Bounded, () => new BoundedSearchEngine()),
             new PackingEngineRegistration(FirstFit, () => new FirstFitEngine()),
             new PackingEngineRegistration(BestFit, () => new BestFitEngine()),
         };

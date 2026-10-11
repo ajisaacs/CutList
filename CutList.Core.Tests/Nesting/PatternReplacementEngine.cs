@@ -98,7 +98,7 @@ internal sealed class PatternReplacementEngine : IPackingEngine
                 long reserved = retained.Sum(i => CutFit.Size(i.Length, bin.Spacing));
                 if (reserved >= CutFit.Capacity(bin.Length, bin.Spacing)) continue;
                 var demand = CutDemand.From(remaining, bin.Length, bin.Spacing, reserved);
-                if (demand.GroupCount > ExhaustiveSearchEngine.MaxDistinctLengths) return;
+                if (demand.GroupCount > BoundedSearchEngine.MaxDistinctLengths) return;
 
                 var search = new MaxFillSearch(demand, budget, maxDepth: 1);
                 var patterns = search.Solve(bars: 1, incumbentLength: CutFit.Units(displaced.Length));

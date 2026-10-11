@@ -89,11 +89,11 @@ public class FirstFitImprovementTests
     }
 
     [Fact]
-    public void Exhaustive_incumbent_uses_the_improved_first_fit_layout()
+    public void BoundedSearch_incumbent_uses_the_improved_first_fit_layout()
     {
         var items = Items(6, 3, 2, 2);
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(items, 10));
 
         Assert.Equal(2, result.Bins.Count);
         Assert.Equal(new[] { 6.0, 2, 2 }, result.Bins[0].Items.Select(i => i.Length));

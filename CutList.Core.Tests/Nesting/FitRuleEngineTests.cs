@@ -22,12 +22,12 @@ public class FitRuleEngineTests
     }
 
     [Fact]
-    public void Exhaustive_places_a_part_as_long_as_a_bar_on_unlimited_stock()
+    public void BoundedSearch_places_a_part_as_long_as_a_bar_on_unlimited_stock()
     {
-        // Exhaustive starts from First Fit's plan, so the old rounding made it loop forever here.
+        // Bounded Search starts from First Fit's plan, so the old rounding made it loop forever here.
         var item = new BinItem("A", 13.900000001);
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(new[] { item }, 13.900000001, 0));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(new[] { item }, 13.900000001, 0));
 
         Assert.Same(item, Assert.Single(Assert.Single(result.Bins).Items));
     }

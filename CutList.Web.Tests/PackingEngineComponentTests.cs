@@ -43,7 +43,7 @@ public sealed class PackingEngineComponentTests : IAsyncLifetime
     {
         var page = await RenderResultsTabAsync(_seed.UnlockedJobId);
         var options = page.FindAll("select#packing-engine option").Select(o => o.GetAttribute("value"));
-        Assert.Equal(new[] { "lastbar", "exhaustive", "firstfit", "bestfit" }, options);
+        Assert.Equal(new[] { "boundedlastbar", "bounded", "firstfit", "bestfit" }, options);
 
         page.Find("select#packing-engine").Change(new ChangeEventArgs { Value = "bestfit" });
         await page.Find("#run-optimization").ClickAsync(new());
@@ -55,25 +55,27 @@ public sealed class PackingEngineComponentTests : IAsyncLifetime
     [Fact]
     public async Task Reoptimizing_reuses_the_saved_engine_by_default()
     {
-        await SavePlanAsync(_seed.UnlockedJobId, "exhaustive");
+        await SavePlanAsync(_seed.UnlockedJobId, "bounded");
         var page = await RenderResultsTabAsync(_seed.UnlockedJobId);
-        Assert.Contains("Engine: Exhaustive", page.Find(".packing-engine-used").TextContent);
+        Assert.Contains("Engine: Bounded Search", page.Find(".packing-engine-used").TextContent);
 
         await page.Find("#run-optimization").ClickAsync(new());
 
-        Assert.Contains("\"EngineId\":\"exhaustive\"", await SavedJsonAsync(_seed.UnlockedJobId));
+        Assert.Contains("\"EngineId\":\"bounded\"", await SavedJsonAsync(_seed.UnlockedJobId));
     }
 
-    [Fact]
-    public async Task Plan_saved_under_a_retired_engine_id_still_loads_and_reoptimizes_with_the_default()
+    [Theory]
+    [InlineData("advanced", "Advanced Fit")]
+    [InlineData("exhaustive", "Exhaustive")]
+    [InlineData("lastbar", "Exhaustive + Last-Bar")]
+    public async Task Plan_saved_under_a_retired_engine_id_still_loads_and_reoptimizes_with_the_default(string retiredId, string retiredName)
     {
-        // "advanced" was renamed to "firstfit" without an alias; plans saved under it must keep loading,
-        // and the picker then starts on the configured default (lastbar).
+        // Retired ids have no aliases: keep the saved label but select the configured default for a new run.
         await SavePlanAsync(_seed.UnlockedJobId, "bestfit");
         var retired = (await SavedJsonAsync(_seed.UnlockedJobId))!
-            .Replace("\"EngineId\":\"bestfit\"", "\"EngineId\":\"advanced\"")
-            .Replace("\"EngineName\":\"Best Fit\"", "\"EngineName\":\"Advanced Fit\"");
-        Assert.Contains("\"EngineId\":\"advanced\"", retired);
+            .Replace("\"EngineId\":\"bestfit\"", $"\"EngineId\":\"{retiredId}\"")
+            .Replace("\"EngineName\":\"Best Fit\"", $"\"EngineName\":\"{retiredName}\"");
+        Assert.Contains($"\"EngineId\":\"{retiredId}\"", retired);
         await using (var context = await _db.CreateContextAsync())
         {
             await context.Jobs.Where(j => j.Id == _seed.UnlockedJobId)
@@ -81,11 +83,11 @@ public sealed class PackingEngineComponentTests : IAsyncLifetime
         }
 
         var page = await RenderResultsTabAsync(_seed.UnlockedJobId);
-        Assert.Contains("Engine: Advanced Fit", page.Find(".packing-engine-used").TextContent);
+        Assert.Contains($"Engine: {retiredName}", page.Find(".packing-engine-used").TextContent);
 
         await page.Find("#run-optimization").ClickAsync(new());
 
-        Assert.Contains("\"EngineId\":\"lastbar\"", await SavedJsonAsync(_seed.UnlockedJobId));
+        Assert.Contains("\"EngineId\":\"boundedlastbar\"", await SavedJsonAsync(_seed.UnlockedJobId));
     }
 
     [Fact]

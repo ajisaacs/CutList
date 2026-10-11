@@ -178,8 +178,8 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("Exhaustive")]
-    [InlineData("Exhaustive (First Fit fallback)")]
+    [InlineData("Bounded Search")]
+    [InlineData("Bounded Search (First Fit fallback)")]
     public async Task Results_engine_label_stays_with_the_first_word_of_the_saved_value(string engineName)
     {
         var jobId = await CreateSavedJobAsync(engineName: engineName);
@@ -194,7 +194,7 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("exhaustive")]
+    [InlineData("bounded")]
     [InlineData("firstfit")]
     [InlineData("bestfit")]
     public async Task Engine_help_is_a_closed_native_disclosure_with_the_complete_selected_description(string engineId)
@@ -403,10 +403,10 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(false, "Exhaustive")]
-    [InlineData(true, "Exhaustive")]
-    [InlineData(false, "Exhaustive (First Fit fallback)")]
-    [InlineData(true, "Exhaustive (First Fit fallback)")]
+    [InlineData(false, "Bounded Search")]
+    [InlineData(true, "Bounded Search")]
+    [InlineData(false, "Bounded Search (First Fit fallback)")]
+    [InlineData(true, "Bounded Search (First Fit fallback)")]
     public async Task Printed_results_include_saved_metadata_and_safe_multiline_notes_without_duplicate_title(bool locked, string engineName)
     {
         const string notes = "Check both ends.\n<script>window.injected = true</script>\nUse <b>labels</b> & keep drops.";
@@ -621,8 +621,8 @@ public sealed class JobPresentationComponentTests : IAsyncLifetime
             // this presentation fixture does not attempt to force the packing search to time out.
             Assert.Contains(engineName, new[]
             {
-                BuiltInPackingEngines.Exhaustive.DisplayName,
-                BuiltInPackingEngines.Exhaustive.RunName(BuiltInPackingEngines.FirstFit)
+                BuiltInPackingEngines.Bounded.DisplayName,
+                BuiltInPackingEngines.Bounded.RunName(BuiltInPackingEngines.FirstFit)
             });
             result.EngineName = engineName;
         }

@@ -67,7 +67,7 @@ Keep inputs and every relevant API response in the evidence directory.
   boundary and must not be silently treated as the same case.
 - Two distinct material IDs with identical display names; they remain separate. Rows
   order by material display name/ID and descending raw numeric length, not formatted text.
-- Genuine `Exhaustive (First Fit fallback)` output, saved and reloaded. Retain the input
+- Genuine `Bounded Search (First Fit fallback)` output, saved and reloaded. Retain the input
   and engine response proving the fallback; do not relabel a normal run as a fallback.
 - Locked saved job with a fresh full job/parts/stock snapshot before and after read-only
   render, unit toggles and print attempts. Locking itself is a separate expected change.
@@ -204,7 +204,7 @@ These assets do not reuse the higher-precision mixed-material fixture described 
 - Parts: four each of RAIL 47-7/8 inches, LEG 29-7/8 inches, and BRACE 17-7/8 inches.
 - Job stock: one custom 96-inch bar at priority 0; unlimited catalog 144-inch bars at
   priority 1; two catalog 240-inch bars at priority 2. Bandsaw kerf is 1/16 inch.
-- Persist through the real UI's Exhaustive Optimize action, then reload Results before
+- Persist through the real UI's Bounded Search Optimize action, then reload Results before
   capturing. The saved result has 3 used bars (two 144-inch and one 96-inch), 12 pieces,
   no unplaced parts, and 3/4 inch remaining waste. The unused 240-inch stock is absent
   from Material List. Reported 99.8% efficiency includes kerf in consumed length;

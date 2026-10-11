@@ -41,7 +41,7 @@ public sealed class PackingEngineApiTests : IAsyncLifetime
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("Available engines: lastbar, exhaustive, firstfit, bestfit", await response.Content.ReadAsStringAsync());
+        Assert.Contains("Available engines: boundedlastbar, bounded, firstfit, bestfit", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -50,15 +50,15 @@ public sealed class PackingEngineApiTests : IAsyncLifetime
         var engines = await _client.GetFromJsonAsync<List<PackingEngineDto>>("/api/packing/engines");
 
         Assert.NotNull(engines);
-        Assert.Equal(new[] { "lastbar", "exhaustive", "firstfit", "bestfit" }, engines.Select(e => e.Id));
-        Assert.Equal("lastbar", Assert.Single(engines, e => e.IsDefault).Id);
+        Assert.Equal(new[] { "boundedlastbar", "bounded", "firstfit", "bestfit" }, engines.Select(e => e.Id));
+        Assert.Equal("boundedlastbar", Assert.Single(engines, e => e.IsDefault).Id);
         Assert.All(engines, e => Assert.False(string.IsNullOrWhiteSpace(e.Description)));
     }
 
     [Theory]
     [InlineData("bestfit", "bestfit")]
-    [InlineData("lastbar", "lastbar")]
-    [InlineData(null, "lastbar")]
+    [InlineData("boundedlastbar", "boundedlastbar")]
+    [InlineData(null, "boundedlastbar")]
     public async Task Job_pack_runs_requested_or_default_engine(string? requested, string expected)
     {
         var response = await _client.PostAsJsonAsync($"/api/jobs/{_seed.UnlockedJobId}/pack", new PackJobRequestDto { Engine = requested });
@@ -82,8 +82,8 @@ public sealed class PackingEngineApiTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("exhaustive", null)]   // Engine field
-    [InlineData(null, "exhaustive")]   // legacy Strategy field
+    [InlineData("bounded", null)]   // Engine field
+    [InlineData(null, "bounded")]   // legacy Strategy field
     public async Task Standalone_optimize_runs_and_reports_the_selected_engine(string? engine, string? strategy)
     {
         var response = await _client.PostAsJsonAsync("/api/packing/optimize", new StandalonePackRequestDto
@@ -96,8 +96,8 @@ public sealed class PackingEngineApiTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("exhaustive", body.RootElement.GetProperty("engine").GetString());
-        Assert.Equal("Exhaustive", body.RootElement.GetProperty("engineName").GetString());
+        Assert.Equal("bounded", body.RootElement.GetProperty("engine").GetString());
+        Assert.Equal("Bounded Search", body.RootElement.GetProperty("engineName").GetString());
         Assert.Equal(1, body.RootElement.GetProperty("summary").GetProperty("totalBins").GetInt32());
         Assert.Equal(0, body.RootElement.GetProperty("summary").GetProperty("itemsNotPlaced").GetInt32());
     }
@@ -110,13 +110,13 @@ public sealed class PackingEngineApiTests : IAsyncLifetime
         {
             Parts = { new PartInputDto { Name = "A", Length = "24", Quantity = 5 } },
             StockBins = { new StockBinInputDto { Length = "96", Quantity = 1, Priority = 1 } },
-            Engine = "exhaustive"
+            Engine = "bounded"
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("exhaustive", body.RootElement.GetProperty("engine").GetString());
-        Assert.Equal("Exhaustive", body.RootElement.GetProperty("engineName").GetString());
+        Assert.Equal("bounded", body.RootElement.GetProperty("engine").GetString());
+        Assert.Equal("Bounded Search", body.RootElement.GetProperty("engineName").GetString());
         Assert.Equal(1, body.RootElement.GetProperty("summary").GetProperty("totalBins").GetInt32());
         Assert.Equal(2, body.RootElement.GetProperty("summary").GetProperty("itemsNotPlaced").GetInt32());
     }

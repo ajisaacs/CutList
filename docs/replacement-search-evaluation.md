@@ -2,6 +2,8 @@
 
 > Historical test-only experiment. The reference-identity defect identified here was fixed in the
 > opt-in last-bar engine work; see [last-bar-engine-trial.md](last-bar-engine-trial.md).
+> `Exhaustive` in the original measurements is now named `Bounded Search`; the historical
+> labels and results below are retained unchanged.
 
 ## Decision
 

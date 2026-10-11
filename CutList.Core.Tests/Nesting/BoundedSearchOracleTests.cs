@@ -3,7 +3,7 @@ using Xunit;
 
 namespace CutList.Core.Tests.Nesting;
 
-public class ExhaustiveOracleTests
+public class BoundedSearchOracleTests
 {
     [Fact]
     public void Uses_the_fewest_bars_a_brute_force_search_finds()
@@ -17,7 +17,7 @@ public class ExhaustiveOracleTests
             var items = Enumerable.Range(0, rng.Next(1, 10))
                 .Select(i => new BinItem($"I{i}", rng.Next(2, (int)(stock * 4) + 1) / 4.0)).ToList();
 
-            var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, stock, kerf));
+            var result = new BoundedSearchEngine().Pack(new PackingRequest(items, stock, kerf));
 
             var sizes = items.Where(i => i.Length <= stock).Select(i => CutFit.Size(i.Length, kerf)).ToArray();
             Assert.Equal(BruteForceFewestBars(sizes, CutFit.Capacity(stock, kerf)), result.Bins.Count);

@@ -34,8 +34,8 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
     {
         var engines = await _tools.ListPackingEngines();
 
-        Assert.Equal(new[] { "lastbar", "exhaustive", "firstfit", "bestfit" }, engines.Select(e => e.Id));
-        Assert.Equal("lastbar", Assert.Single(engines, e => e.IsDefault).Id);
+        Assert.Equal(new[] { "boundedlastbar", "bounded", "firstfit", "bestfit" }, engines.Select(e => e.Id));
+        Assert.Equal("boundedlastbar", Assert.Single(engines, e => e.IsDefault).Id);
     }
 
     [Fact]
@@ -54,12 +54,12 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
         var result = await _tools.OptimizeJob(_seed.UnlockedJobId, engine: "fastest");
 
         Assert.False(result.Success);
-        Assert.Contains("Unknown packing engine 'fastest'. Available engines: lastbar, exhaustive, firstfit, bestfit.", result.Error);
+        Assert.Contains("Unknown packing engine 'fastest'. Available engines: boundedlastbar, bounded, firstfit, bestfit.", result.Error);
     }
 
     [Theory]
     [InlineData("bestfit")]
-    [InlineData("exhaustive")]
+    [InlineData("bounded")]
     public void Create_cutlist_places_every_part_on_unlimited_stock(string engine)
     {
         var result = CutListTools.CreateCutList(
@@ -70,7 +70,7 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
 
         Assert.True(result.Success, result.Error);
         Assert.Equal(engine, result.EngineId);
-        Assert.Equal(engine == "bestfit" ? "Best Fit" : "Exhaustive", result.EngineName);
+        Assert.Equal(engine == "bestfit" ? "Best Fit" : "Bounded Search", result.EngineName);
         Assert.Empty(result.UnusedItems);
         Assert.Equal(5, result.Bins.Sum(b => b.Items.Count));
     }
@@ -83,11 +83,11 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
             [new PartInput { Name = "A", Length = "24", Quantity = 5 }],
             [new StockBinInput { Length = "96", Quantity = 1, Priority = 1 }],
             0.125,
-            "exhaustive");
+            "bounded");
 
         Assert.True(result.Success, result.Error);
-        Assert.Equal("exhaustive", result.EngineId);
-        Assert.Equal("Exhaustive", result.EngineName);
+        Assert.Equal("bounded", result.EngineId);
+        Assert.Equal("Bounded Search", result.EngineName);
         Assert.Equal(2, result.UnusedItems.Count);
     }
 
@@ -101,6 +101,6 @@ public sealed class PackingEngineMcpTests : IAsyncLifetime
             "optimal");
 
         Assert.False(result.Success);
-        Assert.Contains("Available engines: lastbar, exhaustive, firstfit, bestfit", result.Error);
+        Assert.Contains("Available engines: boundedlastbar, bounded, firstfit, bestfit", result.Error);
     }
 }

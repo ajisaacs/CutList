@@ -18,9 +18,9 @@ public sealed class SearchBenchmarkFactAttribute : FactAttribute
 }
 
 /// <summary>
-/// Opt-in baseline for the Exhaustive engine's budget-limited pattern search (see
+/// Opt-in baseline for the Bounded Search engine's budget-limited pattern search (see
 /// docs/search-benchmark.md). Each seeded job runs through the unchanged production path
-/// (<see cref="MultiBinPacker"/> with <see cref="ExhaustiveSearchEngine"/>, unlimited stock). The same
+/// (<see cref="MultiBinPacker"/> with <see cref="BoundedSearchEngine"/>, unlimited stock). The same
 /// <see cref="MinBarsSearch"/> call the engine makes is then mirrored to read the work counter, and must
 /// reach the engine's bar count. Jobs that exhaust the budget are re-run with a larger budget to show
 /// what more search finds. Writes search-baseline.json; asserts consistency only, never timing.
@@ -116,7 +116,7 @@ public sealed class SearchBaselineBenchmark
 #endif
             Runtime = Environment.Version.ToString(),
             Environment.ProcessorCount,
-            Budget = ExhaustiveSearchEngine.DefaultSearchBudget,
+            Budget = BoundedSearchEngine.DefaultSearchBudget,
             ExtendedBudget = extendedBudget,
             TimedRuns,
             Kerf,
@@ -134,7 +134,7 @@ public sealed class SearchBaselineBenchmark
 
     private static PackResult Production(List<BinItem> items)
     {
-        var packer = new MultiBinPacker(new ExhaustiveSearchEngine()) { Spacing = Kerf };
+        var packer = new MultiBinPacker(new BoundedSearchEngine()) { Spacing = Kerf };
         packer.SetBins(new[] { new MultiBin(Stock, -1, 1) });
         return packer.Pack(items);
     }
@@ -157,7 +157,7 @@ public sealed class SearchBaselineBenchmark
         int lower = demand.LowerBound(demand.Counts);
 
         // Mirror the engine's unlimited-stock search (First Fit placed every part).
-        var (mirrorBars, budget) = MirrorMinBars(demand, firstFitBars, ExhaustiveSearchEngine.DefaultSearchBudget);
+        var (mirrorBars, budget) = MirrorMinBars(demand, firstFitBars, BoundedSearchEngine.DefaultSearchBudget);
         bool fallback = result!.FallbackEngine != null;
         Assert.Equal(result.Bins.Count, mirrorBars);
         Assert.Equal(fallback, mirrorBars == firstFitBars && budget.Exhausted);
@@ -176,14 +176,14 @@ public sealed class SearchBaselineBenchmark
         }
 
         return new JobResult(scenario, job, items.Count, demand.GroupCount, firstFitBars, lower,
-            result.Bins.Count, fallback, Math.Min(budget.Used, ExhaustiveSearchEngine.DefaultSearchBudget),
+            result.Bins.Count, fallback, Math.Min(budget.Used, BoundedSearchEngine.DefaultSearchBudget),
             budget.Exhausted, status, Median(runMs), runMs, extBudget, extBars, extExhausted, extUsed, extMs);
     }
 
     private static (int Bars, SearchBudget Budget) MirrorMinBars(CutDemand demand, int firstFitBars, long limit)
     {
         var budget = new SearchBudget(limit);
-        var patterns = new MinBarsSearch(demand, budget, ExhaustiveSearchEngine.MaxSearchBars)
+        var patterns = new MinBarsSearch(demand, budget, BoundedSearchEngine.MaxSearchBars)
             .Solve(firstFitBars, int.MaxValue);
         return (patterns?.Count ?? firstFitBars, budget);
     }

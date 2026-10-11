@@ -1,7 +1,7 @@
 # Pattern-search benchmark
 
 `CutList.Core.Tests/Benchmarks/SearchBaselineBenchmark.cs` is an opt-in baseline for the
-Exhaustive engine's budget-limited pattern search. It is skipped unless
+Bounded Search engine's budget-limited pattern search. It is skipped unless
 `CUTLIST_SEARCH_BENCHMARK_DIR` names an output directory, so ordinary test runs are unaffected.
 
 ```bash
@@ -22,7 +22,7 @@ lengths in whole sixteenths from 6" to 180":
 - `distinct`: 40-120 distinct lengths, 1-3 of each.
 
 Each job runs through the unchanged production path (`MultiBinPacker` with
-`ExhaustiveSearchEngine`, three timed runs after warm-up). The harness then mirrors the engine's
+`BoundedSearchEngine`, three timed runs after warm-up). The harness then mirrors the engine's
 `MinBarsSearch` call to read the work counter, and asserts that the mirror reaches the engine's bar
 count and fallback state. It also checks that every part is placed exactly once, by reference.
 Jobs that exhaust the budget are searched again with the extended budget.
@@ -31,7 +31,7 @@ Jobs that exhaust the budget are searched again with the extended budget.
 
 - `Status`: `proven-optimal` (the search finished, or the plan meets the L2 lower bound),
   `improved-unproven` (out of budget after beating First Fit), or `fallback` (out of budget
-  without beating First Fit, reported as "Exhaustive (First Fit fallback)").
+  without beating First Fit, reported as "Bounded Search (First Fit fallback)").
 - `GapToLowerBoundOnExhausted`: bars above the Martello-Toth L2 bound. This is an upper limit on what
   any search change could save, not an estimate: L2 is not always reachable.
 - `Extended`: what the larger budget found. When an extended search finishes, its bar count is the
@@ -50,7 +50,7 @@ promise of the fewest bars.
 A tighter bar can strand awkward pieces later. First Fit therefore compares this candidate with its
 original whole-job pipeline and retains the original if the candidate uses more bars, leaves more
 parts unplaced, or leaves a greater total unplaced part length (compared in `CutFit` units). On ties,
-the per-bar candidate is kept. Exhaustive uses this selected result as its incumbent/fallback; its
+the per-bar candidate is kept. Bounded Search uses this selected result as its incumbent/fallback; its
 search budget and fallback reporting are unchanged. Repeat-layout batching is separate and is not
 implemented by this pass.
 

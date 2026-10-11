@@ -24,7 +24,7 @@ public sealed class ReplacementBenchmarkFactAttribute : FactAttribute
 public sealed class ReplacementSearchBenchmark(ITestOutputHelper output)
 {
     public const string OutputVariable = "CUTLIST_REPLACEMENT_BENCHMARK_DIR";
-    private static readonly long[] Budgets = [10_000, 100_000, ExhaustiveSearchEngine.DefaultSearchBudget];
+    private static readonly long[] Budgets = [10_000, 100_000, BoundedSearchEngine.DefaultSearchBudget];
     private const int TimedRuns = 3;
     private const double Stock = 240;
     private const double Kerf = 0.125;
@@ -123,7 +123,7 @@ public sealed class ReplacementSearchBenchmark(ITestOutputHelper output)
 #endif
                 Runtime = Environment.Version.ToString(), Environment.ProcessorCount,
                 Stock, Kerf, Budgets, TimedRuns,
-                Scope = "Production FirstFit vs test-only pattern replacement; no Exhaustive policy change",
+                Scope = "Production FirstFit vs test-only pattern replacement; no Bounded Search policy change",
                 Inputs = inputs, Rows = rows
             }, new JsonSerializerOptions { WriteIndented = true }));
     }

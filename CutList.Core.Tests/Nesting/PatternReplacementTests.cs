@@ -253,7 +253,7 @@ public sealed class PatternReplacementTests
     public void High_distinct_length_jobs_do_not_enter_recursive_pattern_enumeration()
     {
         var bin = MakeBin(1_200, 0, 1_000, 100);
-        var remaining = Items(Enumerable.Range(1, ExhaustiveSearchEngine.MaxDistinctLengths + 1)
+        var remaining = Items(Enumerable.Range(1, BoundedSearchEngine.MaxDistinctLengths + 1)
             .Select(i => (double)i).ToArray());
         var originalBin = bin.Items.ToArray();
         var originalRemaining = remaining.ToArray();

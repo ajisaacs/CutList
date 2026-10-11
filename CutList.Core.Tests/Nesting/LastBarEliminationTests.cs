@@ -347,7 +347,7 @@ public class LastBarEliminationTests(ITestOutputHelper output)
             AssertSnapshot(before, baseline);
             Assert.Equal(baseline.Bins.Count - result.Bins.Count, engine.LastEliminatedBars);
             Assert.InRange(engine.LastBudgetUsed, 0, budget + 1);
-            // An independent exhaustive assignment oracle on the PLACED subset proves that
+            // An independent bounded assignment oracle on the PLACED subset proves that
             // reported bar savings are feasible, not that this restricted heuristic is exact.
             Assert.True(result.Bins.Count >= FewestBars(result.Bins.SelectMany(b => b.Items)
                 .Select(i => CutFit.Size(i.Length, kerf)).ToArray(), CutFit.Capacity(10, kerf)));
@@ -357,18 +357,18 @@ public class LastBarEliminationTests(ITestOutputHelper output)
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Frozen_real_FirstFit_job_saves_a_bar_end_to_end_including_Exhaustive_fallback(bool exhaustiveBaseline)
+    public void Frozen_real_FirstFit_job_saves_a_bar_end_to_end_including_BoundedSearch_fallback(bool boundedBaseline)
     {
         // First improvement in a bounded 2,000-job scan: seed 835, job 892. Frozen, not scanned
         // during normal tests. The final 2.25 cannot be placed without resident rearrangement.
         double[] lengths = [7.5, 3, 0.5, 1.5, 2.25, 1, 7.25, 0.5, 8.75, 7.5, 3.75, 1, 6.25, 2.5, 4.5, 1.5, 0.5];
         var items = lengths.Select((n, i) => new BinItem($"P{i}", n)).ToList();
         var request = new PackingRequest(items, 10);
-        IPackingEngine underlying = exhaustiveBaseline ? new ExhaustiveSearchEngine(1) : new FirstFitEngine();
+        IPackingEngine underlying = boundedBaseline ? new BoundedSearchEngine(1) : new FirstFitEngine();
         var baseline = RunThroughStockOrchestration(underlying);
         var before = Snapshot(baseline);
-        var engine = exhaustiveBaseline
-            ? new LastBarEliminationEngine(10_000, new ExhaustiveSearchEngine(1))
+        var engine = boundedBaseline
+            ? new LastBarEliminationEngine(10_000, new BoundedSearchEngine(1))
             : new LastBarEliminationEngine(10_000); // default, real production FirstFit
 
         var result = RunThroughStockOrchestration(engine);
@@ -385,7 +385,7 @@ public class LastBarEliminationTests(ITestOutputHelper output)
         AssertSnapshot(before, baseline);
         Assert.Equal(lengths, items.Select(i => i.Length));
         Assert.Equal(items.Select((_, i) => $"P{i}"), items.Select(i => i.Name));
-        if (exhaustiveBaseline) Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
+        if (boundedBaseline) Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
         var metrics = (engine.LastBudgetUsed, engine.LastBudgetExhausted, engine.LastAttempts,
             engine.LastEliminatedBars, engine.LastDepthLimitReached);
         var repeated = RunThroughStockOrchestration(engine);

@@ -3,12 +3,12 @@ using Xunit;
 
 namespace CutList.Core.Tests.Nesting;
 
-public class ExhaustiveSearchEngineTests
+public class BoundedSearchEngineTests
 {
     [Fact]
     public void Exhausted_search_budget_still_places_every_part()
     {
-        var engine = new ExhaustiveSearchEngine(searchBudget: 1);
+        var engine = new BoundedSearchEngine(searchBudget: 1);
         var items = Enumerable.Range(1, 6).Select(i => new BinItem($"P{i}", 10 + i)).ToList();
 
         var result = engine.Pack(new PackingRequest(items, 40, 0.125));
@@ -25,7 +25,7 @@ public class ExhaustiveSearchEngineTests
         var request = new PackingRequest(items, 10, 0);
         var fallbackBars = new FirstFitEngine().Pack(request).Bins.Count;
 
-        var result = new ExhaustiveSearchEngine(searchBudget: 1).Pack(request);
+        var result = new BoundedSearchEngine(searchBudget: 1).Pack(request);
 
         Assert.Equal(3, fallbackBars);
         Assert.Equal(fallbackBars, result.Bins.Count);
@@ -42,7 +42,7 @@ public class ExhaustiveSearchEngineTests
             .Select((length, i) => new BinItem($"P{i}", length)).ToList();
         var request = new PackingRequest(items, 10, 0);
 
-        var result = new ExhaustiveSearchEngine().Pack(request);
+        var result = new BoundedSearchEngine().Pack(request);
 
         Assert.Equal(12, new FirstFitEngine().Pack(request).Bins.Count);
         Assert.Equal(10, result.Bins.Count);
@@ -55,7 +55,7 @@ public class ExhaustiveSearchEngineTests
     {
         // A one-step budget runs out on the limited 48" stock, so that length keeps First Fit's plan and
         // reports the fallback; the 120" stock's First Fit plan is proven optimal without searching.
-        var packer = new MultiBinPacker(new ExhaustiveSearchEngine(searchBudget: 1)) { Spacing = 0.125 };
+        var packer = new MultiBinPacker(new BoundedSearchEngine(searchBudget: 1)) { Spacing = 0.125 };
         packer.SetBins(new[] { new MultiBin(48, 1, 1), new MultiBin(120, -1, 2) });
 
         var result = packer.Pack(new List<BinItem> { new("A", 40), new("B", 40) });
@@ -71,7 +71,7 @@ public class ExhaustiveSearchEngineTests
         // First-fit decreasing packs {4,4} {3,3,3} {3} = 3 bars; the optimum is {4,3,3} {4,3,3} = 2 bars.
         var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10, 0));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(items, 10, 0));
 
         Assert.Equal(2, result.Bins.Count);
         Assert.Equal(6, result.Bins.Sum(b => b.Items.Count));
@@ -86,7 +86,7 @@ public class ExhaustiveSearchEngineTests
         var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
         var request = new PackingRequest(items, 10.25, 0.125, maxBinCount: 2);
 
-        var result = new ExhaustiveSearchEngine().Pack(request);
+        var result = new BoundedSearchEngine().Pack(request);
 
         Assert.Null(result.FallbackEngine);
         Assert.Equal(2, result.Bins.Count);
@@ -102,7 +102,7 @@ public class ExhaustiveSearchEngineTests
         var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
         var request = new PackingRequest(items, 10.1875, 0.125, maxBinCount: 2);
 
-        var result = new ExhaustiveSearchEngine().Pack(request);
+        var result = new BoundedSearchEngine().Pack(request);
         var firstFit = new FirstFitEngine().Pack(request);
 
         Assert.Null(result.FallbackEngine);
@@ -116,7 +116,7 @@ public class ExhaustiveSearchEngineTests
         // One 10" bar: First Fit cuts {5,4} = 9"; the fullest bar is {4,3,3} = 10".
         var items = new[] { 5.0, 4, 3, 3 }.Select((l, i) => new BinItem($"P{i}", l)).ToList();
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10, 0, maxBinCount: 1));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(items, 10, 0, maxBinCount: 1));
 
         Assert.Equal(new[] { 4.0, 3, 3 }, Assert.Single(result.Bins).Items.Select(i => i.Length));
         Assert.Equal(5.0, Assert.Single(result.ItemsNotUsed).Length);
@@ -130,7 +130,7 @@ public class ExhaustiveSearchEngineTests
         // 6 more bars; First Fit's {15,4} = 19" leaves parts that need 5.
         var items = new[] { 15.0, 12, 7, 9, 6, 8, 15, 7, 9, 15, 4, 3 }.Select((l, i) => new BinItem($"P{i}", l)).ToList();
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 20, 0, maxBinCount: 1));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(items, 20, 0, maxBinCount: 1));
 
         Assert.Equal(new[] { 15.0, 4 }, Assert.Single(result.Bins).Items.Select(i => i.Length));
         Assert.Null(result.FallbackEngine);
@@ -143,7 +143,7 @@ public class ExhaustiveSearchEngineTests
         var items = Enumerable.Repeat(4.0, 10).Concat(Enumerable.Repeat(3.0, 20))
             .Select((length, i) => new BinItem($"P{i}", length)).ToList();
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10.2, 0.1));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(items, 10.2, 0.1));
 
         Assert.Equal(10, result.Bins.Count);
         Assert.All(result.Bins, b =>
@@ -160,7 +160,7 @@ public class ExhaustiveSearchEngineTests
         var items = new[] { 6.0000000011, 6.0000000011, 6.0000000011, 3.9999999991, 3.9999999991, 3.9999999991, 4.0 }
             .Select((length, i) => new BinItem($"P{i}", length)).ToList();
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10, 0, maxBinCount: 4));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(items, 10, 0, maxBinCount: 4));
 
         Assert.Equal(4, result.Bins.Count);
         Assert.Empty(result.ItemsNotUsed);
@@ -171,10 +171,10 @@ public class ExhaustiveSearchEngineTests
     public void Too_many_distinct_lengths_keep_first_fit_without_searching()
     {
         // Pattern enumeration recurses once per distinct length, so very varied jobs are not searched.
-        var items = Enumerable.Range(0, ExhaustiveSearchEngine.MaxDistinctLengths + 1)
+        var items = Enumerable.Range(0, BoundedSearchEngine.MaxDistinctLengths + 1)
             .Select(i => new BinItem($"P{i}", 10 + i / 8.0)).ToList();
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 240, 0.125));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(items, 240, 0.125));
 
         Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
         Assert.Equal(items.Count, result.Bins.Sum(b => b.Items.Count));
@@ -190,9 +190,9 @@ public class ExhaustiveSearchEngineTests
         var request = new PackingRequest(items, 10, 0);
         var firstFitBars = new FirstFitEngine().Pack(request).Bins.Count;
 
-        var result = new ExhaustiveSearchEngine().Pack(request);
+        var result = new BoundedSearchEngine().Pack(request);
 
-        Assert.True(firstFitBars - 1 > ExhaustiveSearchEngine.MaxSearchBars);
+        Assert.True(firstFitBars - 1 > BoundedSearchEngine.MaxSearchBars);
         Assert.Same(BuiltInPackingEngines.FirstFit, result.FallbackEngine);
         Assert.Equal(firstFitBars, result.Bins.Count);
     }
@@ -204,7 +204,7 @@ public class ExhaustiveSearchEngineTests
         var items = Enumerable.Repeat(4.0, 10).Concat(Enumerable.Repeat(3.0, 20))
             .Select((length, i) => new BinItem($"P{i}", length)).ToList();
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10.19999, 0.1));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(items, 10.19999, 0.1));
 
         Assert.Equal(10, result.Bins.Count);
         Assert.All(result.Bins, b => Assert.Equal(0, b.RemainingLength));
@@ -218,7 +218,7 @@ public class ExhaustiveSearchEngineTests
         // overrun, so {4,3,3} {4,3,3} = 2 bars is optimal.
         var items = new[] { 4.0, 4, 3, 3, 3, 3 }.Select((length, i) => new BinItem($"P{i}", length)).ToList();
 
-        var result = new ExhaustiveSearchEngine().Pack(new PackingRequest(items, 10.25, 0.125));
+        var result = new BoundedSearchEngine().Pack(new PackingRequest(items, 10.25, 0.125));
 
         Assert.Equal(2, result.Bins.Count);
         Assert.Equal(6, result.Bins.Sum(b => b.Items.Count));

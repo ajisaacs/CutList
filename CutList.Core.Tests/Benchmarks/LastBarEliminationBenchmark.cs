@@ -18,7 +18,7 @@ public sealed class LastBarBenchmarkFactAttribute : FactAttribute
 
 /// <summary>
 /// Paired whole-job evaluation of bounded last-bar elimination after the unchanged First Fit
-/// and Exhaustive engines. The post-pass work budget is separate from Exhaustive's existing
+/// and Bounded Search engines. The post-pass work budget is separate from Bounded Search's existing
 /// search budget; this is not an equal-total-budget replacement for the production engine.
 /// </summary>
 public sealed class LastBarEliminationBenchmark(ITestOutputHelper output)
@@ -46,7 +46,7 @@ public sealed class LastBarEliminationBenchmark(ITestOutputHelper output)
         var rows = new List<Measurement>();
         var inputs = new List<object>();
 
-        foreach (string id in new[] { "firstfit", "exhaustive" })
+        foreach (string id in new[] { "firstfit", "bounded" })
         {
             var warmup = SearchBaselineBenchmark.Scenarios[0].Generate(new Random(999));
             for (int run = 0; run < TimedRuns; run++)
@@ -67,7 +67,7 @@ public sealed class LastBarEliminationBenchmark(ITestOutputHelper output)
                     Scenario = scenario.Name, Job = job,
                     Lengths = items.GroupBy(i => i.Length).Select(g => new { Length = g.Key, Count = g.Count() })
                 });
-                foreach (string id in new[] { "firstfit", "exhaustive" })
+                foreach (string id in new[] { "firstfit", "bounded" })
                 foreach (long budget in Budgets)
                 {
                     var baseline = Create(id);
@@ -125,14 +125,14 @@ public sealed class LastBarEliminationBenchmark(ITestOutputHelper output)
                 Runtime = Environment.Version.ToString(), Environment.ProcessorCount,
                 Stock, Kerf, PassBudgets = Budgets, TimedRuns,
                 AllowNonMonotoneEjections = allowNonMonotone,
-                ExhaustiveBudget = ExhaustiveSearchEngine.DefaultSearchBudget,
+                BoundedSearchBudget = BoundedSearchEngine.DefaultSearchBudget,
                 Scope = "Unlimited stock; unchanged engine vs same engine plus test-only bounded post-pass",
                 Inputs = inputs, Rows = rows
             }, new JsonSerializerOptions { WriteIndented = true }));
     }
 
     private static IPackingEngine Create(string id) => id == "firstfit"
-        ? new FirstFitEngine() : new ExhaustiveSearchEngine();
+        ? new FirstFitEngine() : new BoundedSearchEngine();
 
     private static PackResult Production(IPackingEngine engine, List<BinItem> items)
     {

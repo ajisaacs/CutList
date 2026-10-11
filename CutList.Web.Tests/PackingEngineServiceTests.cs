@@ -39,7 +39,7 @@ public sealed class PackingEngineServiceTests : IAsyncLifetime
     [Theory]
     [InlineData("firstfit")]
     [InlineData("bestfit")]
-    [InlineData("exhaustive")]
+    [InlineData("bounded")]
     public async Task Pack_runs_the_requested_engine_and_places_every_part(string engineId)
     {
         var result = await _packing.PackAsync(Parts(), 0.125m, UnlimitedStock(), engineId);
@@ -52,15 +52,15 @@ public sealed class PackingEngineServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Exhaustive_on_limited_stock_fills_the_bars_without_a_fallback()
+    public async Task BoundedSearch_on_limited_stock_fills_the_bars_without_a_fallback()
     {
         // One 240" bar holds seven 30" parts plus kerf; the eighth is not placed.
         List<JobStock> oneBar =
             [new JobStock { MaterialId = _seed.FlatBarMaterialId, LengthInches = 240m, Quantity = 1, IsCustomLength = true, Priority = 1 }];
 
-        var result = await _packing.PackAsync(Parts(), 0.125m, oneBar, "exhaustive");
+        var result = await _packing.PackAsync(Parts(), 0.125m, oneBar, "bounded");
 
-        Assert.Equal("Exhaustive", result.EngineName);
+        Assert.Equal("Bounded Search", result.EngineName);
         var material = Assert.Single(result.MaterialResults);
         Assert.Equal(7, Assert.Single(material.PackResult.Bins).Items.Count);
         Assert.Single(material.PackResult.ItemsNotUsed);

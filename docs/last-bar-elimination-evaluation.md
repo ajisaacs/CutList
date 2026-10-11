@@ -2,7 +2,9 @@
 
 > Historical experiment from before promotion. The opt-in production trial and reference-identity
 > repair are documented in [last-bar-engine-trial.md](last-bar-engine-trial.md); measurements below
-> describe the earlier test-only revision and are not a new held-out validation.
+> describe the earlier test-only revision and are not a new held-out validation. The original
+> `ExhaustiveSearchEngine`/`exhaustive` labels in this report now mean `BoundedSearchEngine`/`bounded`;
+> the old names are retained here to preserve the historical measurement context.
 
 ## Result and recommendation
 

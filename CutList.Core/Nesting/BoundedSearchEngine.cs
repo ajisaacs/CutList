@@ -3,12 +3,12 @@ using CutList.Core.Nesting.Search;
 namespace CutList.Core.Nesting
 {
     /// <summary>
-    /// Exhaustive engine: groups parts by length and searches cut patterns for the fewest bars,
+    /// Bounded Search engine: groups parts by length and searches cut patterns for the fewest bars,
     /// starting from the First Fit plan. When limited stock cannot hold every part it fills those bars
     /// as fully as possible, unless First Fit's leftovers would need fewer bars of that length. Returns
     /// First Fit's plan, reported as a fallback, when the search budget runs out before it does better.
     /// </summary>
-    public class ExhaustiveSearchEngine : IPackingEngine
+    public class BoundedSearchEngine : IPackingEngine
     {
         /// <summary>
         /// Search steps (every pattern-enumeration step and search node) per stock length before the
@@ -32,7 +32,7 @@ namespace CutList.Core.Nesting
         private readonly IPackingEngine _firstFit = new FirstFitEngine();
         private readonly int _searchBudget;
 
-        public ExhaustiveSearchEngine(int searchBudget = DefaultSearchBudget)
+        public BoundedSearchEngine(int searchBudget = DefaultSearchBudget)
         {
             _searchBudget = searchBudget;
         }
